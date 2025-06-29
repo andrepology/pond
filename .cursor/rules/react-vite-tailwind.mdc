@@ -1,0 +1,77 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: React + TypeScript + Vite + Tailwind CSS v4 development standards
+globs: ["**/*.{ts,tsx,js,jsx,css,scss}"]
+alwaysApply: true
+---
+
+# React + TypeScript + Vite + Tailwind CSS v4 Development Rules
+
+You are an expert in TypeScript, React, Vite, and Tailwind CSS v4.
+
+## Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Structure files: exported component, subcomponents, helpers, static content, types
+
+## Naming Conventions
+- Use lowercase with dashes for directories (e.g., components/auth-wizard)
+- Favor named exports for components
+
+## TypeScript Usage
+- Use TypeScript for all code; prefer interfaces over types
+- Avoid enums; use maps or objects instead
+- Use functional components with TypeScript interfaces
+- Enable strict mode in tsconfig.json
+- Prefer unknown over any
+
+## Syntax and Formatting
+- Use the "function" keyword for pure functions
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements
+- Use declarative JSX
+
+## Tailwind CSS v4 Specific Rules
+
+### Core Changes
+- **CSS-first configuration**: Use `@theme` directive in CSS instead of `tailwind.config.js`
+- **CSS import syntax**: Use `@import "tailwindcss"` instead of `@tailwind` directives
+- **Package changes**: PostCSS plugin is now `@tailwindcss/postcss`, CLI is `@tailwindcss/cli`, Vite plugin is `@tailwindcss/vite`
+
+### New v4 Features
+- **Container query support**: Use `@sm:`, `@md:` for container-based breakpoints
+- **3D transforms**: `transform-3d`, `rotate-x-*`, `rotate-y-*`, `perspective-*`
+- **Enhanced gradients**: `bg-linear-45`, `bg-conic`, `bg-radial-*`
+- **Shadow enhancements**: `inset-shadow-*` and `inset-ring-*` utilities
+- **New variants**: `starting`, `not-*`, `inert`, `nth-*`, `**` for all descendants
+
+### Breaking Changes from v3 to v4
+- `bg-opacity-*` → Use `bg-black/50` instead
+- `text-opacity-*` → Use `text-black/50` instead
+- `shadow-sm` → `shadow-xs`, `rounded-sm` → `rounded-xs`
+- Default border color is now `currentColor`
+- CSS variables in arbitrary values: `bg-(--brand-color)` instead of `bg-[--brand-color]`
+
+## Performance & Development
+- Use Vite for fast development and building
+- Leverage Vite's hot module replacement
+- Use React.memo() for expensive components
+- Implement lazy loading for routes and components
+- Use pnpm as the package manager
+
+## State Management & Testing
+- Use React's built-in state for local component state
+- Use Context for shared state when appropriate
+- Write unit tests for components using Vitest
+- Use React Testing Library for component testing
+
+## Key Conventions
+- Optimize Web Vitals (LCP, CLS, FID)
+- Use functional components with TypeScript interfaces
+- Implement proper error boundaries
+- Use semantic HTML elements for accessibility

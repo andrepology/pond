@@ -1,0 +1,39 @@
+---
+description: determine whether to read and write to a log of progress on the project
+globs: 
+alwaysApply: false
+---
+---
+description: Development learning log for tracking decisions and discoveries
+globs: []
+alwaysApply: false
+---
+
+# Learning Log
+
+Use this log to track important decisions, discoveries, and learnings during development.
+
+## Log Reference
+
+@docs/learning-log.md
+
+## When to Update the Log
+
+- After making significant architectural decisions
+- When discovering new patterns or approaches
+- When solving complex problems
+- When making design trade-offs
+
+## Log Entry Format
+
+**Timestamp | Context | Decision | Rationale | Impact**
+
+Keep entries short and structured for LLM consumption, not human readability.
+
+## Usage
+
+The agent can request this rule when:
+- Documenting significant decisions
+- Reflecting on development progress
+- Looking up past decisions
+- Planning future work based on learnings

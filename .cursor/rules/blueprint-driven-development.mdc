@@ -1,0 +1,43 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Blueprint-driven development process with automatic blueprint fetching
+globs: ["**/*.{ts,tsx,js,jsx}"]
+alwaysApply: false
+---
+
+# Blueprint-Driven Development Process
+
+When working on code, always consider the relevant blueprints to maintain consistency with established patterns and decisions.
+
+## Blueprint References
+
+Automatically include relevant blueprint files based on the work context:
+
+@docs/project-blueprint.md
+@docs/app-blueprint.md  
+@docs/patterns.md
+
+## Development Guidelines
+
+- **Check blueprints first** before making architectural or design decisions
+- **Update blueprints** when making significant changes or discovering new patterns
+- **Follow established patterns** documented in patterns.md
+- **Maintain consistency** with the overall project vision and user flows
+- **Document new patterns** that emerge during development
+
+## When to Reference Each Blueprint
+
+- **Project Blueprint**: For tech stack decisions, design principles, overall vision
+- **App Blueprint**: For user flows, navigation, major sections, data flow
+- **Patterns**: For UI components, interactions, reusable code patterns
+
+## Blueprint Update Process
+
+- Update blueprints when implementing new features or patterns
+- Keep blueprints living documents that reflect current state
+- Document rationale for major decisions
+- Maintain high-level perspective suitable for designer review
