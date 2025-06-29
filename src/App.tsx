@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useEffect, useState, Suspense, forwardRef, useMemo, useRef } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
-import { useCursor, CameraControls, Text, Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Billboard, Box } from '@react-three/drei'
+import { useCursor, CameraControls, Text, Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Billboard, Box, Center } from '@react-three/drei'
 import { useRoute, useLocation } from 'wouter'
 import { suspend } from 'suspend-react'
 import CameraControlsImpl from 'camera-controls'
@@ -49,7 +49,7 @@ export default function App() {
           </Focusable>
           
           {/* Shadows and Ground */}
-          <AccumulativeShadows frames={100} scale={10}>
+          <AccumulativeShadows temporal frames={60} scale={15}>
             <RandomizedLight amount={8} position={[5, 5, -10]} />
           </AccumulativeShadows>
         </group>
@@ -91,21 +91,27 @@ interface FocusableProps {
 function Focusable({ id, name, children, ...props }: FocusableProps) {
   const [, setLocation] = useLocation()
   const [hovered, hover] = useState(false)
+  const [labelY, setLabelY] = useState(1.2)
   const [, params] = useRoute('/item/:id')
   const active = params?.id === id
   useCursor(hovered)
 
+  const handleCentered = ({ boundingBox }: { boundingBox: THREE.Box3 }) => {
+    const height = boundingBox.max.y - boundingBox.min.y
+    setLabelY(height / 2 + 0.2) // 0.2 offset from the top
+  }
+
   return (
     <group {...props}>
-      <group
+      <Center
         name={id}
+        onCentered={handleCentered}
         onDoubleClick={(e) => (e.stopPropagation(), setLocation('/item/' + id))}
         onPointerOver={(e) => (e.stopPropagation(), hover(true))}
-        onPointerOut={(e) => (e.stopPropagation(), hover(false))}
-      >
+        onPointerOut={(e) => (e.stopPropagation(), hover(false))}>
         {/* Pass hover and active state to children */}
         {React.cloneElement(children, { hovered, active })}
-      </group>
+      </Center>
       {(hovered || active) && (
         <Billboard>
           <Suspense fallback={null}>
@@ -113,18 +119,16 @@ function Focusable({ id, name, children, ...props }: FocusableProps) {
               font={(suspend(medium) as FontModule).default}
               fontSize={0.25}
               anchorY="bottom"
-              position={[0, 1.2, 0]}
-              material-toneMapped={false}
-            >
+              position={[0, labelY, 0]}
+              material-toneMapped={false}>
               {name}
             </Text>
             <Text
               font={(suspend(regular) as FontModule).default}
               fontSize={0.1}
               anchorY="top"
-              position={[0, 1.1, 0]}
-              material-toneMapped={false}
-            >
+              position={[0, labelY, 0]}
+              material-toneMapped={false}>
               /{id}
             </Text>
           </Suspense>
