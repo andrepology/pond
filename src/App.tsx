@@ -37,8 +37,8 @@ export default function App() {
         <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
 
         {/* Main Scene Content */}
-        <group position={[0, -0.5, 0]}>
-          <Focusable id="01" name="Sphere A" position={[-2, 1, 0]}>
+        <group position={[0, 0.5, 0]}>
+          <Focusable id="01" name="Sphere A" position={[-2, 1, 0]} inspectable>
             <InteractiveSphere color="dodgerblue" />
           </Focusable>
           <Focusable id="02" name="Box B" position={[0, 1, -2]}>
@@ -86,9 +86,10 @@ interface FocusableProps {
   name: string;
   children: React.ReactElement<InteractiveProps>;
   position: [number, number, number];
+  inspectable?: boolean;
 }
 
-function Focusable({ id, name, children, ...props }: FocusableProps) {
+function Focusable({ id, name, children, inspectable = false, ...props }: FocusableProps) {
   const [, setLocation] = useLocation()
   const [hovered, hover] = useState(false)
   const [labelY, setLabelY] = useState(1.2)
@@ -105,6 +106,7 @@ function Focusable({ id, name, children, ...props }: FocusableProps) {
     <group {...props}>
       <Center
         name={id}
+        userData={{ inspectable }}
         onCentered={handleCentered}
         onDoubleClick={(e) => (e.stopPropagation(), setLocation('/item/' + id))}
         onPointerOver={(e) => (e.stopPropagation(), hover(true))}
@@ -174,6 +176,13 @@ function Rig({ sheetPercentage }: { sheetPercentage: number }) {
     const yOffset = sheetPercentage * verticalShiftFactor
 
     if (active) {
+      // If the object is inspectable, allow closer zoom.
+      const inspectable = active.userData.inspectable
+      if (cameraControls) {
+        cameraControls.minDistance = inspectable ? 0.01 : 4
+        cameraControls.maxDistance = 15
+      }
+
       // Reuse existing Vector3 instance
       active.getWorldPosition(targetPositionRef.current)
       const { x, y, z } = targetPositionRef.current
@@ -184,6 +193,11 @@ function Rig({ sheetPercentage }: { sheetPercentage: number }) {
       // Set camera to look at the object from an offset, adjusted for the sheet
       cameraControls?.setLookAt(x, y + 1 + yOffset, z + distance, x, y + yOffset, z, true)
     } else {
+      // Reset zoom limits for the default view
+      if (cameraControls) {
+        cameraControls.minDistance = 5
+        cameraControls.maxDistance = 20
+      }
       // Adjust distance for the default view, adjusted for the sheet
       const distance = 10 / Math.min(viewport.aspect, 1)
       cameraControls?.setLookAt(0, 2 + yOffset, distance, 0, yOffset, 0, true)
