@@ -1,18 +1,12 @@
 import * as THREE from 'three'
-import { useEffect, useState, Suspense, forwardRef, useMemo, useRef } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
-import { useCursor, CameraControls, Text, Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Billboard, Box, Center } from '@react-three/drei'
-import { useRoute, useLocation } from 'wouter'
-import { suspend } from 'suspend-react'
-import CameraControlsImpl from 'camera-controls'
-import React, { type CSSProperties } from 'react'
-import { Sheet } from './Sheet'
+import { useState, forwardRef, useMemo } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF } from '@react-three/drei'
+import React from 'react'
+import { Sheet, Scroll } from '@silk-hq/components'
 import { Controls } from './Controls'
-
-type FontModule = { default: string }
-
-const regular = import('@pmndrs/assets/fonts/inter_regular.woff') as Promise<FontModule>
-const medium = import('@pmndrs/assets/fonts/inter_bold.woff') as Promise<FontModule>
+import { Focusable } from './components/focusable'
+import { CameraRig } from './components/camera-rig'
 
 // Pre-create reusable materials for better performance
 const MATERIALS = {
@@ -22,8 +16,14 @@ const MATERIALS = {
   hotpink: new THREE.MeshStandardMaterial({ color: 'hotpink' })
 }
 
+// Detent positions and their corresponding percentages
+const DETENT_PERCENTAGES = [15, 45, 85]
+
 export default function App() {
-  const [sheetPercentage, setSheetPercentage] = useState(0)
+  const [activeDetent, setActiveDetent] = useState(0)
+  
+  // Convert detent index to percentage for CameraRig
+  const sheetPercentage = DETENT_PERCENTAGES[activeDetent] || 0
 
   return (
     <>
@@ -37,12 +37,12 @@ export default function App() {
         <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
 
         {/* Main Scene Content */}
-        <group position={[0, 0.5, 0]}>
-          <Focusable id="01" name="Sphere A" position={[-2, 1, 0]} inspectable>
-            <InteractiveSphere color="dodgerblue" />
+        <group position={[0, -0.5, 0]}>
+          <Focusable id="01" name="Glass Sphere" position={[-2, 1, 0]} inspectable>
+            <TransmissionSphere />
           </Focusable>
-          <Focusable id="02" name="Box B" position={[0, 1, -2]}>
-            <InteractiveBox color="indianred" />
+          <Focusable id="02" name="Mind Body Model" position={[0, 1, -2]}>
+            <MindBodyModel />
           </Focusable>
           <Focusable id="03" name="Sphere C" position={[2, 1, 0]}>
             <InteractiveSphere color="limegreen" />
@@ -54,90 +54,51 @@ export default function App() {
           </AccumulativeShadows>
         </group>
 
-        <Rig sheetPercentage={sheetPercentage} />
+        <CameraRig sheetPercentage={sheetPercentage} />
         <Preload all />
       </Canvas>
-      <Sheet sheetPercentage={sheetPercentage} />
-      <Controls onPercentageChange={setSheetPercentage} />
+      
+      {/* Silk Sheet Implementation */}
+      <Sheet.Root
+        license="non-commercial"
+        presented={true}
+        activeDetent={activeDetent}
+        onActiveDetentChange={setActiveDetent}
+      >
+        <Sheet.View
+          contentPlacement="bottom"
+          tracks="bottom"
+          detents={["15%", "45%", "85%"]}
+          swipe={true}
+          swipeOvershoot={true}
+        >
+          <Sheet.Backdrop className="bg-black/20" />
+          <Sheet.Content className="bg-white rounded-t-lg shadow-lg">
+            <Sheet.Handle className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3" />
+            <div className="p-6">
+              <Sheet.Title className="text-lg font-semibold mb-2">Scene Inspector</Sheet.Title>
+              <Sheet.Description className="text-gray-600 mb-4">
+                Inspect and interact with 3D objects in the scene
+              </Sheet.Description>
+              <div className="space-y-2">
+                <p>Active Detent: {activeDetent}</p>
+                <p>Sheet Height: {DETENT_PERCENTAGES[activeDetent]}%</p>
+              </div>
+            </div>
+          </Sheet.Content>
+        </Sheet.View>
+      </Sheet.Root>
+      
+      <Controls onPercentageChange={setActiveDetent} />
     </>
   )
 }
 
-const buttonStyle: CSSProperties = {
-  background: 'rgba(255,255,255,0.9)',
-  border: 'none',
-  color: '#333',
-  padding: '8px 16px',
-  borderRadius: '99px',
-  cursor: 'pointer',
-  fontFamily: 'sans-serif',
-  fontWeight: 'bold',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-}
 
 interface InteractiveProps {
   hovered?: boolean;
   active?: boolean;
   color: string;
-}
-
-interface FocusableProps {
-  id: string;
-  name: string;
-  children: React.ReactElement<InteractiveProps>;
-  position: [number, number, number];
-  inspectable?: boolean;
-}
-
-function Focusable({ id, name, children, inspectable = false, ...props }: FocusableProps) {
-  const [, setLocation] = useLocation()
-  const [hovered, hover] = useState(false)
-  const [labelY, setLabelY] = useState(1.2)
-  const [, params] = useRoute('/item/:id')
-  const active = params?.id === id
-  useCursor(hovered)
-
-  const handleCentered = ({ boundingBox }: { boundingBox: THREE.Box3 }) => {
-    const height = boundingBox.max.y - boundingBox.min.y
-    setLabelY(height / 2 + 0.2) // 0.2 offset from the top
-  }
-
-  return (
-    <group {...props}>
-      <Center
-        name={id}
-        userData={{ inspectable }}
-        onCentered={handleCentered}
-        onDoubleClick={(e) => (e.stopPropagation(), setLocation('/item/' + id))}
-        onPointerOver={(e) => (e.stopPropagation(), hover(true))}
-        onPointerOut={(e) => (e.stopPropagation(), hover(false))}>
-        {/* Pass hover and active state to children */}
-        {React.cloneElement(children, { hovered, active })}
-      </Center>
-      {(hovered || active) && (
-        <Billboard>
-          <Suspense fallback={null}>
-            <Text
-              font={(suspend(medium) as FontModule).default}
-              fontSize={0.25}
-              anchorY="bottom"
-              position={[0, labelY, 0]}
-              material-toneMapped={false}>
-              {name}
-            </Text>
-            <Text
-              font={(suspend(regular) as FontModule).default}
-              fontSize={0.1}
-              anchorY="top"
-              position={[0, labelY, 0]}
-              material-toneMapped={false}>
-              /{id}
-            </Text>
-          </Suspense>
-        </Billboard>
-      )}
-    </group>
-  )
 }
 
 const InteractiveSphere = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
@@ -162,47 +123,47 @@ const InteractiveBox = forwardRef<any, InteractiveProps>(({ color, hovered, acti
   )
 });
 
-function Rig({ sheetPercentage }: { sheetPercentage: number }) {
-  const { controls, scene, viewport } = useThree()
-  const [, params] = useRoute('/item/:id')
-  const targetPositionRef = useRef(new THREE.Vector3())
+const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
+  return (
+    <DreiSphere {...props} ref={ref} castShadow>
+      <MeshTransmissionMaterial
+        // performance
+        samples={6}
+        resolution={256}
 
-  useEffect(() => {
-    const cameraControls = controls as CameraControlsImpl | null
-    const active = scene.getObjectByName(params?.id!)
+        transmission={1}
+        roughness={0}
+        thickness={0.2}
+        ior={1.5}
+        chromaticAberration={0.02}
+        anisotropy={0.1}
+        distortion={0.5}
+        distortionScale={0.5}
+        temporalDistortion={0}
+      />
+    </DreiSphere>
+  )
+});
 
-    // This factor controls how much the camera moves up when the sheet is open.
-    const verticalShiftFactor = -2
-    const yOffset = sheetPercentage * verticalShiftFactor
-
-    if (active) {
-      // If the object is inspectable, allow closer zoom.
-      const inspectable = active.userData.inspectable
-      if (cameraControls) {
-        cameraControls.minDistance = inspectable ? 0.01 : 4
-        cameraControls.maxDistance = 15
+const MindBodyModel = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
+  const { scene } = useGLTF('/models/mindbody.glb')
+  
+  // Apply standard material to all meshes in the model
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone()
+    clone.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.material = new THREE.MeshStandardMaterial({ 
+          color: 'gray',
+          metalness: 0.1,
+          roughness: 0.7
+        })
+        child.castShadow = true
+        child.receiveShadow = true
       }
+    })
+    return clone
+  }, [scene])
 
-      // Reuse existing Vector3 instance
-      active.getWorldPosition(targetPositionRef.current)
-      const { x, y, z } = targetPositionRef.current
-
-      // Adjust distance based on aspect ratio
-      const distance = 5 / Math.min(viewport.aspect, 1)
-
-      // Set camera to look at the object from an offset, adjusted for the sheet
-      cameraControls?.setLookAt(x, y + 1 + yOffset, z + distance, x, y + yOffset, z, true)
-    } else {
-      // Reset zoom limits for the default view
-      if (cameraControls) {
-        cameraControls.minDistance = 5
-        cameraControls.maxDistance = 20
-      }
-      // Adjust distance for the default view, adjusted for the sheet
-      const distance = 10 / Math.min(viewport.aspect, 1)
-      cameraControls?.setLookAt(0, 2 + yOffset, distance, 0, yOffset, 0, true)
-    }
-  }, [params?.id, controls, scene, viewport.aspect, sheetPercentage])
-
-  return <CameraControls makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 2} />
-}
+  return <primitive {...props} ref={ref} object={clonedScene} />
+});

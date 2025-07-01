@@ -1,20 +1,19 @@
 import React from 'react'
 
 interface ControlsProps {
-  onPercentageChange: (percentage: number) => void
+  onPercentageChange: (detentIndex: number) => void
 }
 
-const percentages = [
-  { label: 'Closed', value: 0 },
-  { label: '30%', value: 0.3 },
-  { label: '60%', value: 0.6 },
-  { label: '90%', value: 0.9 }
+const detents = [
+  { label: '15%', value: 0 },
+  { label: '45%', value: 1 },
+  { label: '85%', value: 2 }
 ]
 
 export function Controls({ onPercentageChange }: ControlsProps) {
   return (
     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 flex gap-1.5 bg-black/5 p-1 rounded-full">
-      {percentages.map(({ label, value }) => (
+      {detents.map(({ label, value }) => (
         <button
           key={label}
           onClick={() => onPercentageChange(value)}
