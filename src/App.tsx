@@ -25,18 +25,26 @@ export default function App() {
 
   return (
     <>
-      <Canvas shadows="soft" camera={{ position: [0, 5, 12], fov: 35 }} eventSource={document.getElementById('root')!} eventPrefix="client">
-        <Perf position="top-left" />
+      <Canvas 
+        shadows="soft" 
+        camera={{ position: [0, 5, 12], fov: 35 }} 
+        eventSource={document.getElementById('root')!} 
+        eventPrefix="client"
+        gl={{ 
+          antialias: true,
+          powerPreference: "high-performance" 
+        }}
+        dpr={[1, 2]}
+      >
+        <Perf deepAnalyze position="top-left" />
 
         <color attach="background" args={['#f0f0f0']} />
         <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.01)} />
-        <ambientLight intensity={Math.PI / 4} />
         
         <Environment preset="city" />
 
         {/* Lights */}
         <ambientLight intensity={0.5} />
-        <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
 
         {/* Main Scene Content */}
         <group position={[0, -0.5, 0]}>
@@ -46,9 +54,9 @@ export default function App() {
           <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
             <InteractiveMindbody color="indianred" />
           </Focusable>
-          <Focusable id="03" name="Sphere C" position={[2, 1, 0]}>
+          {/* <Focusable id="03" name="Sphere C" position={[2, 1, 0]}>
             <InteractiveSphere color="limegreen" />
-          </Focusable>
+          </Focusable> */}
           
           {/* Shadows and Ground */}
           <AccumulativeShadows temporal frames={60} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.5} scale={20}>
@@ -110,18 +118,20 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
   return (
     <DreiSphere {...props} ref={ref} castShadow>
       <MeshTransmissionMaterial
-        // performance
-        samples={2}
-        // resolution={256}
-
+        // Balanced quality/performance for mobile
+        samples={4}
+        // resolution={128}
+        transmissionSampler
+        
+        // Visual properties
         transmission={1}
-        roughness={0}
-        thickness={0.5}
-        ior={1.5}
-        chromaticAberration={0.02}
-        anisotropy={0.1}
-        distortion={0.5}
-        distortionScale={0.5}
+        roughness={0}        // Slight roughness can hide aliasing
+        thickness={0.7}
+        ior={1.45}              // Slightly lower IOR for less distortion
+        chromaticAberration={0.01}  // Reduced to minimize artifacts
+        anisotropy={0.05}       // Reduced for cleaner look
+        distortion={0.2}        // Lower distortion
+        distortionScale={0.2}
         temporalDistortion={0}
       />
     </DreiSphere>
