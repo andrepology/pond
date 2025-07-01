@@ -8,6 +8,7 @@ import { Sheet } from './Sheet'
 import { Controls } from './Controls'
 import { Focusable } from './components/focusable'
 import { CameraRig } from './components/camera-rig'
+import SphericalSky from './components/SphericalSky'
 
 // Pre-create reusable materials for better performance
 const MATERIALS = {
@@ -48,7 +49,7 @@ export default function App() {
 
         {/* Main Scene Content */}
         <group position={[0, -0.5, 0]}>
-          <Focusable id="01" name="Glass Sphere" position={[-2, 1, 0]} inspectable>
+          <Focusable id="01" name="pond" position={[-2, 1, 0]} inspectable>
             <TransmissionSphere />
           </Focusable>
           <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
@@ -116,24 +117,32 @@ const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered,
 
 const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
   return (
-    <DreiSphere {...props} ref={ref} castShadow>
-      <MeshTransmissionMaterial
-        // Balanced quality/performance for mobile
-        samples={4}
-        // resolution={128}
-        transmissionSampler
-        
-        // Visual properties
-        transmission={1}
-        roughness={0}        // Slight roughness can hide aliasing
-        thickness={0.7}
-        ior={1.45}              // Slightly lower IOR for less distortion
-        chromaticAberration={0.01}  // Reduced to minimize artifacts
-        anisotropy={0.05}       // Reduced for cleaner look
-        distortion={0.2}        // Lower distortion
-        distortionScale={0.2}
-        temporalDistortion={0}
+    <group {...props} ref={ref}>
+      <DreiSphere castShadow>
+        <MeshTransmissionMaterial
+          // Balanced quality/performance for mobile
+          samples={4}
+          // resolution={128}
+          transmissionSampler
+          
+          // Visual properties
+          transmission={1}
+          roughness={0}        // Slight roughness can hide aliasing
+          thickness={0.7}
+          ior={1.45}              // Slightly lower IOR for less distortion
+          chromaticAberration={0.01}  // Reduced to minimize artifacts
+          anisotropy={0.05}       // Reduced for cleaner look
+          distortion={0.2}        // Lower distortion
+          distortionScale={0.2}
+          temporalDistortion={0}
+        />
+      </DreiSphere>
+      <SphericalSky
+        radius={0.95}
+        displayRadius={1000}
+        segments={12}
+        lowQuality={true}
       />
-    </DreiSphere>
+    </group>
   )
 });
