@@ -44,7 +44,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   rayleigh: initialRayleigh = 2,
   mieCoefficient: initialMieCoefficient = 0.07,
   mieDirectionalG: initialMieDirectionalG = 0.35,
-  sunPosition: initialSunPosition = [0, 1, 1],
+  sunPosition: initialSunPosition = [0, 0, 1],
   up: initialUp = [0, 1, 0],
   radius = 1000,
   displayRadius = 1000, // Default to a large radius for the visual effect
@@ -52,7 +52,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   updateFrequency = 10, // Only update every 10 frames
   lowQuality = false,
   controlsId = 'sky',
-  initialTimeScale = 0.001,
+  initialTimeScale = 0.01,
   initialEnableTimeAnimation = true
 }) => {
   // Create Leva controls
@@ -403,19 +403,21 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
     // Update time based on timeScale
     timeRef.current += delta * timeScale
 
-    // Calculate y position: oscillate between -2 and 6
-    // Using a custom easing function to slow down in the middle range
-    const normalSine = Math.sin(timeRef.current)
+    // Calculate x position: linear back and forth between -3 and 3
+    // Create a triangle wave using modulo and linear interpolation
+    const period = 4 // Full cycle duration
+    const normalizedTime = (timeRef.current % period) / period // 0 to 1
+    const triangleWave = normalizedTime < 0.5 
+      ? normalizedTime * 2 // 0 to 1 in first half
+      : 2 - (normalizedTime * 2) // 1 to 0 in second half
+    const xPosition = -3 + (triangleWave * 6) // Map from [0,1] to [-3,3]
 
-    // This function will make the animation linger more in the middle range
-    // by applying a cubic easing function that flattens near zero
-    const easedValue = Math.sign(normalSine) * Math.pow(Math.abs(normalSine), 3)
+    // Calculate y position: oscillate between -0.1 and 0.1
+    const yPosition = 0.0 * Math.sin(timeRef.current * 0.3)
 
-    // Map from [-1,1] to [-2,6] range
-    const yPosition = 2 + 4 * easedValue
-
-    // Update sun position with the new y value
+    // Update sun position with the new x and y values
     if (materialRef.current) {
+      materialRef.current.uniforms.sunPosition.value.x = xPosition
       materialRef.current.uniforms.sunPosition.value.y = yPosition
     }
   })
