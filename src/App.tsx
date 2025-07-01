@@ -2,8 +2,9 @@ import * as THREE from 'three'
 import { useState, forwardRef, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF } from '@react-three/drei'
+import { Perf } from 'r3f-perf'
 import React from 'react'
-import { Sheet, Scroll } from '@silk-hq/components'
+import { Sheet } from './Sheet'
 import { Controls } from './Controls'
 import { Focusable } from './components/focusable'
 import { CameraRig } from './components/camera-rig'
@@ -16,20 +17,21 @@ const MATERIALS = {
   hotpink: new THREE.MeshStandardMaterial({ color: 'hotpink' })
 }
 
-// Detent positions and their corresponding percentages
-const DETENT_PERCENTAGES = [15, 45, 85]
+// Preload the GLB model for better performance
+useGLTF.preload('/models/mindbody.glb')
 
 export default function App() {
-  const [activeDetent, setActiveDetent] = useState(0)
-  
-  // Convert detent index to percentage for CameraRig
-  const sheetPercentage = DETENT_PERCENTAGES[activeDetent] || 0
+  const [sheetPercentage, setSheetPercentage] = useState(0)
 
   return (
     <>
-      <Canvas shadows camera={{ position: [0, 5, 12], fov: 35 }} eventSource={document.getElementById('root')!} eventPrefix="client">
-        {/* Background and Environment */}
+      <Canvas shadows="soft" camera={{ position: [0, 5, 12], fov: 35 }} eventSource={document.getElementById('root')!} eventPrefix="client">
+        <Perf position="top-left" />
+
         <color attach="background" args={['#f0f0f0']} />
+        <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.01)} />
+        <ambientLight intensity={Math.PI / 4} />
+        
         <Environment preset="city" />
 
         {/* Lights */}
@@ -41,55 +43,25 @@ export default function App() {
           <Focusable id="01" name="Glass Sphere" position={[-2, 1, 0]} inspectable>
             <TransmissionSphere />
           </Focusable>
-          <Focusable id="02" name="Mind Body Model" position={[0, 1, -2]}>
-            <MindBodyModel />
+          <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
+            <InteractiveMindbody color="indianred" />
           </Focusable>
           <Focusable id="03" name="Sphere C" position={[2, 1, 0]}>
             <InteractiveSphere color="limegreen" />
           </Focusable>
           
           {/* Shadows and Ground */}
-          <AccumulativeShadows temporal frames={60} scale={15}>
-            <RandomizedLight amount={8} position={[5, 5, -10]} />
+          <AccumulativeShadows temporal frames={60} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.5} scale={20}>
+            <RandomizedLight radius={10} ambient={0.5} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
+
         </group>
 
         <CameraRig sheetPercentage={sheetPercentage} />
         <Preload all />
       </Canvas>
-      
-      {/* Silk Sheet Implementation */}
-      <Sheet.Root
-        license="non-commercial"
-        presented={true}
-        activeDetent={activeDetent}
-        onActiveDetentChange={setActiveDetent}
-      >
-        <Sheet.View
-          contentPlacement="bottom"
-          tracks="bottom"
-          detents={["15%", "45%", "85%"]}
-          swipe={true}
-          swipeOvershoot={true}
-        >
-          <Sheet.Backdrop className="bg-black/20" />
-          <Sheet.Content className="bg-white rounded-t-lg shadow-lg">
-            <Sheet.Handle className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3" />
-            <div className="p-6">
-              <Sheet.Title className="text-lg font-semibold mb-2">Scene Inspector</Sheet.Title>
-              <Sheet.Description className="text-gray-600 mb-4">
-                Inspect and interact with 3D objects in the scene
-              </Sheet.Description>
-              <div className="space-y-2">
-                <p>Active Detent: {activeDetent}</p>
-                <p>Sheet Height: {DETENT_PERCENTAGES[activeDetent]}%</p>
-              </div>
-            </div>
-          </Sheet.Content>
-        </Sheet.View>
-      </Sheet.Root>
-      
-      <Controls onPercentageChange={setActiveDetent} />
+      <Sheet sheetPercentage={sheetPercentage} />
+      <Controls onPercentageChange={setSheetPercentage} />
     </>
   )
 }
@@ -112,14 +84,25 @@ const InteractiveSphere = forwardRef<any, InteractiveProps>(({ color, hovered, a
   )
 });
 
-const InteractiveBox = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
+const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
+  const { scene } = useGLTF('/models/mindbody.glb')
+  
   const material = useMemo(() => {
     if (hovered || active) return MATERIALS.hotpink
     return MATERIALS[color as keyof typeof MATERIALS] || new THREE.MeshStandardMaterial({ color })
   }, [color, hovered, active])
 
+  const mesh = scene.children[0] as THREE.Mesh
+
   return (
-    <Box {...props} ref={ref} castShadow material={material} />
+    <mesh 
+      {...props} 
+      ref={ref}
+      geometry={mesh.geometry}
+      material={material}
+      rotation={[0, Math.PI, 0]}
+      castShadow
+    />
   )
 });
 
@@ -128,12 +111,12 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
     <DreiSphere {...props} ref={ref} castShadow>
       <MeshTransmissionMaterial
         // performance
-        samples={6}
-        resolution={256}
+        samples={2}
+        // resolution={256}
 
         transmission={1}
         roughness={0}
-        thickness={0.2}
+        thickness={0.5}
         ior={1.5}
         chromaticAberration={0.02}
         anisotropy={0.1}
@@ -143,27 +126,4 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
       />
     </DreiSphere>
   )
-});
-
-const MindBodyModel = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  const { scene } = useGLTF('/models/mindbody.glb')
-  
-  // Apply standard material to all meshes in the model
-  const clonedScene = useMemo(() => {
-    const clone = scene.clone()
-    clone.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.material = new THREE.MeshStandardMaterial({ 
-          color: 'gray',
-          metalness: 0.1,
-          roughness: 0.7
-        })
-        child.castShadow = true
-        child.receiveShadow = true
-      }
-    })
-    return clone
-  }, [scene])
-
-  return <primitive {...props} ref={ref} object={clonedScene} />
 });
