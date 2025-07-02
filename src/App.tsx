@@ -9,6 +9,7 @@ import { Controls } from './Controls'
 import { Focusable } from './components/focusable'
 import { CameraRig } from './components/camera-rig'
 import SphericalSky from './components/SphericalSky'
+import Starfield from './components/Starfield'
 
 // Pre-create reusable materials for better performance
 const MATERIALS = {
@@ -35,7 +36,7 @@ export default function App() {
           antialias: true,
           powerPreference: "high-performance" 
         }}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
       >
         <Perf deepAnalyze position="top-left" />
 
@@ -123,7 +124,7 @@ const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered,
 const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
   return (
     <group {...props} ref={ref}>
-      <DreiSphere castShadow>
+      {/* <DreiSphere castShadow>
         <MeshTransmissionMaterial
           // Balanced quality/performance for mobile
           samples={4}
@@ -141,13 +142,31 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
           distortionScale={0.2}
           temporalDistortion={0}
         />
-      </DreiSphere>
+      </DreiSphere> */}
+      <group position={[0, 0, 0]}>
+
       <SphericalSky
-        radius={0.95}
-        displayRadius={1000}
-        segments={12}
-        lowQuality={true}
-      />
+          radius={0.95}
+          displayRadius={1000}
+          segments={36}
+          lowQuality={true}
+        />
+
+        <Starfield 
+          radius={1.0}
+          count={50}
+          minStarSize={0.0}
+          
+          twinkleSpeed={1.3}
+          twinkleAmount={0.3}
+
+          bloomSize={0.8}
+          bloomStrength={0.5}
+          distanceFalloff={1.8}
+          coreBrightness={3.0}
+        />
+        
+      </group>
     </group>
   )
 });

@@ -240,7 +240,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 
             // Use the actual, small-scale position for the screen projection
 			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-			gl_Position.z = gl_Position.w; // set z to camera.far
+			// gl_Position.z = gl_Position.w; // set z to camera.far
 
 			vSunDirection = normalize( sunPosition );
 
@@ -306,7 +306,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           // This creates a more natural gradation across the sphere
           vec3 localPos = normalize(vWorldPosition);
           
-          direction = normalize(mix(direction, localPos, 0.6));
+          direction = normalize(mix(direction, localPos, 1.50));
 
           // optical length
           // cutoff angle at 90 to avoid singularity in next formula.
@@ -353,7 +353,8 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 
 		}`,
       side: THREE.BackSide,
-      depthWrite: false
+      depthWrite: true,
+   
     })
 
     materialRef.current = material
@@ -457,7 +458,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 
   return (
     <group>
-      <mesh ref={meshRef} geometry={geometry} material={material} frustumCulled={true} />
+      <mesh ref={meshRef} geometry={geometry} material={material} frustumCulled={true} castShadow />
     </group>
   )
 }
