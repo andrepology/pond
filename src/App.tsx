@@ -10,6 +10,7 @@ import { Focusable } from './components/focusable'
 import { CameraRig } from './components/camera-rig'
 import SphericalSky from './components/SphericalSky'
 import Starfield from './components/Starfield'
+import WaterSphere from './components/WaterSphere'
 
 // Pre-create reusable materials for better performance
 const MATERIALS = {
@@ -115,7 +116,7 @@ const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered,
   }, [scene])
 
   return (
-    <group ref={groupRef} scale={0.6} {...props}>
+    <group ref={groupRef} scale={0.45} {...props}>
       <primitive ref={primitiveRef} object={scene} rotation={[0, Math.PI, 0]} />
     </group>
   )
@@ -124,36 +125,18 @@ const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered,
 const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
   return (
     <group {...props} ref={ref}>
-      {/* <DreiSphere castShadow>
-        <MeshTransmissionMaterial
-          // Balanced quality/performance for mobile
-          samples={4}
-          // resolution={128}
-          transmissionSampler
-          
-          // Visual properties
-          transmission={1}
-          roughness={0}        // Slight roughness can hide aliasing
-          thickness={0.7}
-          ior={1.65}              // Slightly lower IOR for less distortion
-          chromaticAberration={0.01}  // Reduced to minimize artifacts
-          anisotropy={0.05}       // Reduced for cleaner look
-          distortion={0.2}        // Lower distortion
-          distortionScale={0.2}
-          temporalDistortion={0}
-        />
-      </DreiSphere> */}
+      
       <group position={[0, 0, 0]}>
 
-      <SphericalSky
-          radius={0.95}
-          displayRadius={1000}
-          segments={36}
-          lowQuality={true}
-        />
+        <SphericalSky
+            radius={1.0}
+            displayRadius={1000}
+            segments={36}
+            lowQuality={true}
+          />
 
         <Starfield 
-          radius={1.0}
+          radius={1.01}
           count={50}
           minStarSize={0.0}
           
@@ -165,6 +148,8 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
           distanceFalloff={1.8}
           coreBrightness={3.0}
         />
+
+        <WaterSphere radius={1.0} />
         
       </group>
     </group>

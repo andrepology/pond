@@ -56,7 +56,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   initialEnableTimeAnimation = true
 }) => {
   // Create Leva controls
-  const { turbidity, rayleigh, sunPosition, mieCoefficient, mieDirectionalG, directionOverride, isOrthographic, timeScale, enableTimeAnimation } = useControls(
+  const { turbidity, rayleigh, sunPosition, mieCoefficient, mieDirectionalG, directionOverride, isOrthographic, timeScale, enableTimeAnimation, horizonOffset } = useControls(
     controlsId,
     {
       Sky: folder({
@@ -114,6 +114,17 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           max: 5.0,
           step: 0.1,
           label: 'Time Scale'
+        }
+      }),
+      Horizon: folder({
+        horizonOffset: {
+          value: {
+            x: 0.0,
+            y: 0.8,
+            z: 0.0
+          },
+          step: 0.1,
+          label: 'Horizon Offset'
         }
       }),
       Direction: folder({
@@ -183,7 +194,8 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
         up: { value: _up.set(...initialUp) },
         // Add new uniform for camera direction override
         cameraForward: { value: new THREE.Vector3(...directionOverride) },
-        displayRadius: { value: displayRadius }
+        displayRadius: { value: displayRadius },
+        horizonOffset: { value: new THREE.Vector3(horizonOffset.x, horizonOffset.y, horizonOffset.z) }
       },
       vertexShader: /* glsl */ `
 		uniform vec3 sunPosition;
@@ -270,6 +282,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 		uniform float mieDirectionalG;
 		uniform vec3 up;
 		uniform vec3 cameraForward; // Camera direction override for orthographic view
+		uniform vec3 horizonOffset; // Horizon position offset
 
 		// constants for atmospheric scattering
 		const float pi = 3.141592653589793238462643383279502884197169;
@@ -305,6 +318,12 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           // For realistic effect, blend world position with camera direction
           // This creates a more natural gradation across the sphere
           vec3 localPos = normalize(vWorldPosition);
+          
+          // Apply horizon offset using uniform controls
+          localPos.x += horizonOffset.x;
+          localPos.y += horizonOffset.y;
+          localPos.z += horizonOffset.z;
+          localPos = normalize(localPos);
           
           direction = normalize(mix(direction, localPos, 1.50));
 
@@ -366,7 +385,8 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
     mieCoefficient,
     mieDirectionalG,
     lowQuality,
-    displayRadius
+    displayRadius,
+    horizonOffset
     // sunPosition removed from deps to prevent unnecessary recreation
   ])
 
@@ -380,8 +400,9 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
       materialRef.current.uniforms.sunPosition.value.set(...sunPositionArray)
       materialRef.current.uniforms.cameraForward.value.set(...directionOverride)
       materialRef.current.uniforms.displayRadius.value = displayRadius
+      materialRef.current.uniforms.horizonOffset.value.set(horizonOffset.x, horizonOffset.y, horizonOffset.z)
     }
-  }, [turbidity, rayleigh, mieCoefficient, mieDirectionalG, sunPositionArray, directionOverride, displayRadius])
+  }, [turbidity, rayleigh, mieCoefficient, mieDirectionalG, sunPositionArray, directionOverride, displayRadius, horizonOffset])
 
   // Update camera direction in the shader
   useFrame(() => {

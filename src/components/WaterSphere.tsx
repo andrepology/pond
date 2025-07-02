@@ -159,8 +159,9 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
         }
       `,
       transparent: true,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide,
       depthWrite: false,
+      blending: THREE.NormalBlending,
     });
 
     loadTexture('/waternormals.jpg')
