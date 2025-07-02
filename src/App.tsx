@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { useState, forwardRef, useMemo } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import React from 'react'
@@ -94,24 +94,29 @@ const InteractiveSphere = forwardRef<any, InteractiveProps>(({ color, hovered, a
 });
 
 const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
+  const groupRef = useRef<THREE.Group>(null)
+  const primitiveRef = useRef<THREE.Object3D>(null)
   const { scene } = useGLTF('/models/mindbody.glb')
-  
-  const material = useMemo(() => {
-    if (hovered || active) return MATERIALS.hotpink
-    return MATERIALS[color as keyof typeof MATERIALS] || new THREE.MeshStandardMaterial({ color })
-  }, [color, hovered, active])
 
-  const mesh = scene.children[0] as THREE.Mesh
+  useEffect(() => {
+    const stoneMaterial = new THREE.MeshStandardMaterial({
+      color: '#CFCFCF',
+      roughness: 0.4,
+      metalness: 0.19
+    })
+
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.material = stoneMaterial
+        child.castShadow = true
+      }
+    })
+  }, [scene])
 
   return (
-    <mesh 
-      {...props} 
-      ref={ref}
-      geometry={mesh.geometry}
-      material={material}
-      rotation={[0, Math.PI, 0]}
-      castShadow
-    />
+    <group ref={groupRef} scale={0.6} {...props}>
+      <primitive ref={primitiveRef} object={scene} rotation={[0, Math.PI, 0]} />
+    </group>
   )
 });
 
@@ -129,7 +134,7 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
           transmission={1}
           roughness={0}        // Slight roughness can hide aliasing
           thickness={0.7}
-          ior={1.45}              // Slightly lower IOR for less distortion
+          ior={1.65}              // Slightly lower IOR for less distortion
           chromaticAberration={0.01}  // Reduced to minimize artifacts
           anisotropy={0.05}       // Reduced for cleaner look
           distortion={0.2}        // Lower distortion
