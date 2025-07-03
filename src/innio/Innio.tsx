@@ -27,7 +27,7 @@ const AmbientAudio: React.FC<any> = () => null
 const EffectComposer: React.FC<any> = ({ children }) => <>{children}</>
 const Bloom: React.FC<any> = () => null
 
-const SCALE_FACTOR = 1 / 24;
+const SCALE_FACTOR = 1 / 12;
 
 interface InnioProps {
   onPositionUpdate?: (position: THREE.Vector3) => void
@@ -173,6 +173,9 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
 
   const MAX_LENGTH = 8
 
+  // --- Food target state (for placing food and marker rendering) ---
+  const [foodTarget, setFoodTarget] = useState<THREE.Vector3 | null>(null)
+
   // --- Create InnioBehavior instance (state machine) ---
   const innioBehavior = useMemo(() => new InnioBehavior({
     approachThreshold: wanderControls.arrivalDistance,
@@ -180,7 +183,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     eatDuration: 0.3,
     bounds: { min: boundaryControls.min, max: boundaryControls.max },
     onEat: () => {
-      setFoodTarget(null)
+      setFoodTarget(null) // Clear the food target state when eaten
       setTailCount((prev) => {
         if (prev == MAX_LENGTH) {
           return prev
@@ -192,9 +195,6 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     minWanderRestDuration: probabilisticRestControls.minWanderRestDuration,
     maxWanderRestDuration: probabilisticRestControls.maxWanderRestDuration,
   }), [wanderControls.arrivalDistance, boundaryControls.min, boundaryControls.max, probabilisticRestControls])
-
-  // --- Food target state (for placing food and marker rendering) ---
-  const [foodTarget, setFoodTarget] = useState<THREE.Vector3 | null>(null)
 
   // --- Tail segments positions and refs ---
   const tailPositions = useRef<THREE.Vector3[]>([])
@@ -367,16 +367,24 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         if (shouldUpdate && nextWanderTargetRef.current.lengthSq() === 0) {
           const base = vectorPool.get();
           if (isVisionOut) {
-            const toCenter = vectorPool.get().subVectors(new THREE.Vector3(0, 0, 0), headRef.current!.position).normalize();
+            // Steer toward center when vision detects boundary
+            const toCenter = vectorPool.get();
+            toCenter.set(0, headRef.current!.position.y, 0).sub(headRef.current!.position).normalize();
             base.copy(headRef.current!.position).add(toCenter.multiplyScalar(params.forwardDistance));
             vectorPool.release(toCenter);
           } else {
             base.copy(headRef.current!.position).add(forward.multiplyScalar(params.forwardDistance));
           }
           
-          const phi = Math.random() * Math.PI * 2;
-          const theta = Math.random() * Math.PI;
-          const offset = vectorPool.get().set(Math.sin(theta) * Math.cos(phi), Math.sin(theta) * Math.sin(phi), Math.cos(theta)).multiplyScalar(Math.random() * params.radius);
+          // Generate true 3D wander targets using spherical coordinates
+          const phi = Math.random() * Math.PI * 2; // Azimuthal angle (0 to 2π)
+          const theta = Math.random() * Math.PI; // Polar angle (0 to π)
+          const offsetLen = Math.random() * params.radius;
+          const offset = vectorPool.get().set(
+            Math.sin(theta) * Math.cos(phi),
+            Math.sin(theta) * Math.sin(phi),
+            Math.cos(theta)
+          ).multiplyScalar(offsetLen);
           
           const newTarget = vectorPool.get().copy(base).add(offset);
           applyBounds(newTarget);
@@ -586,7 +594,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   // Add this effect to handle the loading animation
   useEffect(() => {
     if (isLoading) {
-      // Set up pulsing animation
+      // Set up pulsing animation for visual feedback during API calls
       let direction = 1;
       const pulseAnimation = setInterval(() => {
         direction *= -1;
@@ -597,8 +605,11 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       }, 500);
       
       return () => clearInterval(pulseAnimation);
+    } else {
+      // Reset scale when loading completes
+      setHeadSpring({ scale: 1 });
     }
-  }, [isLoading]);
+  }, [isLoading, setHeadSpring]);
 
   // --- Additive Pulse Animation State ---
   const activePulseStartTimesRef = useRef<number[]>([]);
@@ -862,7 +873,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   const PUNCTUATION_PAUSE_EXTENSION = 300;
   const DOUBLE_CLICK_TIME_THRESHOLD = 400;
   const CLICK_MAX_DURATION = 300;
-  const CLICK_MOVE_THRESHOLD_SQUARED = (5 * SCALE_FACTOR) * (5 * SCALE_FACTOR);
+  const CLICK_MOVE_THRESHOLD_SQUARED = 5 * 5; // In world units, not scaled
   const LONG_PRESS_THRESHOLD = 700;
 
   // State for text display
@@ -994,11 +1005,14 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         setCurrentBehavior(InnioState.TALK)
       }
     } else if (innioMessage && innioBehavior.state === InnioState.TALK) {
-      // Update the message if already talking
-      console.log("Updating innio message");
+      // Update the message if already talking - this allows dynamic message updates
+      console.log("Updating innio message while talking");
       innioBehavior.setMessage(innioMessage)
+      // Force re-render of speech display by resetting the message
+      setAllWordsForCurrentMessage([]);
+      setDisplayWords([]);
     }
-  }, [innioMessage])
+  }, [innioMessage, innioBehavior])
 
   // Add smoothstep function for better easing
   const smoothstep = (min: number, max: number, value: number): number => {
@@ -1078,6 +1092,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     pt.y = headRef.current?.position.y ?? 0;
     
     innioBehavior.setFoodTarget(pt);
+    setFoodTarget(pt); // Update React state for food target
     createRippleEffect(pt);
   }
 
@@ -1239,7 +1254,9 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
             onPointerDown={handleInnioClick}
             onPointerOver={() => document.body.style.cursor = 'pointer'}
             onPointerOut={() => document.body.style.cursor = 'default'}
-            scale={headSpring.scale}
+            scale-x={headSpring.scale.to(s => s * 1.2)}
+            scale-y={headSpring.scale.to(s => s * 0.85)}
+            scale-z={headSpring.scale}
           >
             <sphereGeometry args={[0.05 * SCALE_FACTOR, 16, 16]} />
             <meshToonMaterial 
@@ -1249,7 +1266,6 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
               toneMapped={false}
               gradientMap={gradientMap}
             />
-            <primitive object={new THREE.Object3D()} scale={[1.2, 0.85, 1]} />
             {(innioBehavior.state === InnioState.TALK) && (
               <Html
                 position={[0, 0.5 * SCALE_FACTOR, 0]}
@@ -1301,6 +1317,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
                 key={idx}
                 ref={(el) => tailRefs.current[idx] = el}
                 position={pos}
+                scale={[1, verticalScale, 1]}
                 onPointerDown={handleInnioClick}
                 onPointerOver={() => document.body.style.cursor = 'pointer'}
                 onPointerOut={() => document.body.style.cursor = 'default'}
@@ -1313,7 +1330,6 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
                   toneMapped={false}
                   gradientMap={gradientMap}
                 />
-                <primitive object={new THREE.Object3D()} scale={[1, verticalScale, 1]} />
               </mesh>
             );
           })}

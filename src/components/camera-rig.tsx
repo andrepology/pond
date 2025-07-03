@@ -26,8 +26,8 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       // If the object is inspectable, allow closer zoom.
       const inspectable = active.userData.inspectable
       if (cameraControls) {
-        cameraControls.minDistance = inspectable ? 0.01 : 4
-        cameraControls.maxDistance = 15
+        cameraControls.minDistance = inspectable ? 0.01 : 5
+        cameraControls.maxDistance = 20
       }
 
       // Reuse existing Vector3 instance
@@ -35,7 +35,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       const { x, y, z } = targetPositionRef.current
 
       // Adjust distance based on aspect ratio
-      const distance = 5 / Math.min(viewport.aspect, 1)
+      const distance = 10 / Math.min(viewport.aspect, 1)
 
       // Set camera to look at the object from an offset, adjusted for the sheet
       cameraControls?.setLookAt(x, y + 1 + yOffset, z + distance, x, y + yOffset, z, true)
@@ -47,7 +47,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       }
       // Adjust distance for the default view, adjusted for the sheet
       const distance = 10 / Math.min(viewport.aspect, 1)
-      cameraControls?.setLookAt(0, 2 + yOffset, distance, 0, yOffset, 0, true)
+      cameraControls?.setLookAt(8, 4 + yOffset, distance, 0, 0, 0, true)
     }
   }, [params?.id, controls, scene, viewport.aspect, sheetPercentage])
 

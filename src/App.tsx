@@ -144,7 +144,7 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
 });
 
 const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  useControls('Transmission Material', {
+  const transmissionControls = useControls('Transmission Material', {
     samples: { value: 5, min: 1, max: 20, step: 1 },
     resolution: { value: 256, min: 64, max: 1024, step: 64 },
     transmission: { value: 1, min: 0, max: 1, step: 0.01 },
@@ -168,7 +168,7 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
         lowQuality={true}
       />
 
-      {/* <WaterSphere radius={0.99} /> */}
+      <WaterSphere radius={0.99} />
 
       <Innio />
 
@@ -190,18 +190,18 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
       {/* <DreiSphere castShadow args={[1.01, 64, 64]}>
         <MeshTransmissionMaterial
           backside
-          samples={samples}
-          resolution={resolution}
-          transmission={transmission}
-          roughness={roughness}
-          thickness={thickness}
-          ior={ior}
-          chromaticAberration={chromaticAberration}
-          anisotropy={anisotropy}
-          distortion={distortion}
-          distortionScale={distortionScale}
-          temporalDistortion={temporalDistortion}
-          clearcoat={clearcoat}
+          samples={transmissionControls.samples}
+          resolution={transmissionControls.resolution}
+          transmission={transmissionControls.transmission}
+          roughness={transmissionControls.roughness}
+          thickness={transmissionControls.thickness}
+          ior={transmissionControls.ior}
+          chromaticAberration={transmissionControls.chromaticAberration}
+          anisotropy={transmissionControls.anisotropy}
+          distortion={transmissionControls.distortion}
+          distortionScale={transmissionControls.distortionScale}
+          temporalDistortion={transmissionControls.temporalDistortion}
+          clearcoat={transmissionControls.clearcoat}
         />
       </DreiSphere> */}
     </group>

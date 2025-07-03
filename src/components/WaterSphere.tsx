@@ -67,8 +67,8 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
       distortionScale: { value: 1.8, min: 0, max: 5, step: 0.1 },
       bumpScale: { value: 0.25, min: 0, max: 1, step: 0.05 },
       normalMapInfluence: { value: 0.85, min: 0, max: 2, step: 0.05 },
-      textureRepeatX: { value: 3.0, min: 0.5, max: 10, step: 0.5 },
-      textureRepeatY: { value: 3.0, min: 0.5, max: 10, step: 0.5 },
+      textureRepeatX: { value: 4.0, min: 0.5, max: 10, step: 0.5 },
+      textureRepeatY: { value: 4.0, min: 0.5, max: 10, step: 0.5 },
     }),
   });
 
