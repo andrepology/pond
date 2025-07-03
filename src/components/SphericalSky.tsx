@@ -119,9 +119,9 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
       Horizon: folder({
         horizonOffset: {
           value: {
-            x: 0.0,
-            y: 0.8,
-            z: 0.0
+            x: -2.0,
+            y: 0.95,
+            z: -2.0
           },
           step: 0.1,
           label: 'Horizon Offset'

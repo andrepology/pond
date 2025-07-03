@@ -35,7 +35,7 @@ interface WaterSphereProps {
 
 const WaterSphere: React.FC<WaterSphereProps> = ({
   radius,
-  sunPosition = [0, 1, 2],
+  sunPosition = [-0.5, 12, -0.5],
 }) => {
   const { camera } = useThree();
   const sphereRef = useRef<THREE.Mesh>(null);
@@ -137,7 +137,7 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
           vec4 normalColor2 = texture2D(waterNormals, uvFlow2);
           vec4 normalColor = mix(normalColor1, normalColor2, flowMixRatio);
           float poleProximity = abs(normalize(vWorldPosition).y);
-          float poleAttenuationFactor = smoothstep(0.7, 0.98, poleProximity);
+          float poleAttenuationFactor = smoothstep(0.2, 0.98, poleProximity);
           float adjustedNormalMapInfluence = normalMapInfluence * (1.0 - poleAttenuationFactor);
           vec3 normal = normalize(vNormal + normalColor.rgb * adjustedNormalMapInfluence);
           float NdotL = dot(normal, sunDirection);
@@ -146,7 +146,7 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
           vec3 reflectDir = reflect(-sunDirection, normal);
           float spec = pow(max(dot(reflectDir, viewDir), 0.5), 32.0) * 0.2;
           float rimFactor = 1.0 - max(0.0, dot(viewDir, normal));
-          float rim = pow(rimFactor, 8.0) * 0.3;
+          float rim = pow(rimFactor, 8.0) * 0.25;
           vec3 color = waterColor * (ambientLight + light * diffuseLight) + spec + rim;
           float brightness = dot(color, vec3(0.299, 0.587, 0.114)) * brightnessFactor;
           float visibility = smoothstep(
@@ -154,14 +154,14 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
             brightnessThreshold + brightnessTransition/2.0,
             brightness
           );
-          visibility = pow(visibility, 0.6);
+          visibility = pow(visibility, 0.4);
           gl_FragColor = vec4(color, transparency * opacity * visibility);
         }
       `,
       transparent: true,
       side: THREE.FrontSide,
       depthWrite: false,
-      blending: THREE.NormalBlending,
+      blending: THREE.AdditiveBlending,
     });
 
     loadTexture('/waternormals.jpg')
@@ -258,7 +258,7 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
       frustumCulled
       visible={controls.initialSphereOpacity > 0.01}
     >
-      <sphereGeometry args={[1, 64, 64]} />
+      <sphereGeometry args={[1, 32, 32]} />
       <primitive object={sphereMaterial} />
     </mesh>
   );

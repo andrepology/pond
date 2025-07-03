@@ -57,7 +57,7 @@ const Starfield: React.FC<StarfieldProps> = ({
   
   // Distance and distribution
   distanceFalloff = 1.0,
-  coreBrightness = 2.5,
+  coreBrightness = 1.0,
   centerBias = 3.0,
   
   // Legacy props
@@ -90,13 +90,13 @@ const Starfield: React.FC<StarfieldProps> = ({
         secondaryFrequency: { value: secondaryFrequency, min: 0.0, max: 2.0, step: 0.1, label: 'Secondary Frequency' },
       }),
       Bloom: folder({
-        bloomSize: { value: bloomSize, min: 1.0, max: 5.0, step: 0.1, label: 'Bloom Size' },
+        bloomSize: { value: bloomSize, min: 0.0, max: 5.0, step: 0.1, label: 'Bloom Size' },
         bloomStrength: { value: bloomStrength, min: 0.5, max: 3.0, step: 0.1, label: 'Bloom Strength' },
         bloomSoftness: { value: bloomSoftness, min: 1.0, max: 5.0, step: 0.1, label: 'Bloom Softness' },
       }),
       Distance: folder({
         distanceFalloff: { value: distanceFalloff, min: 0.5, max: 3.0, step: 0.1, label: 'Distance Falloff' },
-        coreBrightness: { value: coreBrightness, min: 1.0, max: 5.0, step: 0.1, label: 'Core Brightness' },
+        coreBrightness: { value: coreBrightness, min: 0.0, max: 5.0, step: 0.1, label: 'Core Brightness' },
       })
     },
     { collapsed: true }

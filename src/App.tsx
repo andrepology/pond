@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF } from '@react-three/drei'
+import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF, Center } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
+import { useControls } from 'leva'
 import React from 'react'
 import { Sheet } from './Sheet'
 import { Controls } from './Controls'
@@ -28,14 +29,14 @@ export default function App() {
 
   return (
     <>
-      <Canvas 
-        shadows="soft" 
-        camera={{ position: [0, 5, 12], fov: 35 }} 
-        eventSource={document.getElementById('root')!} 
+      <Canvas
+        shadows="soft"
+        camera={{ position: [0, 5, 12], fov: 35 }}
+        eventSource={document.getElementById('root')!}
         eventPrefix="client"
-        gl={{ 
+        gl={{
           antialias: true,
-          powerPreference: "high-performance" 
+          powerPreference: "high-performance"
         }}
         dpr={[1, 1.5]}
       >
@@ -43,15 +44,15 @@ export default function App() {
 
         <color attach="background" args={['#f0f0f0']} />
         <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.01)} />
-        
-        <Environment preset="city" />
+
+        <Environment preset="forest" />
 
         {/* Lights */}
         <ambientLight intensity={0.5} />
 
         {/* Main Scene Content */}
-        <group position={[0, -0.5, 0]}>
-          <Focusable id="01" name="pond" position={[-2, 1, 0]} inspectable>
+        <Center   >
+          <Focusable id="01" name="pond" position={[-2, 1.2, 0]} inspectable>
             <TransmissionSphere />
           </Focusable>
           <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
@@ -60,16 +61,16 @@ export default function App() {
           {/* <Focusable id="03" name="Sphere C" position={[2, 1, 0]}>
             <InteractiveSphere color="limegreen" />
           </Focusable> */}
-          
+
           {/* Shadows and Ground */}
-          <AccumulativeShadows temporal frames={60} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.5} scale={20}>
+          <AccumulativeShadows frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.3} scale={20}>
             <RandomizedLight radius={10} ambient={0.5} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
 
-        </group>
+        </Center>
 
         <CameraRig sheetPercentage={sheetPercentage} />
-        <Preload all />
+        {/* <Preload all /> */}
       </Canvas>
       <Sheet sheetPercentage={sheetPercentage} />
       <Controls onPercentageChange={setSheetPercentage} />
@@ -123,35 +124,76 @@ const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered,
 });
 
 const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
+  const {
+    samples,
+    resolution,
+    transmission,
+    roughness,
+    thickness,
+    ior,
+    chromaticAberration,
+    anisotropy,
+    distortion,
+    distortionScale,
+    temporalDistortion,
+    clearcoat
+  } = useControls('Transmission Material', {
+    samples: { value: 5, min: 1, max: 20, step: 1 },
+    resolution: { value: 256, min: 64, max: 1024, step: 64 },
+    transmission: { value: 1, min: 0, max: 1, step: 0.01 },
+    roughness: { value: 0.0, min: 0, max: 1, step: 0.01 },
+    thickness: { value: 0.2, min: 0, max: 2, step: 0.01 },
+    ior: { value: 1.5, min: 1, max: 3, step: 0.01 },
+    chromaticAberration: { value: 0.02, min: 0, max: 0.1, step: 0.001 },
+    anisotropy: { value: 0.1, min: 0, max: 1, step: 0.01 },
+    distortion: { value: 0.1, min: 0, max: 1, step: 0.01 },
+    distortionScale: { value: 4.3, min: 0, max: 10, step: 0.1 },
+    temporalDistortion: { value: 0.2, min: 0, max: 1, step: 0.01 },
+    clearcoat: { value: 1, min: 0, max: 1, step: 0.01 }
+  })
+
   return (
-    <group {...props} ref={ref}>
-      
-      <group position={[0, 0, 0]}>
+    <group  {...props} ref={ref}>
+      <SphericalSky
+        radius={1.0}
+        displayRadius={1000}
+        segments={8}
+        lowQuality={true}
+      />
 
-        <SphericalSky
-            radius={1.0}
-            displayRadius={1000}
-            segments={36}
-            lowQuality={true}
-          />
+      {/* <WaterSphere radius={0.99} /> */}
 
-        <Starfield 
-          radius={1.01}
-          count={50}
-          minStarSize={0.0}
-          
-          twinkleSpeed={1.3}
-          twinkleAmount={0.3}
+      <Starfield
+        radius={1.00}
+        count={50}
+        minStarSize={0.0}
 
-          bloomSize={0.8}
-          bloomStrength={0.5}
-          distanceFalloff={1.8}
-          coreBrightness={3.0}
+        twinkleSpeed={1.3}
+        twinkleAmount={0.3}
+
+        bloomSize={0.8}
+        bloomStrength={0.5}
+        distanceFalloff={1.8}
+        coreBrightness={3.0}
+      />
+
+      <DreiSphere castShadow args={[1.01, 64, 64]}>
+        <MeshTransmissionMaterial
+          backside
+          samples={samples}
+          resolution={resolution}
+          transmission={transmission}
+          roughness={roughness}
+          thickness={thickness}
+          ior={ior}
+          chromaticAberration={chromaticAberration}
+          anisotropy={anisotropy}
+          distortion={distortion}
+          distortionScale={distortionScale}
+          temporalDistortion={temporalDistortion}
+          clearcoat={clearcoat}
         />
-
-        <WaterSphere radius={1.0} />
-        
-      </group>
+      </DreiSphere>
     </group>
   )
 });
