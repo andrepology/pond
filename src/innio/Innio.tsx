@@ -291,6 +291,120 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   const basePosTmp = useMemo(() => new THREE.Vector3(), []);
   const perpTmp = useMemo(() => new THREE.Vector3(), []);
 
+  // --- Boundary Detection System ---
+  const boundaryZones = {
+    danger: 0.1,      // Emergency zone
+    caution: 0.3,     // Strong avoidance
+    awareness: 0.5    // Gentle steering
+  };
+
+  const getDistanceToBoundary = (pos: THREE.Vector3, bounds: { min: number, max: number }) => {
+    const distances = [
+      bounds.max - Math.abs(pos.x),
+      bounds.max - Math.abs(pos.y), 
+      bounds.max - Math.abs(pos.z)
+    ];
+    return Math.min(...distances);
+  };
+
+  const getNearestBoundaryNormal = (pos: THREE.Vector3, bounds: { min: number, max: number }) => {
+    const normal = vectorPool.get();
+    normal.set(0, 0, 0);
+    
+    // Check each axis and find the closest boundary
+    const distX = bounds.max - Math.abs(pos.x);
+    const distY = bounds.max - Math.abs(pos.y);
+    const distZ = bounds.max - Math.abs(pos.z);
+    
+    const minDist = Math.min(distX, distY, distZ);
+    
+    if (minDist === distX) {
+      normal.x = pos.x > 0 ? -1 : 1;
+    } else if (minDist === distY) {
+      normal.y = pos.y > 0 ? -1 : 1;
+    } else {
+      normal.z = pos.z > 0 ? -1 : 1;
+    }
+    
+    return normal.normalize();
+  };
+
+  const getBoundaryAvoidanceForce = (
+    pos: THREE.Vector3, 
+    velocity: THREE.Vector3,
+    params: any
+  ) => {
+    const dist = getDistanceToBoundary(pos, params.bounds);
+    const force = vectorPool.get();
+    
+    if (dist >= boundaryZones.awareness) {
+      force.set(0, 0, 0);
+      return force;
+    }
+    
+    const normal = getNearestBoundaryNormal(pos, params.bounds);
+    
+    if (dist < boundaryZones.danger) {
+      // Emergency: Very strong repulsion
+      force.copy(normal).multiplyScalar(params.maxSteerForce * 4);
+      
+      // Also reduce forward velocity to help turning
+      const velocityDotNormal = velocity.dot(normal);
+      if (velocityDotNormal < 0) {
+        // Moving toward boundary - dampen that component
+        const dampening = normal.clone().multiplyScalar(velocityDotNormal * -0.8);
+        velocity.add(dampening);
+      }
+    } else if (dist < boundaryZones.caution) {
+      // Strong steering away
+      const strength = 1 - (dist - boundaryZones.danger) / (boundaryZones.caution - boundaryZones.danger);
+      force.copy(normal).multiplyScalar(params.maxSteerForce * 2 * strength);
+    } else {
+      // Gentle guidance
+      const strength = 1 - (dist - boundaryZones.caution) / (boundaryZones.awareness - boundaryZones.caution);
+      force.copy(normal).multiplyScalar(params.maxSteerForce * 0.5 * strength);
+    }
+    
+    vectorPool.release(normal);
+    return force;
+  };
+
+  // --- Swim Cycle State for Burst-Glide Pattern ---
+  const swimCycleRef = useRef({
+    phase: 'glide' as 'burst' | 'glide',
+    timer: 0,
+    burstDuration: 0.4,
+    glideDuration: 1.0,
+    intensity: 1.0
+  });
+
+  const updateSwimCycle = (delta: number, nearBoundary: boolean) => {
+    const cycle = swimCycleRef.current;
+    cycle.timer += delta;
+    
+    if (nearBoundary) {
+      // When near boundaries, use shorter, more controlled bursts
+      cycle.burstDuration = 0.2;
+      cycle.glideDuration = 0.4;
+      cycle.intensity = 0.6;
+    } else {
+      // Normal swimming pattern
+      cycle.burstDuration = 0.3 + Math.random() * 0.2;
+      cycle.glideDuration = 0.8 + Math.random() * 0.7;
+      cycle.intensity = 0.8 + Math.random() * 0.4;
+    }
+    
+    if (cycle.phase === 'burst' && cycle.timer >= cycle.burstDuration) {
+      cycle.phase = 'glide';
+      cycle.timer = 0;
+    } else if (cycle.phase === 'glide' && cycle.timer >= cycle.glideDuration) {
+      cycle.phase = 'burst';
+      cycle.timer = 0;
+    }
+    
+    return cycle;
+  };
+
   // Now let's modify the updateMovement function to use vector pooling
   const updateMovement = (delta: number) => {
     const params = wanderParams.current;
@@ -317,18 +431,20 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       
       const desired = vectorPool.get();
       const pos = headRef.current!.position;
-      const buffer = params.boundaryBuffer;
-
-      // --- Boundary Avoidance: Highest Priority ---
-      if (Math.abs(pos.x) > params.bounds.max - buffer || Math.abs(pos.z) > params.bounds.max - buffer) {
-        // If near a boundary, the desired velocity is back towards the center.
-        // We preserve the current y-level.
-        const center = tempVec2.set(0, pos.y, 0);
-        desired.subVectors(center, pos).normalize().multiplyScalar(params.maxSpeed);
+      
+      // --- Multi-Zone Boundary Avoidance ---
+      const boundaryForce = getBoundaryAvoidanceForce(pos, currentVelocity.current, params);
+      
+      // If we have boundary force, it takes priority
+      if (boundaryForce.lengthSq() > 0) {
+        desired.copy(boundaryForce);
+        
+        // Slow down when near boundaries for better control
+        const dist = getDistanceToBoundary(pos, params.bounds);
+        const speedMultiplier = Math.max(0.3, dist / boundaryZones.awareness);
+        desired.clampLength(0, params.maxSpeed * speedMultiplier);
       } else {
         // --- Standard Wander Logic ---
-        applyBounds(headRef.current!.position);
-        
         const forward = vectorPool.get();
         if (currentVelocity.current.lengthSq() > 0.0001) {
           forward.copy(currentVelocity.current).normalize();
@@ -415,21 +531,49 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         vectorPool.release(forward);
       }
       
-      // --- Apply Steering (common to both boundary avoidance and wander) ---
+      // --- Apply Steering ---
       const steer = vectorPool.get().subVectors(desired, currentVelocity.current).clampLength(0, params.maxSteerForce);
       currentVelocity.current.add(steer);
       
-      // Minimum speed maintenance for more natural movement
-      const minSpeed = params.maxSpeed * 0.8;
-      if (currentVelocity.current.length() < minSpeed) {
-        currentVelocity.current.normalize().multiplyScalar(minSpeed);
+      // Adjust speed based on context and swim cycle
+      const dist = getDistanceToBoundary(pos, params.bounds);
+      const nearBoundary = dist < boundaryZones.awareness;
+      
+      // Update swim cycle
+      const swimCycle = updateSwimCycle(delta, nearBoundary);
+      
+      let targetSpeed = params.maxSpeed;
+      
+      if (nearBoundary) {
+        // Slow down near boundaries
+        targetSpeed *= Math.max(0.3, dist / boundaryZones.awareness);
       } else {
-        currentVelocity.current.clampLength(0, params.maxSpeed);
+        // Apply burst-glide pattern
+        if (swimCycle.phase === 'burst') {
+          targetSpeed *= swimCycle.intensity;
+          
+          // During burst, ensure minimum speed
+          const minSpeed = params.maxSpeed * 0.6;
+          if (currentVelocity.current.length() < minSpeed) {
+            currentVelocity.current.normalize().multiplyScalar(minSpeed);
+          }
+        } else {
+          // Glide phase - gradual deceleration
+          const glideProgress = swimCycle.timer / swimCycle.glideDuration;
+          const glideFactor = 0.3 + (0.5 * (1 - glideProgress));
+          targetSpeed *= glideFactor;
+        }
       }
       
-      // Add darting movements for more lifelike behavior
-      if (Math.random() < 0.02) { // 2% chance per frame
-        const dart = Math.random() * 0.4 + 0.8; // 0.8-1.2x speed multiplier
+      // Apply drag for more realistic physics
+      const drag = 0.02;
+      currentVelocity.current.multiplyScalar(1 - drag);
+      
+      currentVelocity.current.clampLength(0, targetSpeed);
+      
+      // Add darting movements only when not near boundaries
+      if (dist > boundaryZones.caution && Math.random() < 0.02) {
+        const dart = Math.random() * 0.4 + 0.8;
         headRef.current!.position.add(
           currentVelocity.current.clone().multiplyScalar(dart)
         );
@@ -437,10 +581,11 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         headRef.current!.position.add(currentVelocity.current);
       }
       
-      applyBounds(headRef.current!.position); // Keep hard clamp as a final safety measure
+      applyBounds(headRef.current!.position); // Final safety clamp
       
       vectorPool.release(steer);
       vectorPool.release(desired);
+      vectorPool.release(boundaryForce);
     } else if (innioBehavior.state === InnioState.APPROACH) {
       if (!innioBehavior.target) return;
       const params = wanderParams.current;
@@ -546,12 +691,32 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       } else {
         const speedFactor = THREE.MathUtils.clamp(currentVelocity.current.length() * 10, 0.2, 1);
         const baseAmp = animationControls.waveBase * (1 - i / tailCount);
-        const waveAmp = baseAmp * speedFactor;
-        const waveOffset = Math.sin(timeRef.current * animationControls.waveSpeed + i * 5) * waveAmp;
+        
+        // Enhance wave based on swim cycle
+        let waveAmp = baseAmp * speedFactor;
+        let waveSpeed = animationControls.waveSpeed;
+        
+        if (swimCycleRef.current.phase === 'burst') {
+          // Stronger, faster waves during burst
+          waveAmp *= 1.5;
+          waveSpeed *= 1.3;
+        } else {
+          // Gentler waves during glide
+          const glideProgress = swimCycleRef.current.timer / swimCycleRef.current.glideDuration;
+          waveAmp *= (0.5 + 0.5 * (1 - glideProgress));
+        }
+        
+        const waveOffset = Math.sin(timeRef.current * waveSpeed + i * 5) * waveAmp;
         
         // Reuse perpTmp
         perpTmp.set(-headDirection.z, 0, headDirection.x);
         basePosTmp.add(perpTmp.multiplyScalar(waveOffset));
+        
+        // Add banking to tail segments
+        if (bodyBankingRef.current.currentBank !== 0) {
+          const bankOffset = bodyBankingRef.current.currentBank * 0.02 * (1 - i / tailCount);
+          basePosTmp.y += bankOffset;
+        }
       }
       
       tailPositions.current[i].lerp(basePosTmp, 0.05);
@@ -578,6 +743,13 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
 
   // Add this with other refs
   const positionUpdateVec = useRef(new THREE.Vector3());
+  
+  // Body banking for realistic turning
+  const bodyBankingRef = useRef({
+    currentBank: 0,
+    targetBank: 0,
+    lateralAcceleration: 0
+  });
 
   const { me } = useAccount()
   const { generateResponse, resetForNewEntry } = invokeInnio()
@@ -727,6 +899,31 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     // Synchronize hitbox position with the head
     if (headRef.current && hitboxRef.current) {
       hitboxRef.current.position.copy(headRef.current.position);
+    }
+    
+    // Calculate body banking based on turning
+    if (headRef.current && currentVelocity.current.lengthSq() > 0.001) {
+      // Calculate lateral acceleration (approximation)
+      const velocityDir = currentVelocity.current.clone().normalize();
+      const turnRate = 1 - velocityDir.dot(lastHeadDir.current);
+      
+      // Bank angle proportional to turn rate and speed
+      const speed = currentVelocity.current.length();
+      bodyBankingRef.current.targetBank = turnRate * speed * 50; // Adjust multiplier for desired effect
+      
+      // Determine banking direction based on cross product
+      const cross = new THREE.Vector3().crossVectors(lastHeadDir.current, velocityDir);
+      if (cross.y < 0) bodyBankingRef.current.targetBank *= -1;
+      
+      // Smooth banking transition
+      bodyBankingRef.current.currentBank = THREE.MathUtils.lerp(
+        bodyBankingRef.current.currentBank,
+        bodyBankingRef.current.targetBank,
+        0.1
+      );
+      
+      // Apply banking to head rotation
+      headRef.current.rotation.z = bodyBankingRef.current.currentBank * 0.3; // Max 30% of calculated bank
     }
 
     // Calculate perspective line

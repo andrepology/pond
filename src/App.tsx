@@ -14,6 +14,7 @@ import Starfield from './components/Starfield'
 import WaterSphere from './components/WaterSphere'
 import Innio from './innio/Innio'
 import { useLocation } from 'wouter'
+import { DateTimeDisplay } from './components/DateTimeDisplay'
 
 // Pre-create reusable materials for better performance
 const MATERIALS = {
@@ -46,7 +47,7 @@ export default function App() {
         }}
         dpr={[1, 1.5]}
       >
-        <Perf deepAnalyze position="top-left" />
+        {/* <Perf deepAnalyze position="top-left" /> */}
         <Preload all />
         
         <CameraRig sheetPercentage={sheetPercentage} />
@@ -57,7 +58,7 @@ export default function App() {
         <color attach="background" args={['#f0f0f0']} />
         <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.05)} />
 
-        <Environment preset="forest" />
+        {/* <Environment preset="forest" /> */}
 
         {/* Lights */}
         <ambientLight intensity={0.5} />
@@ -86,6 +87,7 @@ export default function App() {
        
       </Canvas>
       {/* <Leva collapsed/> */}
+      <DateTimeDisplay />
       <Sheet sheetPercentage={sheetPercentage} />
       <Controls onPercentageChange={setSheetPercentage} />
     </>
