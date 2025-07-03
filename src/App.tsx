@@ -3,7 +3,7 @@ import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF, Center } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
-import { useControls } from 'leva'
+import { Leva, useControls } from 'leva'
 import React from 'react'
 import { Sheet } from './Sheet'
 import { Controls } from './Controls'
@@ -12,6 +12,8 @@ import { CameraRig } from './components/camera-rig'
 import SphericalSky from './components/SphericalSky'
 import Starfield from './components/Starfield'
 import WaterSphere from './components/WaterSphere'
+import Innio from './innio/Innio'
+import { useLocation } from 'wouter'
 
 // Pre-create reusable materials for better performance
 const MATERIALS = {
@@ -26,6 +28,7 @@ useGLTF.preload('/models/mindbody.glb')
 
 export default function App() {
   const [sheetPercentage, setSheetPercentage] = useState(0)
+  const [, setLocation] = useLocation()
 
   return (
     <>
@@ -34,6 +37,7 @@ export default function App() {
         camera={{ position: [0, 5, 12], fov: 35 }}
         eventSource={document.getElementById('root')!}
         eventPrefix="client"
+        onPointerMissed={() => setLocation('/')}
         gl={{
           antialias: true,
           powerPreference: "high-performance"
@@ -41,9 +45,11 @@ export default function App() {
         dpr={[1, 1.5]}
       >
         <Perf deepAnalyze position="top-left" />
+        <CameraRig sheetPercentage={sheetPercentage} />
+
 
         <color attach="background" args={['#f0f0f0']} />
-        <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.01)} />
+        <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.05)} />
 
         <Environment preset="forest" />
 
@@ -51,8 +57,8 @@ export default function App() {
         <ambientLight intensity={0.5} />
 
         {/* Main Scene Content */}
-        <Center   >
-          <Focusable id="01" name="pond" position={[-2, 1.2, 0]} inspectable>
+        <Center position={[0, 0, 0]}>
+          <Focusable id="01" name="innio" position={[-2, 1.2, 0]} inspectable>
             <TransmissionSphere />
           </Focusable>
           <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
@@ -63,15 +69,17 @@ export default function App() {
           </Focusable> */}
 
           {/* Shadows and Ground */}
-          <AccumulativeShadows frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.3} scale={20}>
+          <AccumulativeShadows frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={2} opacity={0.3} scale={20}>
             <RandomizedLight radius={10} ambient={0.5} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
 
+
         </Center>
 
-        <CameraRig sheetPercentage={sheetPercentage} />
-        {/* <Preload all /> */}
+  
+        <Preload all />
       </Canvas>
+      {/* <Leva collapsed/> */}
       <Sheet sheetPercentage={sheetPercentage} />
       <Controls onPercentageChange={setSheetPercentage} />
     </>
@@ -157,11 +165,13 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
       <SphericalSky
         radius={1.0}
         displayRadius={1000}
-        segments={8}
+        segments={48}
         lowQuality={true}
       />
 
       {/* <WaterSphere radius={0.99} /> */}
+
+      {/* <Innio /> */}
 
       <Starfield
         radius={1.00}
@@ -177,7 +187,8 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
         coreBrightness={3.0}
       />
 
-      <DreiSphere castShadow args={[1.01, 64, 64]}>
+      
+      {/* <DreiSphere castShadow args={[1.01, 64, 64]}>
         <MeshTransmissionMaterial
           backside
           samples={samples}
@@ -193,7 +204,7 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
           temporalDistortion={temporalDistortion}
           clearcoat={clearcoat}
         />
-      </DreiSphere>
+      </DreiSphere> */}
     </group>
   )
 });
