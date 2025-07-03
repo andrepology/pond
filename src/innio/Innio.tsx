@@ -104,7 +104,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   const wanderControls = useControls('Wander', {
     visionRange: { value: 5 * SCALE_FACTOR, min: 1 * SCALE_FACTOR, max: 10 * SCALE_FACTOR, step: 0.5 * SCALE_FACTOR },
     forwardDistance: { value: 2.5 * SCALE_FACTOR, min: 1 * SCALE_FACTOR, max: 5 * SCALE_FACTOR, step: 0.1 * SCALE_FACTOR },
-    radius: { value: 1 * SCALE_FACTOR, min: 0.1 * SCALE_FACTOR, max: 3 * SCALE_FACTOR, step: 0.1 * SCALE_FACTOR },
+    radius: { value: 0.4, min: 0.1, max: 1.0, step: 0.1 },
     updateInterval: { value: 0.8, min: 0.1, max: 2, step: 0.1 },
     arrivalDistance: { value: 0.3 * SCALE_FACTOR, min: 0.1 * SCALE_FACTOR, max: 1 * SCALE_FACTOR, step: 0.1 * SCALE_FACTOR },
   }, { collapsed: true })
@@ -117,9 +117,9 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
 
   const animationControls = useControls('Animation', {
     swayFrequency: { value: 1.0, min: 0.1, max: 5, step: 0.1 },
-    swayAmount: { value: 0.1, min: 0, max: 0.5, step: 0.01 },
+    swayAmount: { value: 0.1 * SCALE_FACTOR, min: 0, max: 0.5 * SCALE_FACTOR, step: 0.01 * SCALE_FACTOR },
     waveSpeed: { value: 3, min: 0.1, max: 10, step: 0.1 },
-    waveBase: { value: 0.2, min: 0, max: 1, step: 0.01 },
+    waveBase: { value: 0.2 * SCALE_FACTOR, min: 0, max: 1 * SCALE_FACTOR, step: 0.01 * SCALE_FACTOR },
   }, { collapsed: true })
 
   const probabilisticRestControls = useControls('Probabilistic Rest', {
@@ -286,6 +286,10 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   const tempVec1 = useMemo(() => new THREE.Vector3(), []);
   const tempVec2 = useMemo(() => new THREE.Vector3(), []);
   const tempVec3 = useMemo(() => new THREE.Vector3(), []);
+  const candidateTmp = useMemo(() => new THREE.Vector3(), []);
+  const prevPosTmp = useMemo(() => new THREE.Vector3(), []);
+  const basePosTmp = useMemo(() => new THREE.Vector3(), []);
+  const perpTmp = useMemo(() => new THREE.Vector3(), []);
 
   // Now let's modify the updateMovement function to use vector pooling
   const updateMovement = (delta: number) => {
@@ -310,154 +314,113 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       vectorPool.release(perp);
       vectorPool.release(targetPos);
     } else if (innioBehavior.state === InnioState.WANDER) {
-      applyBounds(headRef.current!.position);
       
-      // Get forward vector from pool
-      const forward = vectorPool.get();
-      if (currentVelocity.current.length() > 0.001) {
-        forward.copy(currentVelocity.current).normalize();
-      } else {
-        forward.set(0, 0, 1);
-      }
-      
-      // Get visionPoint from pool
-      const visionPoint = vectorPool.get();
-      visionPoint.copy(headRef.current!.position).add(forward.clone().multiplyScalar(params.visionDistance));
-      
-      const isVisionOut = visionPoint.x < params.bounds.min + params.boundaryBuffer ||
-                          visionPoint.x > params.bounds.max - params.boundaryBuffer ||
-                          visionPoint.y < params.bounds.min + params.boundaryBuffer ||
-                          visionPoint.y > params.bounds.max - params.boundaryBuffer ||
-                          visionPoint.z < params.bounds.min + params.boundaryBuffer ||
-                          visionPoint.z > params.bounds.max - params.boundaryBuffer;
-      
-      // Calculate the current effective target by interpolating between current and next
-      const currentTarget = vectorPool.get();
-      
-      // If we don't have a next target yet or just starting, use only the current target
-      if (nextWanderTargetRef.current.lengthSq() === 0) {
-        currentTarget.copy(wanderTargetRef.current);
-      } else {
-        // Update transition progress
-        targetTransitionRef.current += delta / params.updateInterval * 0.75;
-        
-        // Clamp transition to 0-1 range
-        targetTransitionRef.current = Math.min(targetTransitionRef.current, 1);
-        
-        // Use a smooth step function for more natural easing
-        const smoothT = smoothstep(0, 1, targetTransitionRef.current);
-        
-        // Interpolate between current and next targets
-        currentTarget.lerpVectors(wanderTargetRef.current, nextWanderTargetRef.current, smoothT);
-        
-        // If we've fully transitioned, make the next target the current one
-        if (targetTransitionRef.current >= 1) {
-          wanderTargetRef.current.copy(nextWanderTargetRef.current);
-          nextWanderTargetRef.current.set(0, 0, 0);
-          targetTransitionRef.current = 0;
-        }
-      }
-      
-      // Update displayed target position - use tempVec2 to avoid creating new Vector3
-      tempVec2.copy(currentTarget);
-      setWanderTargetState(tempVec2);
-      
-      const isTargetOut = currentTarget.x < params.bounds.min ||
-                          currentTarget.x > params.bounds.max ||
-                          currentTarget.y < params.bounds.min ||
-                          currentTarget.y > params.bounds.max ||
-                          currentTarget.z < params.bounds.min ||
-                          currentTarget.z > params.bounds.max;
-                          
-      const distToTarget = headRef.current!.position.distanceTo(currentTarget);
-      const shouldUpdate = (timeRef.current - lastWanderUpdateRef.current > params.updateInterval) ||
-                           (distToTarget < params.arrivalThreshold) ||
-                           isTargetOut ||
-                           isVisionOut;
-      
-      if (shouldUpdate && nextWanderTargetRef.current.lengthSq() === 0) {
-        // Get base vector from pool
-        const base = vectorPool.get();
-        if (isVisionOut) {
-          // Get toCenter vector from pool
-          const toCenter = vectorPool.get();
-          toCenter.subVectors(new THREE.Vector3(0, 0, 0), headRef.current!.position).normalize();
-          base.copy(headRef.current!.position).add(toCenter.multiplyScalar(params.forwardDistance));
-          vectorPool.release(toCenter);
-        } else {
-          base.copy(headRef.current!.position).add(forward.multiplyScalar(params.forwardDistance));
-        }
-        
-        const angle = Math.random() * Math.PI * 2;
-        const offsetLen = Math.random() * params.radius;
-        
-        // Get offset vector from pool
-        const offset = vectorPool.get();
-        // Generate a random direction in 3D space
-        const phi = Math.random() * Math.PI * 2; // Azimuthal angle
-        const theta = Math.random() * Math.PI; // Polar angle
-        offset.set(
-          Math.sin(theta) * Math.cos(phi),
-          Math.sin(theta) * Math.sin(phi),
-          Math.cos(theta)
-        ).multiplyScalar(offsetLen);
-        
-        // Get newTarget vector from pool
-        const newTarget = vectorPool.get();
-        newTarget.copy(base).add(offset);
-        
-        newTarget.x = THREE.MathUtils.clamp(newTarget.x, params.bounds.min, params.bounds.max);
-        newTarget.y = THREE.MathUtils.clamp(newTarget.y, params.bounds.min, params.bounds.max);
-        newTarget.z = THREE.MathUtils.clamp(newTarget.z, params.bounds.min, params.bounds.max);
-        
-        // Set the new target as the next target and start transition
-        if (wanderTargetRef.current.lengthSq() === 0) {
-          // If we don't have a current target, set directly
-          wanderTargetRef.current.copy(newTarget);
-        } else {
-          // Otherwise, set as next target and reset transition
-          nextWanderTargetRef.current.copy(newTarget);
-          targetTransitionRef.current = 0;
-        }
-        
-        lastWanderUpdateRef.current = timeRef.current;
-        
-        // Release vectors back to pool
-        vectorPool.release(offset);
-        vectorPool.release(newTarget);
-        vectorPool.release(base);
-      }
-      
-      // Steer toward the interpolated target
-      // Get desired vector from pool
       const desired = vectorPool.get();
-      desired.subVectors(currentTarget, headRef.current!.position);
-      const dist = desired.length();
-      desired.normalize();
-      
-      if (dist < params.slowingRadius) {
-        desired.multiplyScalar(params.maxSpeed * (dist / params.slowingRadius));
+      const pos = headRef.current!.position;
+      const buffer = params.boundaryBuffer;
+
+      // --- Boundary Avoidance: Highest Priority ---
+      if (Math.abs(pos.x) > params.bounds.max - buffer || Math.abs(pos.z) > params.bounds.max - buffer) {
+        // If near a boundary, the desired velocity is back towards the center.
+        // We preserve the current y-level.
+        const center = tempVec2.set(0, pos.y, 0);
+        desired.subVectors(center, pos).normalize().multiplyScalar(params.maxSpeed);
       } else {
-        desired.multiplyScalar(params.maxSpeed);
+        // --- Standard Wander Logic ---
+        applyBounds(headRef.current!.position);
+        
+        const forward = vectorPool.get();
+        if (currentVelocity.current.lengthSq() > 0.0001) {
+          forward.copy(currentVelocity.current).normalize();
+        } else {
+          forward.set(0, 0, 1);
+        }
+        
+        // Vision-based boundary detection
+        const visionPoint = vectorPool.get();
+        visionPoint.copy(headRef.current!.position).add(forward.multiplyScalar(params.visionDistance));
+        const isVisionOut = Math.abs(visionPoint.x) > params.bounds.max - params.boundaryBuffer || 
+                           Math.abs(visionPoint.y) > params.bounds.max - params.boundaryBuffer ||
+                           Math.abs(visionPoint.z) > params.bounds.max - params.boundaryBuffer;
+        vectorPool.release(visionPoint);
+
+        const currentTarget = vectorPool.get();
+        if (nextWanderTargetRef.current.lengthSq() === 0) {
+          currentTarget.copy(wanderTargetRef.current);
+        } else {
+          targetTransitionRef.current = Math.min(targetTransitionRef.current + delta / params.updateInterval * 0.75, 1);
+          const smoothT = smoothstep(0, 1, targetTransitionRef.current);
+          currentTarget.lerpVectors(wanderTargetRef.current, nextWanderTargetRef.current, smoothT);
+          if (targetTransitionRef.current >= 1) {
+            wanderTargetRef.current.copy(nextWanderTargetRef.current);
+            nextWanderTargetRef.current.set(0, 0, 0);
+            targetTransitionRef.current = 0;
+          }
+        }
+        
+        setWanderTargetState(tempVec3.copy(currentTarget));
+        
+        const isTargetOut = Math.abs(currentTarget.x) > params.bounds.max || Math.abs(currentTarget.z) > params.bounds.max;
+        const distToTarget = headRef.current!.position.distanceTo(currentTarget);
+        const shouldUpdate = (timeRef.current - lastWanderUpdateRef.current > params.updateInterval) || (distToTarget < params.arrivalThreshold) || isTargetOut || isVisionOut;
+        
+        if (shouldUpdate && nextWanderTargetRef.current.lengthSq() === 0) {
+          const base = vectorPool.get();
+          if (isVisionOut) {
+            const toCenter = vectorPool.get().subVectors(new THREE.Vector3(0, 0, 0), headRef.current!.position).normalize();
+            base.copy(headRef.current!.position).add(toCenter.multiplyScalar(params.forwardDistance));
+            vectorPool.release(toCenter);
+          } else {
+            base.copy(headRef.current!.position).add(forward.multiplyScalar(params.forwardDistance));
+          }
+          
+          const phi = Math.random() * Math.PI * 2;
+          const theta = Math.random() * Math.PI;
+          const offset = vectorPool.get().set(Math.sin(theta) * Math.cos(phi), Math.sin(theta) * Math.sin(phi), Math.cos(theta)).multiplyScalar(Math.random() * params.radius);
+          
+          const newTarget = vectorPool.get().copy(base).add(offset);
+          applyBounds(newTarget);
+          
+          if (wanderTargetRef.current.lengthSq() === 0) {
+            wanderTargetRef.current.copy(newTarget);
+          } else {
+            nextWanderTargetRef.current.copy(newTarget);
+            targetTransitionRef.current = 0;
+          }
+          
+          lastWanderUpdateRef.current = timeRef.current;
+          vectorPool.release(offset);
+          vectorPool.release(newTarget);
+          vectorPool.release(base);
+        }
+        
+        desired.subVectors(currentTarget, headRef.current!.position);
+        const dist = desired.length();
+        desired.normalize();
+        
+        if (dist < params.slowingRadius) {
+          desired.multiplyScalar(params.maxSpeed * (dist / params.slowingRadius));
+        } else {
+          desired.multiplyScalar(params.maxSpeed);
+        }
+        vectorPool.release(currentTarget);
+        vectorPool.release(forward);
       }
       
-      // Get steer vector from pool
-      const steer = vectorPool.get();
-      steer.copy(desired).sub(currentVelocity.current);
-      steer.clampLength(0, params.maxSteerForce);
-      
-      // Apply steering but maintain more constant speed
+      // --- Apply Steering (common to both boundary avoidance and wander) ---
+      const steer = vectorPool.get().subVectors(desired, currentVelocity.current).clampLength(0, params.maxSteerForce);
       currentVelocity.current.add(steer);
-      // Set a minimum speed (70-90% of max) for more constant movement
+      
+      // Minimum speed maintenance for more natural movement
       const minSpeed = params.maxSpeed * 0.8;
-      // Ensure velocity is between min and max speed
       if (currentVelocity.current.length() < minSpeed) {
         currentVelocity.current.normalize().multiplyScalar(minSpeed);
       } else {
         currentVelocity.current.clampLength(0, params.maxSpeed);
       }
-      // Add some quick, darting movements for more natural innio behavior
-      if (Math.random() < 0.02) { // Occasional quick darting movements
+      
+      // Add darting movements for more lifelike behavior
+      if (Math.random() < 0.02) { // 2% chance per frame
         const dart = Math.random() * 0.4 + 0.8; // 0.8-1.2x speed multiplier
         headRef.current!.position.add(
           currentVelocity.current.clone().multiplyScalar(dart)
@@ -465,14 +428,11 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       } else {
         headRef.current!.position.add(currentVelocity.current);
       }
-      applyBounds(headRef.current!.position);
       
-      // Release vectors back to pool
+      applyBounds(headRef.current!.position); // Keep hard clamp as a final safety measure
+      
       vectorPool.release(steer);
       vectorPool.release(desired);
-      vectorPool.release(currentTarget);
-      vectorPool.release(visionPoint);
-      vectorPool.release(forward);
     } else if (innioBehavior.state === InnioState.APPROACH) {
       if (!innioBehavior.target) return;
       const params = wanderParams.current;
@@ -535,35 +495,25 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     vectorPool.release(displacement);
   }
 
-  // Add a reusable vector
-  const candidateTmp = useMemo(() => new THREE.Vector3(), []);
-
   const computeTargetDirection = (): THREE.Vector3 => {
-    candidateTmp.set(0, 0, 0); // Reset the vector
+    candidateTmp.set(0, 0, 0);
     
-    if ((innioBehavior.state === InnioState.REST || innioBehavior.state === InnioState.TALK) 
-        && innioBehavior.stationaryDirection) {
-      candidateTmp.copy(innioBehavior.stationaryDirection);
+    if ((innioBehavior.state === InnioState.REST || innioBehavior.state === InnioState.TALK) && innioBehavior.stationaryDirection) {
+      return candidateTmp.copy(innioBehavior.stationaryDirection);
     } else if (innioBehavior.state === InnioState.APPROACH && innioBehavior.target) {
-      candidateTmp.copy(innioBehavior.target).sub(headRef.current!.position);
-      if (candidateTmp.length() > 0.001) {
-        candidateTmp.normalize();
-      } else {
-        candidateTmp.copy(lastHeadDir.current);
-      }
-    } else if (currentVelocity.current.length() > 0.001) {
-      candidateTmp.copy(currentVelocity.current).normalize();
+      candidateTmp.subVectors(innioBehavior.target, headRef.current!.position);
+    } else if (currentVelocity.current.lengthSq() > 0.0001) {
+      candidateTmp.copy(currentVelocity.current);
     } else {
-      candidateTmp.copy(lastHeadDir.current);
+      return lastHeadDir.current;
+    }
+
+    if (candidateTmp.lengthSq() > 0.0001) {
+      return candidateTmp.normalize();
     }
     
-    return candidateTmp;
+    return lastHeadDir.current;
   }
-
-  // Add these with your temp vectors
-  const prevPosTmp = useMemo(() => new THREE.Vector3(), []);
-  const basePosTmp = useMemo(() => new THREE.Vector3(), []);
-  const perpTmp = useMemo(() => new THREE.Vector3(), []);
 
   const updateTailSegments = (headDirection: THREE.Vector3) => {
     prevPosTmp.copy(headRef.current!.position);
@@ -742,7 +692,9 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
 
     // Update the innio behavior state machine
     innioBehavior.update(headRef.current.position, currentVelocity.current, delta)
-    setCurrentBehavior(innioBehavior.state)
+    if (currentBehavior !== innioBehavior.state) {
+      setCurrentBehavior(innioBehavior.state)
+    }
 
     // Update movement (head position, steering, and velocity)
     updateMovement(delta)
@@ -894,13 +846,24 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       tailRefs.current[i]!.userData.pulseBoost = 0;
     }
     // --- End Pulse Animation Logic ---
+
+    // -- Check for food target changes to force re-render
+    const newFoodCount = (innioBehavior.target ? 1 : 0) + innioBehavior.targetQueue.length;
+    if (newFoodCount !== foodCountRef.current) {
+        foodCountRef.current = newFoodCount;
+        setForceRender(c => c + 1);
+    }
   })
 
   // Add this ref for the Line
   const lineRef = useRef<THREE.Line>(null)
 
   // Constants for text display
-  const PUNCTUATION_PAUSE_EXTENSION = 300; // Keep this for natural pauses
+  const PUNCTUATION_PAUSE_EXTENSION = 300;
+  const DOUBLE_CLICK_TIME_THRESHOLD = 400;
+  const CLICK_MAX_DURATION = 300;
+  const CLICK_MOVE_THRESHOLD_SQUARED = (5 * SCALE_FACTOR) * (5 * SCALE_FACTOR);
+  const LONG_PRESS_THRESHOLD = 700;
 
   // State for text display
   const [allWordsForCurrentMessage, setAllWordsForCurrentMessage] = useState<string[]>([]);
@@ -1106,23 +1069,16 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   // Add state for tracking long press
   const [pressStartTime, setPressStartTime] = useState<number | null>(null)
   const [pressPosition, setPressPosition] = useState<THREE.Vector3 | null>(null)
-  const longPressThreshold = 700 // ms (slightly longer for better UX)
 
   // Function to handle feeding the innio and create ripple
   const handleFeedInnio = (position: THREE.Vector3) => {
-    const pt = position.clone()
-    pt.y = 0
+    if (innioBehavior.targetQueue.length > 10) return;
     
-    // Only set food target if the queue isn't too full
-    if (innioBehavior.targetQueue.length <= 10) {
-      innioBehavior.setFoodTarget(pt)
-      setFoodTarget(pt)
-      console.log('Food placed, new state:', innioBehavior.state)
-      setCurrentBehavior(innioBehavior.state)
-      
-      // --- Create Ripple Effect ---
-      createRippleEffect(pt);
-    }
+    const pt = position.clone();
+    pt.y = headRef.current?.position.y ?? 0;
+    
+    innioBehavior.setFoodTarget(pt);
+    createRippleEffect(pt);
   }
 
   // Function to create and manage a single ripple effect
@@ -1154,9 +1110,8 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   // Inside Innio component:
   const lastPointerDownRef = useRef<{ time: number; point: THREE.Vector3 | null }>({ time: 0, point: null });
   const lastFeedTapTimeRef = useRef<number>(0);
-  const DOUBLE_CLICK_TIME_THRESHOLD = 400; // ms between taps for double-click
-  const CLICK_MAX_DURATION = 300; // ms max duration for a tap/click
-  const CLICK_MOVE_THRESHOLD_SQUARED = (5 * SCALE_FACTOR) * (5 * SCALE_FACTOR); // Max movement squared for a tap/click
+  const foodCountRef = useRef(0);
+  const [, setForceRender] = useState(0);
 
   // Add audio listener ref
   const audioListener = useRef<THREE.AudioListener | null>(null);
@@ -1253,13 +1208,10 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
                 } else {
                     lastFeedTapTimeRef.current = upTime;
                 }
-            } else {
-                 if (currentPressStartTime && Date.now() - currentPressStartTime > longPressThreshold) {
-                     if (downDetails.point) {
-                         handleFeedInnio(downDetails.point);
-                     }
-                 }
+            } else if (pressStartTime && Date.now() - pressStartTime > LONG_PRESS_THRESHOLD) {
+              handleFeedInnio(downDetails.point);
             }
+            setPressStartTime(null);
           }}
           onPointerMove={(e: ThreeEvent<PointerEvent>) => {
              if (pressPosition && pressPosition.distanceTo(e.point) > 0.5 * SCALE_FACTOR) {

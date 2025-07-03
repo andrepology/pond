@@ -112,7 +112,7 @@ function FocusableLabel({ name, labelY, isVisible }: {
   const textRef = useFadeAnimation(isVisible)
 
   return (
-    <Billboard>
+    <Billboard raycast={() => null}>
       <Suspense fallback={null}>
         <Text
           ref={textRef}
@@ -139,15 +139,16 @@ export function Focusable({
   ...props 
 }: FocusableProps) {
   const { hovered, active, isVisible, labelY, handlers } = useFocusableState(id)
+  const { onPointerOut, onPointerOver, ...centerHandlers } = handlers
   
   useCursor(hovered)
 
   return (
-    <group {...props}>
+    <group {...props} onPointerOver={onPointerOver} onPointerOut={onPointerOut}>
       <Center
         name={id}
         userData={{ inspectable }}
-        {...handlers}
+        {...centerHandlers}
       >
         {React.cloneElement(children, { hovered, active })}
       </Center>

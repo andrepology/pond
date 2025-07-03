@@ -32,6 +32,8 @@ export default function App() {
 
   return (
     <>
+      <Leva collapsed />
+    
       <Canvas
         shadows="soft"
         camera={{ position: [0, 5, 12], fov: 35 }}
@@ -45,7 +47,11 @@ export default function App() {
         dpr={[1, 1.5]}
       >
         <Perf deepAnalyze position="top-left" />
+        <Preload all />
+        
         <CameraRig sheetPercentage={sheetPercentage} />
+
+      
 
 
         <color attach="background" args={['#f0f0f0']} />
@@ -62,7 +68,7 @@ export default function App() {
             <TransmissionSphere />
           </Focusable>
           <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
-            <InteractiveMindbody color="indianred" />
+            <MindBody color="indianred" />
           </Focusable>
           {/* <Focusable id="03" name="Sphere C" position={[2, 1, 0]}>
             <InteractiveSphere color="limegreen" />
@@ -77,7 +83,7 @@ export default function App() {
         </Center>
 
   
-        <Preload all />
+       
       </Canvas>
       {/* <Leva collapsed/> */}
       <Sheet sheetPercentage={sheetPercentage} />
@@ -104,9 +110,8 @@ const InteractiveSphere = forwardRef<any, InteractiveProps>(({ color, hovered, a
   )
 });
 
-const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
+const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
   const groupRef = useRef<THREE.Group>(null)
-  const primitiveRef = useRef<THREE.Object3D>(null)
   const { scene } = useGLTF('/models/mindbody.glb')
 
   useEffect(() => {
@@ -116,36 +121,30 @@ const InteractiveMindbody = forwardRef<any, InteractiveProps>(({ color, hovered,
       metalness: 0.19
     })
 
-    scene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.material = stoneMaterial
-        child.castShadow = true
-      }
-    })
+    const mesh = scene.children[0]
+    if (mesh instanceof THREE.Mesh) {
+      mesh.material = stoneMaterial
+      mesh.castShadow = true
+    }
   }, [scene])
+
+  useFrame(() => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y += 0.001
+    }
+  })
 
   return (
     <group ref={groupRef} scale={0.45} {...props}>
-      <primitive ref={primitiveRef} object={scene} rotation={[0, Math.PI, 0]} />
+      <Center>
+        <primitive object={scene} rotation={[0, Math.PI, 0]} />
+      </Center>
     </group>
   )
 });
 
 const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  const {
-    samples,
-    resolution,
-    transmission,
-    roughness,
-    thickness,
-    ior,
-    chromaticAberration,
-    anisotropy,
-    distortion,
-    distortionScale,
-    temporalDistortion,
-    clearcoat
-  } = useControls('Transmission Material', {
+  useControls('Transmission Material', {
     samples: { value: 5, min: 1, max: 20, step: 1 },
     resolution: { value: 256, min: 64, max: 1024, step: 64 },
     transmission: { value: 1, min: 0, max: 1, step: 0.01 },
@@ -171,9 +170,9 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
 
       {/* <WaterSphere radius={0.99} /> */}
 
-      {/* <Innio /> */}
+      <Innio />
 
-      <Starfield
+      {/* <Starfield
         radius={1.00}
         count={50}
         minStarSize={0.0}
@@ -185,7 +184,7 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
         bloomStrength={0.5}
         distanceFalloff={1.8}
         coreBrightness={3.0}
-      />
+      /> */}
 
       
       {/* <DreiSphere castShadow args={[1.01, 64, 64]}>
