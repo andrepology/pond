@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF, Center, useTexture } from '@react-three/drei'
+import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import { Leva, useControls } from 'leva'
 import React from 'react'
@@ -33,7 +33,7 @@ export default function App() {
 
   return (
     <>
-      <Leva collapsed />
+      <Leva collapsed hidden />
     
       <Canvas
         shadows="soft"
@@ -48,7 +48,7 @@ export default function App() {
         dpr={[1, 1.5]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
-        
+        <Stats />
       
         <CameraRig sheetPercentage={sheetPercentage} />
 
