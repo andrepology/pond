@@ -12,7 +12,7 @@ import { CameraRig } from './components/camera-rig'
 import SphericalSky from './components/SphericalSky'
 import Starfield from './components/Starfield'
 import WaterSphere from './components/WaterSphere'
-import Innio from './innio/Innio'
+// import Innio from './innio/Innio'
 import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/adaptive-fog'
@@ -169,7 +169,7 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
 
       <WaterSphere radius={0.99} />
 
-      <Innio />
+      {/* <Innio /> */}
 
       <Starfield
         radius={1.00}

@@ -1129,6 +1129,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       setIsTextContainerVisible(false); // Start fading out the text container
       
       // Schedule cleanup of message data after fade-out duration
+      // @ts-ignore
       stopTalkCleanupTimeoutRef.current = setTimeout(() => {
         // Double-check state in case innio started talking again very quickly
         if (innioBehavior.state !== InnioState.TALK) {
@@ -1191,9 +1192,11 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
                 innioBehavior.stopTalking();
               }
             }, 5000); // Increased from 1000 to 3000 (3 seconds)
+            // @ts-ignore
             newTimeoutsHolder.push(finalTimeout);
           }
         }, cumulativeDelay);
+        // @ts-ignore
         newTimeoutsHolder.push(wordTimeout);
       });
 
