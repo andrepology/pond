@@ -27,7 +27,7 @@ const AmbientAudio: React.FC<any> = () => null
 const EffectComposer: React.FC<any> = ({ children }) => <>{children}</>
 const Bloom: React.FC<any> = () => null
 
-const SCALE_FACTOR = 1 / 12;
+const SCALE_FACTOR = 1 / 24;
 
 interface InnioProps {
   onPositionUpdate?: (position: THREE.Vector3) => void
@@ -79,7 +79,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   const prevHeadPos = useRef(new THREE.Vector3())
 
   // --- For a smooth, consistent heading ---
-  const lastHeadDir = useRef(new THREE.Vector3(0, 0, 1))
+  const lastHeadDir = useRef(new THREE.Vector3(0, 1, 0))
 
   // --- Time reference used for animations ---
   const timeRef = useRef(0)
@@ -120,6 +120,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     swayAmount: { value: 0.1 * SCALE_FACTOR, min: 0, max: 0.5 * SCALE_FACTOR, step: 0.01 * SCALE_FACTOR },
     waveSpeed: { value: 3, min: 0.1, max: 10, step: 0.1 },
     waveBase: { value: 0.2 * SCALE_FACTOR, min: 0, max: 1 * SCALE_FACTOR, step: 0.01 * SCALE_FACTOR },
+    tailResponsiveness: { value: 0.1, min: 0.01, max: 0.3, step: 0.01 },
   }, { collapsed: true })
 
   const probabilisticRestControls = useControls('Probabilistic Rest', {
@@ -175,6 +176,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
 
   // --- Food target state (for placing food and marker rendering) ---
   const [foodTarget, setFoodTarget] = useState<THREE.Vector3 | null>(null)
+  const [foodQueue, setFoodQueue] = useState<THREE.Vector3[]>([])
 
   // --- Create InnioBehavior instance (state machine) ---
   const innioBehavior = useMemo(() => new InnioBehavior({
@@ -184,6 +186,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     bounds: { min: boundaryControls.min, max: boundaryControls.max },
     onEat: () => {
       setFoodTarget(null) // Clear the food target state when eaten
+      setFoodQueue(prev => prev.slice(1)) // Remove first item from queue
       setTailCount((prev) => {
         if (prev == MAX_LENGTH) {
           return prev
@@ -204,7 +207,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     if (tailPositions.current.length === 0) {
       const initialPositions: THREE.Vector3[] = []
       for (let i = 0; i < tailCount; i++) {
-        initialPositions.push(new THREE.Vector3(0, -(i + 1) * 0.5 * SCALE_FACTOR, 0))
+        initialPositions.push(new THREE.Vector3(0, -(i + 1) * 0.5 * SCALE_FACTOR, 0))  // Tail extends in negative Y direction
       }
       tailPositions.current = initialPositions
     }
@@ -215,7 +218,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       // Use the last segment's position (or a default value if none exist)
       const lastPos = tailPositions.current.length > 0 
         ? tailPositions.current[tailPositions.current.length - 1].clone()
-        : new THREE.Vector3(0, -0.5 * SCALE_FACTOR, 0)
+        : new THREE.Vector3(0, -0.5 * SCALE_FACTOR, 0)  // Default position in negative Y
       const numToAdd = tailCount - tailPositions.current.length
       for (let i = 0; i < numToAdd; i++) {
         tailPositions.current.push(lastPos.clone())
@@ -300,9 +303,12 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
 
   const getDistanceToBoundary = (pos: THREE.Vector3, bounds: { min: number, max: number }) => {
     const distances = [
-      bounds.max - Math.abs(pos.x),
-      bounds.max - Math.abs(pos.y), 
-      bounds.max - Math.abs(pos.z)
+      pos.x - bounds.min,
+      bounds.max - pos.x,
+      pos.y - bounds.min,
+      bounds.max - pos.y,
+      pos.z - bounds.min,
+      bounds.max - pos.z
     ];
     return Math.min(...distances);
   };
@@ -312,18 +318,27 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     normal.set(0, 0, 0);
     
     // Check each axis and find the closest boundary
-    const distX = bounds.max - Math.abs(pos.x);
-    const distY = bounds.max - Math.abs(pos.y);
-    const distZ = bounds.max - Math.abs(pos.z);
+    const distXMin = pos.x - bounds.min;
+    const distXMax = bounds.max - pos.x;
+    const distYMin = pos.y - bounds.min;
+    const distYMax = bounds.max - pos.y;
+    const distZMin = pos.z - bounds.min;
+    const distZMax = bounds.max - pos.z;
     
-    const minDist = Math.min(distX, distY, distZ);
+    const minDist = Math.min(distXMin, distXMax, distYMin, distYMax, distZMin, distZMax);
     
-    if (minDist === distX) {
-      normal.x = pos.x > 0 ? -1 : 1;
-    } else if (minDist === distY) {
-      normal.y = pos.y > 0 ? -1 : 1;
+    if (minDist === distXMin) {
+      normal.x = 1;
+    } else if (minDist === distXMax) {
+      normal.x = -1;
+    } else if (minDist === distYMin) {
+      normal.y = 1;
+    } else if (minDist === distYMax) {
+      normal.y = -1;
+    } else if (minDist === distZMin) {
+      normal.z = 1;
     } else {
-      normal.z = pos.z > 0 ? -1 : 1;
+      normal.z = -1;
     }
     
     return normal.normalize();
@@ -373,33 +388,43 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
   const swimCycleRef = useRef({
     phase: 'glide' as 'burst' | 'glide',
     timer: 0,
-    burstDuration: 0.4,
-    glideDuration: 1.0,
-    intensity: 1.0
+    burstDuration: 0.6,
+    glideDuration: 1.5,
+    intensity: 1.0,
+    transitionProgress: 0  // Add smooth transition between phases
   });
 
   const updateSwimCycle = (delta: number, nearBoundary: boolean) => {
     const cycle = swimCycleRef.current;
     cycle.timer += delta;
     
+    // Smooth transition between phases
+    const transitionSpeed = 3.0; // How fast to transition between phases
+    
     if (nearBoundary) {
-      // When near boundaries, use shorter, more controlled bursts
-      cycle.burstDuration = 0.2;
-      cycle.glideDuration = 0.4;
-      cycle.intensity = 0.6;
+      // When near boundaries, use more controlled movement
+      cycle.burstDuration = 0.4;
+      cycle.glideDuration = 0.8;
+      cycle.intensity = 0.7;
     } else {
-      // Normal swimming pattern
-      cycle.burstDuration = 0.3 + Math.random() * 0.2;
-      cycle.glideDuration = 0.8 + Math.random() * 0.7;
-      cycle.intensity = 0.8 + Math.random() * 0.4;
+      // Normal swimming - predictable, non-random
+      cycle.burstDuration = 0.6;
+      cycle.glideDuration = 1.4;
+      cycle.intensity = 1.0;
     }
     
-    if (cycle.phase === 'burst' && cycle.timer >= cycle.burstDuration) {
-      cycle.phase = 'glide';
-      cycle.timer = 0;
-    } else if (cycle.phase === 'glide' && cycle.timer >= cycle.glideDuration) {
-      cycle.phase = 'burst';
-      cycle.timer = 0;
+    if (cycle.phase === 'burst') {
+      cycle.transitionProgress = Math.min(1, cycle.transitionProgress + delta * transitionSpeed);
+      if (cycle.timer >= cycle.burstDuration) {
+        cycle.phase = 'glide';
+        cycle.timer = 0;
+      }
+    } else { // glide
+      cycle.transitionProgress = Math.max(0, cycle.transitionProgress - delta * transitionSpeed);
+      if (cycle.timer >= cycle.glideDuration) {
+        cycle.phase = 'burst';
+        cycle.timer = 0;
+      }
     }
     
     return cycle;
@@ -416,13 +441,20 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       const sway = Math.sin(timeRef.current * animationControls.swayFrequency) * animationControls.swayAmount;
       // Get perp vector from pool
       const perp = vectorPool.get();
-      perp.set(-innioBehavior.stationaryDirection.z, 0, innioBehavior.stationaryDirection.x);
+      perp.set(-innioBehavior.stationaryDirection.y, innioBehavior.stationaryDirection.x, 0);  // Changed for YZ plane
       
+      // The center of sway now drifts slowly
+      const drift = vectorPool.get()
+        .copy(innioBehavior.stationaryDirection)
+        .multiplyScalar(0.002 * SCALE_FACTOR * delta);
+      innioBehavior.stationaryPosition.add(drift);
+      vectorPool.release(drift);
+
       // Get targetPos from pool
       const targetPos = vectorPool.get();
       targetPos.copy(innioBehavior.stationaryPosition).add(perp.multiplyScalar(sway));
       
-      headRef.current!.position.lerp(targetPos, 0.1);
+      headRef.current!.position.lerp(targetPos, 0.05); // Slower lerp for more fluid motion
       
       // Release vectors back to pool
       vectorPool.release(perp);
@@ -449,7 +481,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         if (currentVelocity.current.lengthSq() > 0.0001) {
           forward.copy(currentVelocity.current).normalize();
         } else {
-          forward.set(0, 0, 1);
+          forward.set(0, 1, 0);
         }
         
         // Vision-based boundary detection
@@ -476,7 +508,9 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         
         setWanderTargetState(tempVec3.copy(currentTarget));
         
-        const isTargetOut = Math.abs(currentTarget.x) > params.bounds.max || Math.abs(currentTarget.z) > params.bounds.max;
+        const isTargetOut = Math.abs(currentTarget.x) > params.bounds.max || 
+                           Math.abs(currentTarget.y) > params.bounds.max || 
+                           Math.abs(currentTarget.z) > params.bounds.max;
         const distToTarget = headRef.current!.position.distanceTo(currentTarget);
         const shouldUpdate = (timeRef.current - lastWanderUpdateRef.current > params.updateInterval) || (distToTarget < params.arrivalThreshold) || isTargetOut || isVisionOut;
         
@@ -485,7 +519,8 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
           if (isVisionOut) {
             // Steer toward center when vision detects boundary
             const toCenter = vectorPool.get();
-            toCenter.set(0, headRef.current!.position.y, 0).sub(headRef.current!.position).normalize();
+            const centerY = (params.bounds.min + params.bounds.max) / 2;  // Calculate actual center
+            toCenter.set(0, centerY, 0).sub(headRef.current!.position).normalize();
             base.copy(headRef.current!.position).add(toCenter.multiplyScalar(params.forwardDistance));
             vectorPool.release(toCenter);
           } else {
@@ -548,38 +583,22 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         // Slow down near boundaries
         targetSpeed *= Math.max(0.3, dist / boundaryZones.awareness);
       } else {
-        // Apply burst-glide pattern
-        if (swimCycle.phase === 'burst') {
-          targetSpeed *= swimCycle.intensity;
-          
-          // During burst, ensure minimum speed
-          const minSpeed = params.maxSpeed * 0.6;
-          if (currentVelocity.current.length() < minSpeed) {
-            currentVelocity.current.normalize().multiplyScalar(minSpeed);
-          }
-        } else {
-          // Glide phase - gradual deceleration
-          const glideProgress = swimCycle.timer / swimCycle.glideDuration;
-          const glideFactor = 0.3 + (0.5 * (1 - glideProgress));
-          targetSpeed *= glideFactor;
-        }
+        // Apply burst-glide pattern with smooth transitions
+        const swimIntensity = swimCycle.transitionProgress; // 0 = full glide, 1 = full burst
+        
+        // Base speed is a glide, burst adds to it.
+        const glideSpeed = params.maxSpeed * 0.4;
+        const burstSpeed = params.maxSpeed * 0.8; // Additional speed
+        targetSpeed = glideSpeed + (burstSpeed * swimIntensity);
       }
       
-      // Apply drag for more realistic physics
-      const drag = 0.02;
+      // Apply smoother drag for more realistic physics
+      const drag = 0.015;
       currentVelocity.current.multiplyScalar(1 - drag);
       
       currentVelocity.current.clampLength(0, targetSpeed);
       
-      // Add darting movements only when not near boundaries
-      if (dist > boundaryZones.caution && Math.random() < 0.02) {
-        const dart = Math.random() * 0.4 + 0.8;
-        headRef.current!.position.add(
-          currentVelocity.current.clone().multiplyScalar(dart)
-        );
-      } else {
-        headRef.current!.position.add(currentVelocity.current);
-      }
+      headRef.current!.position.add(currentVelocity.current);
       
       applyBounds(headRef.current!.position); // Final safety clamp
       
@@ -603,7 +622,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       }
       
       const wiggle = Math.sin(timeRef.current * 2) * 0.2;
-      desired.applyAxisAngle(new THREE.Vector3(0, 1, 0), wiggle);
+      desired.applyAxisAngle(new THREE.Vector3(0, 0, 1), wiggle);  // Changed axis for YZ plane
       
       // Get steer vector from pool
       const steer = vectorPool.get();
@@ -686,40 +705,36 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
                     (animationControls.swayAmount * attenuation);
         
         // Reuse perpTmp
-        perpTmp.set(-headDirection.z, 0, headDirection.x);
+        perpTmp.set(-headDirection.y, headDirection.x, 0);  // Changed for YZ plane
         basePosTmp.add(perpTmp.multiplyScalar(sway));
       } else {
         const speedFactor = THREE.MathUtils.clamp(currentVelocity.current.length() * 10, 0.2, 1);
         const baseAmp = animationControls.waveBase * (1 - i / tailCount);
         
-        // Enhance wave based on swim cycle
-        let waveAmp = baseAmp * speedFactor;
-        let waveSpeed = animationControls.waveSpeed;
+        // Use the smooth transition progress for wave modulation
+        const swimIntensity = swimCycleRef.current.transitionProgress;
         
-        if (swimCycleRef.current.phase === 'burst') {
-          // Stronger, faster waves during burst
-          waveAmp *= 1.5;
-          waveSpeed *= 1.3;
-        } else {
-          // Gentler waves during glide
-          const glideProgress = swimCycleRef.current.timer / swimCycleRef.current.glideDuration;
-          waveAmp *= (0.5 + 0.5 * (1 - glideProgress));
-        }
+        // Smoother wave modulation based on swim phase
+        let waveAmp = baseAmp * speedFactor * (0.6 + swimIntensity * 0.4);
+        let waveSpeed = animationControls.waveSpeed * (0.8 + swimIntensity * 0.2);
         
-        const waveOffset = Math.sin(timeRef.current * waveSpeed + i * 5) * waveAmp;
+        const waveOffset = Math.sin(timeRef.current * waveSpeed - i * 5) * waveAmp;
         
         // Reuse perpTmp
-        perpTmp.set(-headDirection.z, 0, headDirection.x);
-        basePosTmp.add(perpTmp.multiplyScalar(waveOffset));
+        perpTmp.set(-headDirection.y, headDirection.x, 0);  // Changed for YZ plane
+        
+        // Add lateral motion from turning
+        const lateralForce = bodyBankingRef.current.lateralAcceleration * (1 - segProgress) * 0.1;
+        basePosTmp.add(perpTmp.multiplyScalar(waveOffset - lateralForce));
         
         // Add banking to tail segments
         if (bodyBankingRef.current.currentBank !== 0) {
           const bankOffset = bodyBankingRef.current.currentBank * 0.02 * (1 - i / tailCount);
-          basePosTmp.y += bankOffset;
+          basePosTmp.z += bankOffset; // Use Z for vertical offset in YZ plane
         }
       }
       
-      tailPositions.current[i].lerp(basePosTmp, 0.05);
+      tailPositions.current[i].lerp(basePosTmp, animationControls.tailResponsiveness);
       const curDist = tailPositions.current[i].distanceTo(prevPosTmp);
       
       if (curDist > spacing) {
@@ -906,14 +921,16 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       // Calculate lateral acceleration (approximation)
       const velocityDir = currentVelocity.current.clone().normalize();
       const turnRate = 1 - velocityDir.dot(lastHeadDir.current);
+      const speed = currentVelocity.current.length();
+      
+      bodyBankingRef.current.lateralAcceleration = turnRate * speed * 200; // Store for tail physics
       
       // Bank angle proportional to turn rate and speed
-      const speed = currentVelocity.current.length();
-      bodyBankingRef.current.targetBank = turnRate * speed * 50; // Adjust multiplier for desired effect
+      bodyBankingRef.current.targetBank = bodyBankingRef.current.lateralAcceleration * 0.5; // Proportional to lateral accel
       
       // Determine banking direction based on cross product
       const cross = new THREE.Vector3().crossVectors(lastHeadDir.current, velocityDir);
-      if (cross.y < 0) bodyBankingRef.current.targetBank *= -1;
+      if (cross.x < 0) bodyBankingRef.current.targetBank *= -1;  // Changed from cross.y to cross.x for YZ plane
       
       // Smooth banking transition
       bodyBankingRef.current.currentBank = THREE.MathUtils.lerp(
@@ -923,7 +940,7 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
       );
       
       // Apply banking to head rotation
-      headRef.current.rotation.z = bodyBankingRef.current.currentBank * 0.3; // Max 30% of calculated bank
+      headRef.current.rotation.x = bodyBankingRef.current.currentBank * 0.3; // Changed from rotation.z to rotation.x for YZ plane
     }
 
     // Calculate perspective line
@@ -1055,11 +1072,16 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
     }
     // --- End Pulse Animation Logic ---
 
-    // -- Check for food target changes to force re-render
-    const newFoodCount = (innioBehavior.target ? 1 : 0) + innioBehavior.targetQueue.length;
-    if (newFoodCount !== foodCountRef.current) {
-        foodCountRef.current = newFoodCount;
-        setForceRender(c => c + 1);
+    // Sync food target state with behavior
+    if (innioBehavior.target && !foodTarget) {
+      setFoodTarget(innioBehavior.target);
+    } else if (!innioBehavior.target && foodTarget) {
+      setFoodTarget(null);
+    }
+    
+    // Sync food queue state
+    if (innioBehavior.targetQueue.length !== foodQueue.length) {
+      setFoodQueue([...innioBehavior.targetQueue]);
     }
   })
 
@@ -1283,13 +1305,25 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
 
   // Function to handle feeding the innio and create ripple
   const handleFeedInnio = (position: THREE.Vector3) => {
-    if (innioBehavior.targetQueue.length > 10) return;
+    if (foodQueue.length > 10) return;
     
     const pt = position.clone();
-    pt.y = headRef.current?.position.y ?? 0;
     
-    innioBehavior.setFoodTarget(pt);
-    setFoodTarget(pt); // Update React state for food target
+    if (headRef.current) {
+        const headWorldPos = new THREE.Vector3();
+        headRef.current.getWorldPosition(headWorldPos);
+        pt.y = headWorldPos.y; // Use world Y position
+    } else {
+        pt.y = 0; // Fallback
+    }
+    
+    if (!foodTarget) {
+      innioBehavior.setFoodTarget(pt);
+      setFoodTarget(pt); // Update React state for food target
+    } else {
+      innioBehavior.targetQueue.push(pt);
+      setFoodQueue(prev => [...prev, pt]); // Update React state for queue
+    }
     createRippleEffect(pt);
   }
 
@@ -1534,15 +1568,25 @@ const Innio: React.FC<InnioProps> = ({ onPositionUpdate }) => {
         </group>
 
         {/* Food Marker */}
-        { [innioBehavior.target, ...innioBehavior.targetQueue].filter(Boolean).map((ft, idx) => (
+        {foodTarget && (
           <mesh
-            key={idx}
-            position={[
-              ft!.x,
-              ft!.y,
-              ft!.z,
-            ]}
-            
+            position={[foodTarget.x, foodTarget.y, foodTarget.z]}
+          >
+            <sphereGeometry args={[0.035 * SCALE_FACTOR, 12, 12]} />
+            <meshToonMaterial 
+              color="#FFFFFF"
+              emissive="#FFFFFF"
+              emissiveIntensity={3.2}
+              toneMapped={false}
+              gradientMap={gradientMap}
+            />
+          </mesh>
+        )}
+        
+        {foodQueue.map((ft, idx) => (
+          <mesh
+            key={`food-${idx}-${ft.x}-${ft.y}-${ft.z}`}
+            position={[ft.x, ft.y, ft.z]}
           >
             <sphereGeometry args={[0.035 * SCALE_FACTOR, 12, 12]} />
             <meshToonMaterial 

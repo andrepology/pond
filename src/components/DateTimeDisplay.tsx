@@ -19,6 +19,7 @@ interface DateTimeState {
   fadeClass: string
   hours: number
   minutes: number
+  seconds: number
 }
 
 const formatDate = (date: Date): string => {
@@ -57,7 +58,8 @@ export function DateTimeDisplay() {
     cycle: 0,
     fadeClass: 'opacity-100',
     hours: 0,
-    minutes: 0
+    minutes: 0,
+    seconds: 0
   })
   
   const intervalRef = useRef<number | undefined>(undefined)
@@ -88,7 +90,8 @@ export function DateTimeDisplay() {
          cycle: cyclePosition,
          fadeClass: shouldFade ? 'opacity-0' : 'opacity-100',
          hours: now.getHours(),
-         minutes: now.getMinutes()
+         minutes: now.getMinutes(),
+         seconds: seconds
        }))
     }
 
@@ -122,11 +125,26 @@ export function DateTimeDisplay() {
     return (value / max) * 360 - 90 // -90 to start at 12 o'clock
   }
 
-  const hourAngle = getClockArmRotation(state.hours % 12, 12)
-  const minuteAngle = getClockArmRotation(state.minutes, 60)
+  const getHourAngle = (hours: number, minutes: number, seconds: number) => {
+    const hourOn12h = hours % 12;
+    const minuteWithFraction = minutes + seconds / 60;
+    const hourWithFraction = hourOn12h + (minuteWithFraction / 60);
+    return (hourWithFraction / 12) * 360;
+  }
+
+  const getMinuteAngle = (minutes: number, seconds: number) => {
+    const minuteWithFraction = minutes + seconds / 60;
+    return (minuteWithFraction / 60) * 360;
+  }
+
+  const { hours, minutes, seconds } = state;
+
+  // Calculate clock angles using the new functions
+  const hourAngle = getHourAngle(hours, minutes, seconds);
+  const minuteAngle = getMinuteAngle(minutes, seconds);
 
     return (
-    <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+    <div className="fixed top-8 left-1/2 scale-75 transform -translate-x-1/2 z-50 pointer-events-none">
       <div className="relative flex items-center justify-center">
         {/* Text display - centered with fixed width */}
         <div 
@@ -137,7 +155,7 @@ export function DateTimeDisplay() {
             className={`text-2xl font-bold transition-opacity duration-1000 ${state.fadeClass}`}
             style={{ 
               fontFamily: 'AlteHaasGroteskBold, sans-serif',
-              color: 'rgba(184, 184, 184, 0.9)'
+              color: 'rgba(144, 144, 144, 0.8)'
             }}
           >
             {getCurrentText()}
@@ -151,7 +169,7 @@ export function DateTimeDisplay() {
             <div 
               className="absolute rounded-full"
               style={{
-                backgroundColor: 'rgba(204, 204, 204, 0.7)',
+                backgroundColor: 'rgba(144, 144, 144, 0.8)',
                 width: '3px',
                 height: '18px',
                 transform: `rotate(${hourAngle}deg)`,
@@ -167,7 +185,7 @@ export function DateTimeDisplay() {
             <div 
               className="absolute rounded-full"
               style={{
-                backgroundColor: 'rgba(204, 204, 204, 0.7)',
+                backgroundColor: 'rgba(144, 144, 144, 0.8)',
                 width: '2px',
                 height: '25px',
                 transform: `rotate(${minuteAngle}deg)`,
@@ -179,19 +197,7 @@ export function DateTimeDisplay() {
               }}
             />
             
-            {/* Center dot */}
-            <div 
-              className="absolute rounded-full"
-              style={{
-                backgroundColor: 'rgba(204, 204, 204, 0.8)',
-                width: '4px',
-                height: '4px',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 10
-              }}
-            />
+        
           </div>
         </div>
       </div>

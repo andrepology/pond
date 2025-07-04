@@ -49,16 +49,16 @@ export default function App() {
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         <Preload all />
-        
+      
         <CameraRig sheetPercentage={sheetPercentage} />
 
       
 
 
         <color attach="background" args={['#f0f0f0']} />
-        <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.05)} />
+        <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.03)} />
 
-        {/* <Environment preset="forest" /> */}
+        <Environment preset="forest" />
 
         {/* Lights */}
         <ambientLight intensity={0.5} />
@@ -148,17 +148,17 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
 const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
   const transmissionControls = useControls('Transmission Material', {
     samples: { value: 5, min: 1, max: 20, step: 1 },
-    resolution: { value: 256, min: 64, max: 1024, step: 64 },
-    transmission: { value: 1, min: 0, max: 1, step: 0.01 },
+    resolution: { value: 512, min: 64, max: 1024, step: 64 },
+    transmission: { value: 1.0, min: 0, max: 1, step: 0.01 },
     roughness: { value: 0.0, min: 0, max: 1, step: 0.01 },
-    thickness: { value: 0.2, min: 0, max: 2, step: 0.01 },
-    ior: { value: 1.5, min: 1, max: 3, step: 0.01 },
+    thickness: { value: 0.8, min: 0, max: 2, step: 0.01 },
+    ior: { value: 1.0, min: 1, max: 3, step: 0.01 },
     chromaticAberration: { value: 0.02, min: 0, max: 0.1, step: 0.001 },
-    anisotropy: { value: 0.1, min: 0, max: 1, step: 0.01 },
-    distortion: { value: 0.1, min: 0, max: 1, step: 0.01 },
+    anisotropy: { value: 0.0, min: 0, max: 1, step: 0.01 },
+    distortion: { value: 0.0, min: 0, max: 1, step: 0.01 },
     distortionScale: { value: 4.3, min: 0, max: 10, step: 0.1 },
-    temporalDistortion: { value: 0.2, min: 0, max: 1, step: 0.01 },
-    clearcoat: { value: 1, min: 0, max: 1, step: 0.01 }
+    temporalDistortion: { value: 0.0, min: 0, max: 1, step: 0.01 },
+    clearcoat: { value: 0.0, min: 0, max: 1, step: 0.01 }
   })
 
   return (
@@ -170,7 +170,7 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
         lowQuality={true}
       />
 
-      <WaterSphere radius={0.99} />
+      {/* <WaterSphere radius={0.99} /> */}
 
       <Innio />
 
@@ -189,9 +189,9 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
       /> */}
 
       
-      {/* <DreiSphere castShadow args={[1.01, 64, 64]}>
+      {/* <DreiSphere castShadow args={[1.00, 64, 64]}>
         <MeshTransmissionMaterial
-          backside
+          
           samples={transmissionControls.samples}
           resolution={transmissionControls.resolution}
           transmission={transmissionControls.transmission}
