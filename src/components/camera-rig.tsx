@@ -35,7 +35,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       const { x, y, z } = targetPositionRef.current
 
       // Adjust distance based on aspect ratio
-      const distance = 10 / Math.min(viewport.aspect, 1)
+      const distance = 12 / Math.min(viewport.aspect, 1)
 
       // Set camera to look at the object from an offset, adjusted for the sheet
       cameraControls?.setLookAt(x, y + 1 + yOffset, z + distance, x, y + yOffset, z, true)
@@ -47,7 +47,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       }
       // Adjust distance for the default view, adjusted for the sheet
       const distance = 10 / Math.min(viewport.aspect, 1)
-      cameraControls?.setLookAt(8, 4 + yOffset, distance, 0, 0, 0, true)
+      cameraControls?.setLookAt(0, 4 + yOffset, distance, -1, 0, 0, true)
     }
   }, [params?.id, controls, scene, viewport.aspect, sheetPercentage])
 

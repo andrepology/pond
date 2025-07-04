@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF, Center } from '@react-three/drei'
+import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF, Center, useTexture } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import { Leva, useControls } from 'leva'
 import React from 'react'
@@ -26,6 +26,7 @@ const MATERIALS = {
 
 // Preload the GLB model for better performance
 useGLTF.preload('/models/mindbody.glb')
+useGLTF.preload('/models/wellstone.glb')
 
 export default function App() {
   const [sheetPercentage, setSheetPercentage] = useState(0)
@@ -71,9 +72,9 @@ export default function App() {
           <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
             <MindBody color="indianred" />
           </Focusable>
-          {/* <Focusable id="03" name="Sphere C" position={[2, 1, 0]}>
-            <InteractiveSphere color="limegreen" />
-          </Focusable> */}
+          <Focusable id="03" name="wellstone" position={[1, 0.6, 0]}>
+            <WellStone color="limegreen" />
+          </Focusable>
 
           {/* Shadows and Ground */}
           <AccumulativeShadows frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={2} opacity={0.3} scale={20}>
@@ -131,7 +132,7 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
   }, [scene])
 
   useFrame(() => {
-    if (groupRef.current) {
+    if (groupRef.current && (hovered || active)) {
       groupRef.current.rotation.y += 0.001
     }
   })
@@ -206,6 +207,86 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
           clearcoat={transmissionControls.clearcoat}
         />
       </DreiSphere> */}
+    </group>
+  )
+});
+
+const WellStone = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
+  const groupRef = useRef<THREE.Group>(null)
+  const { scene } = useGLTF('/models/wellstone.glb')
+  
+  // Leva controls for real-time adjustment
+  const stoneControls = useControls('WellStone Material', {
+    roughness: { value: 0.8, min: 0, max: 1, step: 0.01 },
+    metalness: { value: 0.1, min: 0, max: 1, step: 0.01 },
+    textureRepeat: { value: 0.5, min: 0.1, max: 3, step: 0.1 },
+    textureRotation: { value: 0, min: 0, max: Math.PI * 2, step: 0.1 },
+    useOriginalUVs: { value: true },
+    normalScale: { value: 1.0, min: 0, max: 3, step: 0.1 }
+  })
+  
+  // Load only diffuse and normal map textures
+  const textures = useTexture({
+    map: '/textures/stone_diffuse.jpg',        // Color/albedo texture (594KB)
+    normalMap: '/textures/stone_normal.jpg'    // Normal map for surface detail (1.3MB)
+  })
+
+  useEffect(() => {
+    
+
+    // Recursively apply custom material with displacement mapping
+    const applyCustomMaterial = (object: THREE.Object3D) => {
+      if (object instanceof THREE.Mesh) {
+        // Create new material with only diffuse and normal mapping
+        const customMaterial = new THREE.MeshStandardMaterial({
+          map: textures.map,
+          normalMap: textures.normalMap,
+          normalScale: new THREE.Vector2(stoneControls.normalScale, stoneControls.normalScale),
+          roughness: stoneControls.roughness,
+          metalness: stoneControls.metalness
+        })
+
+        // Configure texture properties for better quality and UV handling
+        Object.values(textures).forEach(texture => {
+          if (texture) {
+            if (stoneControls.useOriginalUVs) {
+              // Use original UV mapping from the model
+              texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping
+              texture.repeat.set(1, 1)
+              texture.offset.set(0, 0)
+            } else {
+              // Use custom UV mapping to avoid rings
+              texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+              texture.repeat.set(stoneControls.textureRepeat, stoneControls.textureRepeat)
+              texture.rotation = stoneControls.textureRotation
+              texture.center.set(0.5, 0.5) // Rotate around center
+            }
+            texture.anisotropy = 16   // Improve texture quality
+            texture.needsUpdate = true
+          }
+        })
+
+        object.material = customMaterial
+        object.castShadow = true
+        object.receiveShadow = true
+      }
+      object.children.forEach(child => applyCustomMaterial(child))
+    }
+
+    applyCustomMaterial(scene)
+  }, [scene, textures, stoneControls])
+
+  useFrame(() => {
+    if (groupRef.current && (hovered || active)) {
+      groupRef.current.rotation.y += 0.001
+    }
+  })
+
+  return (
+    <group ref={groupRef} scale={20.5} {...props}>
+      <Center>
+        <primitive object={scene} />
+      </Center>
     </group>
   )
 });
