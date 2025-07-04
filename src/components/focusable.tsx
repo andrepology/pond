@@ -30,7 +30,7 @@ interface FontModule {
 const FADE_SPEED = 4
 const LABEL_OFFSET = 0.3
 const FONT_SIZE = 0.25
-const TEXT_COLOR = '#cccccc80' // 80 = 50% opacity in hex
+const TEXT_COLOR = '#cccccc' // 80 = 50% opacity in hex
 
 // Font loading
 // @ts-ignore

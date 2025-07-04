@@ -35,7 +35,7 @@ interface WaterSphereProps {
 
 const WaterSphere: React.FC<WaterSphereProps> = ({
   radius,
-  sunPosition = [-0.5, 12, -0.5],
+  sunPosition = [12.5, 12, 10.5],
 }) => {
   const { camera } = useThree();
   const sphereRef = useRef<THREE.Mesh>(null);

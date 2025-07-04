@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useControls, folder } from 'leva'
 
 // Global geometries cache to avoid recreation
 const geometriesCache = new Map<string, THREE.SphereGeometry>()
@@ -32,18 +31,16 @@ interface SphericalSkyProps {
   // Performance optimizations
   updateFrequency?: number // How often to update (in frames)
   lowQuality?: boolean // Enable lower quality mode
-  // Unique ID for Leva controls
-  controlsId?: string
   // Time animation
   initialTimeScale?: number
   initialEnableTimeAnimation?: boolean
 }
 
 const SphericalSky: React.FC<SphericalSkyProps> = ({
-  turbidity: initialTurbidity = 7,
-  rayleigh: initialRayleigh = 2,
-  mieCoefficient: initialMieCoefficient = 0.07,
-  mieDirectionalG: initialMieDirectionalG = 0.35,
+  turbidity = 7,
+  rayleigh = 2,
+  mieCoefficient = 0.07,
+  mieDirectionalG = 0.35,
   sunPosition: initialSunPosition = [0, 0, 1],
   up: initialUp = [0, 1, 0],
   radius = 1000,
@@ -51,92 +48,17 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   segments = 16, // Lower segment count for better performance
   updateFrequency = 20, // Only update every 10 frames
   lowQuality = false,
-  controlsId = 'sky',
   initialTimeScale = 0.01,
   initialEnableTimeAnimation = true
 }) => {
-  // Create Leva controls
-  const { turbidity, rayleigh, sunPosition, mieCoefficient, mieDirectionalG, directionOverride, isOrthographic, timeScale, enableTimeAnimation, horizonOffset } = useControls(
-    controlsId,
-    {
-      Sky: folder({
-        turbidity: {
-          value: initialTurbidity,
-          min: 1,
-          max: 100,
-          step: 0.1,
-          label: 'Turbidity'
-        },
-        rayleigh: {
-          value: initialRayleigh,
-          min: 0,
-          max: 12,
-          step: 0.01,
-          label: 'Rayleigh'
-        },
-        mieCoefficient: {
-          value: initialMieCoefficient,
-          min: 0.0001,
-          max: 0.5,
-          step: 0.0001,
-          label: 'Mie Coefficient'
-        },
-        mieDirectionalG: {
-          value: initialMieDirectionalG,
-          min: 0,
-          max: 1,
-          step: 0.01,
-          label: 'Mie DirectionalG'
-        },
-        sunPosition: {
-          value: {
-            x: initialSunPosition[0],
-            y: initialSunPosition[1],
-            z: initialSunPosition[2]
-          },
-          step: 0.1,
-          label: 'Sun Position'
-        },
-        rayOffset: {
-          value: 0.1,
-          min: 0,
-          max: 1.0,
-          step: 0.01,
-          label: 'Ray Offset'
-        },
-        enableTimeAnimation: {
-          value: initialEnableTimeAnimation,
-          label: 'Enable Time Passage'
-        },
-        timeScale: {
-          value: initialTimeScale,
-          min: 0.1,
-          max: 5.0,
-          step: 0.1,
-          label: 'Time Scale'
-        }
-      }),
-      Horizon: folder({
-        horizonOffset: {
-          value: {
-            x: -2.0,
-            y: 0.95,
-            z: -2.0
-          },
-          step: 0.1,
-          label: 'Horizon Offset'
-        }
-      }),
-      Direction: folder({
-        directionOverride: {
-          value: [0, 1, 0],
-          label: 'View Direction'
-        },
-        isOrthographic: false
-      })
-    },
-    { collapsed: true }
-  )
+
+  // Default values for properties that were in Leva
+  const directionOverride = [0, 1, 0];
+  const isOrthographic = false;
+  const timeScale = initialTimeScale;
+  const enableTimeAnimation = initialEnableTimeAnimation;
+  const horizonOffset = { x: -2.0, y: 0.95, z: -2.0 };
+  const sunPosition = { x: initialSunPosition[0], y: initialSunPosition[1], z: initialSunPosition[2] };
 
   // Track time
   const timeRef = useRef(0)

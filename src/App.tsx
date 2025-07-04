@@ -24,7 +24,6 @@ const MATERIALS = {
   hotpink: new THREE.MeshStandardMaterial({ color: 'hotpink' })
 }
 
-// Preload the GLB model for better performance
 useGLTF.preload('/models/mindbody.glb')
 useGLTF.preload('/models/wellstone.glb')
 
@@ -49,13 +48,11 @@ export default function App() {
         dpr={[1, 1.5]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
-        <Preload all />
+        
       
         <CameraRig sheetPercentage={sheetPercentage} />
 
       
-
-
         <color attach="background" args={['#f0f0f0']} />
         <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.03)} />
 
@@ -80,6 +77,8 @@ export default function App() {
           <AccumulativeShadows frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={2} opacity={0.3} scale={20}>
             <RandomizedLight radius={10} ambient={0.5} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
+
+          <Preload all />
 
 
         </Center>
@@ -171,11 +170,11 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
         lowQuality={true}
       />
 
-      {/* <WaterSphere radius={0.99} /> */}
+      <WaterSphere radius={0.99} />
 
       <Innio />
 
-      {/* <Starfield
+      <Starfield
         radius={1.00}
         count={50}
         minStarSize={0.0}
@@ -186,8 +185,8 @@ const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((pro
         bloomSize={0.8}
         bloomStrength={0.5}
         distanceFalloff={1.8}
-        coreBrightness={3.0}
-      /> */}
+        coreBrightness={1.0}
+      />
 
       
       {/* <DreiSphere castShadow args={[1.00, 64, 64]}>
