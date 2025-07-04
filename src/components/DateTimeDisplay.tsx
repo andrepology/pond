@@ -62,7 +62,7 @@ export function DateTimeDisplay() {
     seconds: 0
   })
   
-  const intervalRef = useRef<number | undefined>(undefined)
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Load font on mount
   useEffect(() => {

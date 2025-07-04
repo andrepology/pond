@@ -107,19 +107,23 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
     }
 
     const material = new THREE.ShaderMaterial({
-      uniforms: {
-        turbidity: { value: turbidity },
-        rayleigh: { value: rayleigh },
-        mieCoefficient: { value: mieCoefficient },
-        mieDirectionalG: { value: mieDirectionalG },
-        sunPosition: { value: _sunPosition.set(...sunPositionArray) },
-        up: { value: _up.set(...initialUp) },
-        // Add new uniform for camera direction override
-        cameraForward: { value: new THREE.Vector3(...directionOverride) },
-        displayRadius: { value: displayRadius },
-        horizonOffset: { value: new THREE.Vector3(horizonOffset.x, horizonOffset.y, horizonOffset.z) }
-      },
+      uniforms: THREE.UniformsUtils.merge([
+        THREE.UniformsLib.fog,
+        {
+          turbidity: { value: turbidity },
+          rayleigh: { value: rayleigh },
+          mieCoefficient: { value: mieCoefficient },
+          mieDirectionalG: { value: mieDirectionalG },
+          sunPosition: { value: _sunPosition.set(...sunPositionArray) },
+          up: { value: _up.set(...initialUp) },
+          // Add new uniform for camera direction override
+          cameraForward: { value: new THREE.Vector3(...directionOverride) },
+          displayRadius: { value: displayRadius },
+          horizonOffset: { value: new THREE.Vector3(horizonOffset.x, horizonOffset.y, horizonOffset.z) },
+        },
+      ]),
       vertexShader: /* glsl */ `
+		#include <fog_pars_vertex>
 		uniform vec3 sunPosition;
 		uniform float rayleigh;
 		uniform float turbidity;
@@ -173,8 +177,9 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 			vWorldPosition = worldPosition.xyz;
 
             // Use the actual, small-scale position for the screen projection
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-			// gl_Position.z = gl_Position.w; // set z to camera.far
+			vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+			gl_Position = projectionMatrix * mvPosition;
+			#include <fog_vertex>
 
 			vSunDirection = normalize( sunPosition );
 
@@ -194,6 +199,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 		}`,
 
       fragmentShader: /* glsl */ `
+		#include <fog_pars_fragment>
 		varying vec3 vWorldPosition;
 		varying vec3 vSunDirection;
 		varying float vSunfade;
@@ -289,12 +295,14 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 
           gl_FragColor = vec4( retColor, 1.0 );
 
+		  #include <fog_fragment>
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
 
 		}`,
       side: THREE.BackSide,
       depthWrite: true,
+      fog: true,
    
     })
 

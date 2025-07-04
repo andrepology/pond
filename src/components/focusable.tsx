@@ -64,9 +64,10 @@ function useFocusableState(id: string) {
   const [, setLocation] = useLocation()
   const [hovered, setHovered] = useState(false)
   const [labelY, setLabelY] = useState(1.2)
-  const [, params] = useRoute('/item/:id')
+  const [routeMatch, paramsRaw] = useRoute('/item/:id')
+  const params: Record<string, string> = paramsRaw || {};
   
-  const active = params?.id === id
+  const active = params.id === id
   const isVisible = hovered || active
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {

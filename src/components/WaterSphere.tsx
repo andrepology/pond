@@ -74,29 +74,33 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
 
   const sphereMaterial = useMemo(() => {
     const material = new THREE.ShaderMaterial({
-      uniforms: {
-        time: { value: 0 },
-        waterNormals: { value: null },
-        sunDirection: { value: new THREE.Vector3(...sunPosition).normalize() },
-        waterColor: { value: new THREE.Color(controls.waterColor) },
-        distortionScale: { value: controls.distortionScale },
-        bumpScale: { value: controls.bumpScale },
-        repeat: { value: new THREE.Vector2(controls.textureRepeatX, controls.textureRepeatY) },
-        transparency: { value: controls.transparency },
-        flowSpeed: { value: controls.flowSpeed },
-        opacity: { value: controls.initialSphereOpacity },
-        brightnessFactor: { value: controls.brightnessFactor },
-        brightnessThreshold: { value: controls.brightnessThreshold },
-        brightnessTransition: { value: controls.brightnessTransition },
-        normalMapInfluence: { value: controls.normalMapInfluence },
-        flowDir1: { value: new THREE.Vector2(controls.flowDir1X, controls.flowDir1Y) },
-        flowDir2: { value: new THREE.Vector2(controls.flowDir2X, controls.flowDir2Y) },
-        flowMixRatio: { value: controls.flowMixRatio },
-        ambientLight: { value: controls.ambientLight },
-        diffuseLight: { value: controls.diffuseLight },
-        sphereRadius: { value: radius }
-      },
+      uniforms: THREE.UniformsUtils.merge([
+        THREE.UniformsLib.fog,
+        {
+          time: { value: 0 },
+          waterNormals: { value: null },
+          sunDirection: { value: new THREE.Vector3(...sunPosition).normalize() },
+          waterColor: { value: new THREE.Color(controls.waterColor) },
+          distortionScale: { value: controls.distortionScale },
+          bumpScale: { value: controls.bumpScale },
+          repeat: { value: new THREE.Vector2(controls.textureRepeatX, controls.textureRepeatY) },
+          transparency: { value: controls.transparency },
+          flowSpeed: { value: controls.flowSpeed },
+          opacity: { value: controls.initialSphereOpacity },
+          brightnessFactor: { value: controls.brightnessFactor },
+          brightnessThreshold: { value: controls.brightnessThreshold },
+          brightnessTransition: { value: controls.brightnessTransition },
+          normalMapInfluence: { value: controls.normalMapInfluence },
+          flowDir1: { value: new THREE.Vector2(controls.flowDir1X, controls.flowDir1Y) },
+          flowDir2: { value: new THREE.Vector2(controls.flowDir2X, controls.flowDir2Y) },
+          flowMixRatio: { value: controls.flowMixRatio },
+          ambientLight: { value: controls.ambientLight },
+          diffuseLight: { value: controls.diffuseLight },
+          sphereRadius: { value: radius },
+        },
+      ]),
       vertexShader: `
+        #include <fog_pars_vertex>
         uniform float time;
         varying vec2 vUv;
         varying vec3 vNormal;
@@ -105,10 +109,13 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
           vUv = uv;
           vNormal = normal;
           vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          #include <fog_vertex>
         }
       `,
       fragmentShader: `
+        #include <fog_pars_fragment>
         uniform sampler2D waterNormals;
         uniform vec3 waterColor;
         uniform vec3 sunDirection;
@@ -156,12 +163,14 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
           );
           visibility = pow(visibility, 0.4);
           gl_FragColor = vec4(color, transparency * opacity * visibility);
+          #include <fog_fragment>
         }
       `,
       transparent: true,
       side: THREE.FrontSide,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
+      fog: true,
     });
 
     loadTexture('/waternormals.jpg')

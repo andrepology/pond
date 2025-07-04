@@ -1,12 +1,13 @@
 import * as THREE from 'three'
 
-export enum InnioState {
-  WANDER = "wander",
-  APPROACH = "approach",
-  EAT = "eat",
-  REST = "rest",
-  TALK = "talk",
-}
+export type InnioState = "wander" | "approach" | "eat" | "rest" | "talk";
+export const InnioState = {
+  WANDER: "wander" as InnioState,
+  APPROACH: "approach" as InnioState,
+  EAT: "eat" as InnioState,
+  REST: "rest" as InnioState,
+  TALK: "talk" as InnioState,
+};
 
 export interface InnioBehaviorOptions {
   approachThreshold?: number;    // distance under which the innio is considered to have reached the target
@@ -93,7 +94,7 @@ export class InnioBehavior {
    */
   public update(headPosition: THREE.Vector3, velocity: THREE.Vector3, deltaTime: number) {
     switch (this.state) {
-      case InnioState.APPROACH:
+      case "approach":
         if (this.target) {
           // Reuse the temporary vector instead of creating a new one
           this._tempVec.copy(headPosition).sub(this.target);
@@ -104,16 +105,16 @@ export class InnioBehavior {
         }
         break;
 
-      case InnioState.EAT:
+      case "eat":
         this.timer += deltaTime;
         if (this.timer >= this.options.eatDuration!) {
           this.options.onEat?.();
           this.currentProbabilisticRestDuration = undefined; // Ensure this is clear before entering post-eat rest
-          this.enterStationaryState(InnioState.REST, headPosition, velocity);
+          this.enterStationaryState("rest", headPosition, velocity);
         }
         break;
 
-      case InnioState.REST:
+      case "rest":
         this.timer += deltaTime;
         let durationForThisRest = this.options.restDuration!;
         if (this.currentProbabilisticRestDuration !== undefined) {
@@ -128,7 +129,7 @@ export class InnioBehavior {
         }
         break;
 
-      case InnioState.WANDER:
+      case "wander":
         // If innio is talking, it should not make autonomous decisions like resting.
         // Actual movement during TALK is handled by Innio.tsx based on velocity when TALK started.
         if (this.isTalking) {
@@ -159,7 +160,7 @@ export class InnioBehavior {
                 this.options.minWanderRestDuration,
                 this.options.maxWanderRestDuration
             );
-            this.enterStationaryState(InnioState.REST, headPosition, velocity);
+            this.enterStationaryState("rest", headPosition, velocity);
             break; 
           }
         }
@@ -167,7 +168,7 @@ export class InnioBehavior {
         // Otherwise, continue wandering (actual movement logic is in Innio.tsx)
         break;
 
-      case InnioState.TALK:
+      case "talk":
         // While talking, the innio might be stationary or continue its previous movement.
         // Don't change any movement behavior while talking
         // This allows the innio to continue its current movement
@@ -175,7 +176,7 @@ export class InnioBehavior {
     }
   }
 
-  private enterStationaryState(state: InnioState.REST | InnioState.TALK, position: THREE.Vector3, velocity: THREE.Vector3) {
+  private enterStationaryState(state: "rest" | "talk", position: THREE.Vector3, velocity: THREE.Vector3) {
     this.stationaryPosition = position.clone();
     
     // Set direction, preferring current velocity if significant
@@ -211,7 +212,7 @@ export class InnioBehavior {
   // Updated to not make the innio stationary
   public startTalking(position: THREE.Vector3, velocity: THREE.Vector3, message?: string) {
     // Enter stationary state with TALK state (makes innio stop moving)
-    this.enterStationaryState(InnioState.TALK, position, velocity);
+    this.enterStationaryState("talk", position, velocity);
     this.isTalking = true;
     
     if (message) {

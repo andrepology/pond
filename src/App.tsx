@@ -15,6 +15,7 @@ import WaterSphere from './components/WaterSphere'
 import Innio from './innio/Innio'
 import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
+import { AdaptiveFog } from './components/adaptive-fog'
 
 // Pre-create reusable materials for better performance
 const MATERIALS = {
@@ -54,7 +55,12 @@ export default function App() {
 
       
         <color attach="background" args={['#f0f0f0']} />
-        <primitive attach="fog" object={new THREE.FogExp2('#f0f0f0', 0.03)} />
+        <AdaptiveFog
+          color="#f0f0f0"
+          defaultFog={{ near: 15, far: 32 }}
+          focusedFog={{ near: 10, far: 12.5 }}
+          animationDuration={1.2}
+        />
 
         <Environment preset="forest" />
 
@@ -63,10 +69,10 @@ export default function App() {
 
         {/* Main Scene Content */}
         <Center position={[0, 0, 0]}>
-          <Focusable id="01" name="innio" position={[-2, 1.2, 0]} inspectable>
-            <TransmissionSphere />
+          <Focusable id="01" name="innio" position={[-1.2, 1.2, -3]} inspectable>
+            <PondSphere />
           </Focusable>
-          <Focusable id="02" name="mindbody" position={[0, 1, -2]}>
+          <Focusable id="02" name="mindbody" position={[1.8, 0.8, -3]}>
             <MindBody color="indianred" />
           </Focusable>
           <Focusable id="03" name="wellstone" position={[1, 0.6, 0]}>
@@ -101,16 +107,7 @@ interface InteractiveProps {
   color: string;
 }
 
-const InteractiveSphere = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
-  const material = useMemo(() => {
-    if (hovered || active) return MATERIALS.hotpink
-    return MATERIALS[color as keyof typeof MATERIALS] || new THREE.MeshStandardMaterial({ color })
-  }, [color, hovered, active])
 
-  return (
-    <DreiSphere {...props} ref={ref} castShadow material={material} />
-  )
-});
 
 const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
   const groupRef = useRef<THREE.Group>(null)
@@ -145,7 +142,7 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
   )
 });
 
-const TransmissionSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
+const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
   const transmissionControls = useControls('Transmission Material', {
     samples: { value: 5, min: 1, max: 20, step: 1 },
     resolution: { value: 512, min: 64, max: 1024, step: 64 },
@@ -232,7 +229,6 @@ const WellStone = forwardRef<any, InteractiveProps>(({ color, hovered, active, .
 
   useEffect(() => {
     
-
     // Recursively apply custom material with displacement mapping
     const applyCustomMaterial = (object: THREE.Object3D) => {
       if (object instanceof THREE.Mesh) {
