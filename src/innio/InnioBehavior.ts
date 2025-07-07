@@ -1,13 +1,12 @@
 import * as THREE from 'three'
 
-export type InnioState = "wander" | "approach" | "eat" | "rest" | "talk";
-export const InnioState = {
-  WANDER: "wander" as InnioState,
-  APPROACH: "approach" as InnioState,
-  EAT: "eat" as InnioState,
-  REST: "rest" as InnioState,
-  TALK: "talk" as InnioState,
-};
+export enum InnioState {
+  WANDER = "wander",
+  APPROACH = "approach",
+  EAT = "eat",
+  REST = "rest",
+  TALK = "talk",
+}
 
 export interface InnioBehaviorOptions {
   approachThreshold?: number;    // distance under which the innio is considered to have reached the target
@@ -24,32 +23,24 @@ export class InnioBehavior {
   public state: InnioState;
   public target: THREE.Vector3 | null;
   public targetQueue: THREE.Vector3[];
-  private options: InnioBehaviorOptions;
-  private timer: number;
-  
-  // Single source of truth for stationary states (REST only now)
   public stationaryPosition: THREE.Vector3 | null;
   public stationaryDirection: THREE.Vector3 | null;
-  
-  // Flag to track if talking while moving
-  public isTalking: boolean = false;
 
-  // Temporary vector to reduce allocations
-  private _tempVec: THREE.Vector3;
-
-  // Add to the class properties
+  private options: InnioBehaviorOptions;
+  private timer: number;
   private message: string = '';
-  private currentProbabilisticRestDuration?: number; // Stores duration for a specific probabilistic rest
-  private timeSinceLastRestCheck: number; // Timer for checking rest probability
+  private timeSinceLastRestCheck: number;
+  private currentProbabilisticRestDuration?: number;
+  private _tempVec: THREE.Vector3;
 
   constructor(options?: InnioBehaviorOptions) {
     this.options = {
       approachThreshold: 0.5,
-      restDuration: 2, // Default duration for post-eating rest
+      restDuration: 2,
       eatDuration: 1,
       bounds: { min: -10, max: 10 },
       onEat: undefined,
-      restCheckInterval: 10, // Default to checking every 10 seconds
+      restCheckInterval: 10,
       minWanderRestDuration: 1,
       maxWanderRestDuration: 5,
       ...options,
@@ -60,17 +51,11 @@ export class InnioBehavior {
     this.stationaryPosition = null;
     this.stationaryDirection = null;
     this.timer = 0;
+    this.timeSinceLastRestCheck = 0;
     this._tempVec = new THREE.Vector3();
-    this.currentProbabilisticRestDuration = undefined;
-    this.timeSinceLastRestCheck = 0; // Initialize the new timer
   }
 
-  /**
-   * External method to set the food target.
-   * Instead of overriding the current target if one exists, we queue additional food points.
-   */
   public setFoodTarget(target: THREE.Vector3) {
-    // If no current target, set it and transition (unless talking)
     if (!this.target) {
       this.target = target.clone();
       if (this.state !== InnioState.TALK) {
@@ -78,25 +63,14 @@ export class InnioBehavior {
         this.timer = 0;
       }
     } else {
-      // Otherwise queue it
       this.targetQueue.push(target.clone());
     }
   }
 
-  /**
-   * Call this on every frame.
-   * The update logic is:
-   * - In APPROACH, if the innio is near the target, switch to EAT.
-   * - In EAT, count elapsed time (allowing an eating animation to play), then call onEat and switch to REST.
-   * - In REST, wait a little (simulate a pause), then:
-   *   > If there is another food target queued, switch to APPROACH with that target.
-   *   > Otherwise, return to WANDER.
-   */
   public update(headPosition: THREE.Vector3, velocity: THREE.Vector3, deltaTime: number) {
     switch (this.state) {
-      case "approach":
+      case InnioState.APPROACH:
         if (this.target) {
-          // Reuse the temporary vector instead of creating a new one
           this._tempVec.copy(headPosition).sub(this.target);
           if (this._tempVec.length() < this.options.approachThreshold!) {
             this.state = InnioState.EAT;
@@ -105,157 +79,98 @@ export class InnioBehavior {
         }
         break;
 
-      case "eat":
+      case InnioState.EAT:
         this.timer += deltaTime;
         if (this.timer >= this.options.eatDuration!) {
           this.options.onEat?.();
-          this.currentProbabilisticRestDuration = undefined; // Ensure this is clear before entering post-eat rest
-          this.enterStationaryState("rest", headPosition, velocity);
+          this.currentProbabilisticRestDuration = undefined;
+          this.enterStationaryState(InnioState.REST, headPosition, velocity);
         }
         break;
 
-      case "rest":
+      case InnioState.REST:
         this.timer += deltaTime;
-        let durationForThisRest = this.options.restDuration!;
-        if (this.currentProbabilisticRestDuration !== undefined) {
-          durationForThisRest = this.currentProbabilisticRestDuration;
-        }
-
+        const durationForThisRest = this.currentProbabilisticRestDuration ?? this.options.restDuration!;
         if (this.timer >= durationForThisRest) {
           if (this.currentProbabilisticRestDuration !== undefined) {
-            this.currentProbabilisticRestDuration = undefined; // Clear it after use
+            this.currentProbabilisticRestDuration = undefined;
           }
           this.exitStationaryState();
         }
         break;
 
-      case "wander":
-        // If innio is talking, it should not make autonomous decisions like resting.
-        // Actual movement during TALK is handled by Innio.tsx based on velocity when TALK started.
-        if (this.isTalking) {
+      case InnioState.WANDER:
+        if (this.targetQueue.length > 0 && !this.target) {
+            this.target = this.targetQueue.shift()!;
+            this.state = InnioState.APPROACH;
+            this.timer = 0;
+            this.timeSinceLastRestCheck = 0;
+            this.currentProbabilisticRestDuration = undefined;
             break;
         }
 
-        // Priority 1: If there's food in queue, approach it.
-        if (!this.target && this.targetQueue.length > 0) {
-          this.target = this.targetQueue.shift()!;
-          this.state = InnioState.APPROACH;
-          this.timer = 0;
-          this.currentProbabilisticRestDuration = undefined; // Clear any pending probabilistic rest
-          this.timeSinceLastRestCheck = 0; // Reset rest check timer when starting to approach food
-          break; 
-        }
-
-        // Priority 2: Periodically check if the innio should rest.
         this.timeSinceLastRestCheck += deltaTime;
-        if (this.options.restCheckInterval && this.timeSinceLastRestCheck >= this.options.restCheckInterval) {
-          this.timeSinceLastRestCheck = 0; // Reset the timer
-
-          if (this.options.minWanderRestDuration !== undefined &&
-              this.options.maxWanderRestDuration !== undefined &&
-              this.options.minWanderRestDuration <= this.options.maxWanderRestDuration && // Basic sanity check
-              Math.random() < 0.5) { // 50% chance to rest
-            
+        if (this.timeSinceLastRestCheck >= this.options.restCheckInterval!) {
+          this.timeSinceLastRestCheck = 0;
+          if (Math.random() < 0.5) {
             this.currentProbabilisticRestDuration = THREE.MathUtils.randFloat(
-                this.options.minWanderRestDuration,
-                this.options.maxWanderRestDuration
+              this.options.minWanderRestDuration!,
+              this.options.maxWanderRestDuration!
             );
-            this.enterStationaryState("rest", headPosition, velocity);
-            break; 
+            this.enterStationaryState(InnioState.REST, headPosition, velocity);
           }
         }
-        
-        // Otherwise, continue wandering (actual movement logic is in Innio.tsx)
         break;
 
-      case "talk":
-        // While talking, the innio might be stationary or continue its previous movement.
-        // Don't change any movement behavior while talking
-        // This allows the innio to continue its current movement
+      case InnioState.TALK:
+        // Movement is handled in Innio.tsx
         break;
     }
   }
 
-  private enterStationaryState(state: "rest" | "talk", position: THREE.Vector3, velocity: THREE.Vector3) {
-    this.stationaryPosition = position.clone();
-    
-    // Set direction, preferring current velocity if significant
-    if (velocity.length() > 0.001) {
-      this.stationaryDirection = velocity.clone().normalize();
-    } else if (this.stationaryDirection) {
-      // Keep existing direction
-      this.stationaryDirection = this.stationaryDirection.clone();
-    } else {
-      // Default to forward
-      this.stationaryDirection = new THREE.Vector3(0, 0, 1);
-    }
-    
+  private enterStationaryState(state: InnioState.REST | InnioState.TALK, position: THREE.Vector3, velocity: THREE.Vector3) {
     this.state = state;
     this.timer = 0;
+    this.stationaryPosition = position.clone();
+    
+    if (velocity.length() > 0.001) {
+      this.stationaryDirection = velocity.clone().normalize();
+    } else if (!this.stationaryDirection) {
+      this.stationaryDirection = new THREE.Vector3(0, 0, 1);
+    }
   }
 
   private exitStationaryState() {
+    this.stationaryPosition = null;
+    this.stationaryDirection = null;
+    this.timer = 0;
+    
     if (this.targetQueue.length > 0) {
       this.target = this.targetQueue.shift()!;
       this.state = InnioState.APPROACH;
     } else {
-      this.state = InnioState.WANDER;
       this.target = null;
+      this.state = InnioState.WANDER;
     }
-    this.stationaryPosition = null;
-    this.stationaryDirection = null;
-    this.timer = 0;
-    this.currentProbabilisticRestDuration = undefined;
-    this.timeSinceLastRestCheck = 0; // Reset on full reset as well
   }
 
-  // Updated to not make the innio stationary
-  public startTalking(position: THREE.Vector3, velocity: THREE.Vector3, message?: string) {
-    // Enter stationary state with TALK state (makes innio stop moving)
-    this.enterStationaryState("talk", position, velocity);
-    this.isTalking = true;
-    
-    if (message) {
-      this.message = message;
-    }
+  public startTalking(position: THREE.Vector3, velocity: THREE.Vector3, message: string) {
+    this.message = message;
+    this.enterStationaryState(InnioState.TALK, position, velocity);
   }
 
   public stopTalking() {
     if (this.state === InnioState.TALK) {
-      // Just return to previous state (or WANDER by default)
-      this.state = InnioState.WANDER; // Default to WANDER after talking
-      this.isTalking = false;
-      // this.stationaryPosition = null; // Clear these as it's no longer in a fixed "talk" position
-      // this.stationaryDirection = null;
-      // If we want it to resume wandering smoothly, these should ideally not be nulled
-      // if it was moving while talking. The exitStationaryState will handle WANDER.
-      this.exitStationaryState(); // This will correctly transition to WANDER or APPROACH if food is queued
+        this.message = '';
+        this.exitStationaryState();
     }
   }
 
-  public resetTarget() {
-    this.target = null;
-    this.targetQueue = [];
-    this.stationaryPosition = null;
-    this.stationaryDirection = null;
-    this.state = InnioState.WANDER;
-    this.timer = 0;
-    this.currentProbabilisticRestDuration = undefined;
-    this.timeSinceLastRestCheck = 0; // Reset on full reset as well
+  public getMessage(): string | null {
+    return this.state === InnioState.TALK ? this.message : null;
   }
-
-  // Helper to check if we're in a stationary state (now only REST)
-  public isStationary(): boolean {
-    return this.state === InnioState.REST || this.state === InnioState.TALK;
-  }
-
-  // Add a method to set message
+  
   public setMessage(text: string) {
     this.message = text;
-  }
-
-  // Add a method to get message
-  public getMessage(): string {
-    return this.message;
   }
 } 

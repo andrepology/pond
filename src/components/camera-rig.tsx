@@ -5,6 +5,8 @@ import { CameraControls } from '@react-three/drei'
 import { useRoute } from 'wouter'
 import CameraControlsImpl from 'camera-controls'
 
+CameraControlsImpl.install({ THREE })
+
 interface CameraRigProps {
   sheetPercentage: number;
 }
@@ -12,7 +14,7 @@ interface CameraRigProps {
 export function CameraRig({ sheetPercentage }: CameraRigProps) {
   const { controls, scene, viewport } = useThree()
   const [routeMatch, paramsRaw] = useRoute('/item/:id')
-  const params: Record<string, string> = paramsRaw || {};
+  const params: Record<string, string> = paramsRaw || {}
   const targetPositionRef = useRef(new THREE.Vector3())
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       if (cameraControls) {
         cameraControls.minDistance = inspectable ? 0.01 : 5
         cameraControls.maxDistance = 20
+        cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
       }
 
       // Reuse existing Vector3 instance
@@ -45,6 +48,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       if (cameraControls) {
         cameraControls.minDistance = 5
         cameraControls.maxDistance = 20
+        cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.TRUCK
       }
       // Adjust distance for the default view, adjusted for the sheet
       const distance = 10 / Math.min(viewport.aspect, 1)
@@ -52,5 +56,13 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
     }
   }, [params.id, controls, scene, viewport.aspect, sheetPercentage])
 
-  return <CameraControls makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 2} />
+  return (
+    <CameraControls
+      makeDefault
+      minPolarAngle={0}
+      maxPolarAngle={Math.PI / 2}
+      smoothTime={0.4}
+      draggingSmoothTime={0.2}
+    />
+  )
 } 
