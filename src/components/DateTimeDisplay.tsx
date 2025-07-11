@@ -104,7 +104,7 @@ export function DateTimeDisplay() {
   return (
     <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
       <div
-        className={`text-2xl font-bold tracking-wider transition-opacity duration-1000 ${state.fadeClass}`}
+        className={`text-2xl tracking-wide transition-opacity duration-1000 ${state.fadeClass}`}
         style={{ 
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
           color: 'rgba(144, 144, 144, 0.35)'

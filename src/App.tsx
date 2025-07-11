@@ -47,7 +47,7 @@ export default function App() {
           antialias: true,
           powerPreference: "high-performance"
         }}
-        dpr={[1, 1.5]}
+        dpr={[1, 1]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         <Stats />
@@ -63,14 +63,15 @@ export default function App() {
           animationDuration={1.2}
         />
 
-        <Environment preset="forest" />
+        <Environment preset="sunset"   />
 
         {/* Lights */}
         <ambientLight intensity={0.5} />
+        
 
         {/* Main Scene Content */}
-        <Center position={[0, 0, 0.5]}>
-          <Focusable id="01" name="innio" position={[-1.2, 1.2, -3]} inspectable>
+        <Center position={[0, 0.5, 1.5]}>
+          <Focusable id="01" name="pond" position={[-1.2, 1.2, -3]} inspectable>
             <PondSphere />
           </Focusable>
           <Focusable id="02" name="mindbody" position={[1.8, 0.8, 0.01]}>
@@ -164,7 +165,7 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
     <group  {...props} ref={ref}>
       
 
-      <WaterSphere radius={1.00} />
+      {/* <WaterSphere radius={1.00} /> */}
 
       {/* <Innio /> */}
 
@@ -193,7 +194,7 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
       /> */}
       
       {/* Performance here is not great, but its dimensionality is evocative, especially when reflecting the Environment */}
-      {/* <DreiSphere castShadow args={[1.0, 64, 64]}>
+      <DreiSphere castShadow args={[1.01, 64, 64]}>
         <MeshTransmissionMaterial
           
           samples={2}
@@ -214,7 +215,7 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
 
         
             
-      </DreiSphere> */}
+      </DreiSphere>
 
       
     </group>
