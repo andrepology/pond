@@ -47,7 +47,7 @@ export default function App() {
           antialias: true,
           powerPreference: "high-performance"
         }}
-        dpr={[1, 1]}
+        dpr={[1, 1.2]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         <Stats />
