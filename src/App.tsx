@@ -17,6 +17,7 @@ import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/adaptive-fog'
 
+
 // Pre-create reusable materials for better performance
 const MATERIALS = {
   dodgerblue: new THREE.MeshStandardMaterial({ color: 'dodgerblue' }),
@@ -34,11 +35,11 @@ export default function App() {
 
   return (
     <>
-      <Leva collapsed hidden />
+      <Leva collapsed hidden  />
     
       <Canvas
         shadows="soft"
-        camera={{ position: [0, 5, 12], fov: 35 }}
+        camera={{ position: [0, 12, 12], fov: 45 }}
         eventSource={document.getElementById('root')!}
         eventPrefix="client"
         onPointerMissed={() => setLocation('/')}
@@ -58,7 +59,7 @@ export default function App() {
         <AdaptiveFog
           color="#f0f0f0"
           defaultFog={{ near: 15, far: 32 }}
-          focusedFog={{ near: 10, far: 12.5 }}
+          focusedFog={{ near: 8, far: 9.5 }}
           animationDuration={1.2}
         />
 
@@ -68,19 +69,19 @@ export default function App() {
         <ambientLight intensity={0.5} />
 
         {/* Main Scene Content */}
-        <Center position={[0, 0, 0]}>
+        <Center position={[0, 0, 0.5]}>
           <Focusable id="01" name="innio" position={[-1.2, 1.2, -3]} inspectable>
             <PondSphere />
           </Focusable>
-          <Focusable id="02" name="mindbody" position={[1.8, 0.8, -3]}>
+          <Focusable id="02" name="mindbody" position={[1.8, 0.8, 0.01]}>
             <MindBody color="indianred" />
           </Focusable>
-          <Focusable id="03" name="wellstone" position={[1, 0.6, 0]}>
+          {/* <Focusable id="03" name="wellstone" position={[1, 0.6, 0]}>
             <WellStone color="limegreen" />
-          </Focusable>
+          </Focusable> */}
 
           {/* Shadows and Ground */}
-          <AccumulativeShadows frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={2} opacity={0.3} scale={20}>
+          <AccumulativeShadows temporal={false} frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={2} opacity={0.3} scale={20}>
             <RandomizedLight radius={10} ambient={0.5} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
 
@@ -92,7 +93,7 @@ export default function App() {
   
        
       </Canvas>
-      {/* <Leva collapsed/> */}
+      
       <DateTimeDisplay />
       <Sheet sheetPercentage={sheetPercentage} />
       <Controls onPercentageChange={setSheetPercentage} />
@@ -116,8 +117,8 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
   useEffect(() => {
     const stoneMaterial = new THREE.MeshStandardMaterial({
       color: '#CFCFCF',
-      roughness: 0.4,
-      metalness: 0.19
+      roughness: 0.3,
+      metalness: 0.0
     })
 
     const mesh = scene.children[0]
@@ -127,9 +128,10 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
     }
   }, [scene])
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (groupRef.current && (hovered || active)) {
       groupRef.current.rotation.y += 0.001
+      groupRef.current.position.y = Math.sin(clock.elapsedTime) * 0.01
     }
   })
 
@@ -160,37 +162,44 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
 
   return (
     <group  {...props} ref={ref}>
-      <SphericalSky
-        radius={1.0}
-        displayRadius={1000}
-        segments={48}
-        lowQuality={true}
-      />
+      
 
-      <WaterSphere radius={0.99} />
+      <WaterSphere radius={1.00} />
 
       {/* <Innio /> */}
 
-      <Starfield
+
+
+        <SphericalSky
+                radius={1.01}
+                displayRadius={1000}
+                segments={48}
+                lowQuality={true}
+        />
+
+
+      {/* <Starfield
         radius={1.00}
         count={50}
-        minStarSize={0.0}
+        minStarSize={0.10}
 
         twinkleSpeed={1.3}
         twinkleAmount={0.3}
 
-        bloomSize={0.8}
-        bloomStrength={0.5}
+        bloomSize={0.3}
+        bloomStrength={0.1}
         distanceFalloff={1.8}
         coreBrightness={1.0}
-      />
-
+      /> */}
       
-      {/* <DreiSphere castShadow args={[1.00, 64, 64]}>
+      {/* Performance here is not great, but its dimensionality is evocative, especially when reflecting the Environment */}
+      {/* <DreiSphere castShadow args={[1.0, 64, 64]}>
         <MeshTransmissionMaterial
           
-          samples={transmissionControls.samples}
-          resolution={transmissionControls.resolution}
+          samples={2}
+          resolution={1028}
+          
+          
           transmission={transmissionControls.transmission}
           roughness={transmissionControls.roughness}
           thickness={transmissionControls.thickness}
@@ -202,7 +211,12 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
           temporalDistortion={transmissionControls.temporalDistortion}
           clearcoat={transmissionControls.clearcoat}
         />
+
+        
+            
       </DreiSphere> */}
+
+      
     </group>
   )
 });

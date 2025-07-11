@@ -27,7 +27,7 @@ interface FontModule {
 }
 
 // Constants
-const FADE_SPEED = 4
+const FADE_SPEED = 8
 const LABEL_OFFSET = 0.3
 const FONT_SIZE = 0.15
 const TEXT_COLOR = '#cccccc' // 80 = 50% opacity in hex
@@ -54,7 +54,7 @@ function useFadeAnimation(isVisible: boolean) {
 
     const material = textRef.current.material as THREE.Material
     material.opacity = currentOpacity.current
-    material.transparent = true
+    
   })
 
   return textRef
