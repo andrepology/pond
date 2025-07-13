@@ -1,6 +1,6 @@
 import * as THREE from 'three'
-import { useState, Suspense, useRef } from 'react'
-import { useCursor, Text, Billboard, Center } from '@react-three/drei'
+import { useState, Suspense, useRef, useLayoutEffect } from 'react'
+import { useCursor, Text, Billboard } from '@react-three/drei'
 import { useRoute, useLocation } from 'wouter'
 import { suspend } from 'suspend-react'
 import { useFrame } from '@react-three/fiber'
@@ -54,7 +54,7 @@ function useFadeAnimation(isVisible: boolean) {
 
     const material = textRef.current.material as THREE.Material
     material.opacity = currentOpacity.current
-    
+
   })
 
   return textRef
@@ -65,8 +65,8 @@ function useFocusableState(id: string) {
   const [hovered, setHovered] = useState(false)
   const [labelY, setLabelY] = useState(1.2)
   const [routeMatch, paramsRaw] = useRoute('/item/:id')
-  const params: Record<string, string> = paramsRaw || {};
-  
+  const params: Record<string, string> = paramsRaw || {}
+
   const active = params.id === id
   const isVisible = hovered || active
 
@@ -85,30 +85,25 @@ function useFocusableState(id: string) {
     setHovered(false)
   }
 
-  const handleCentered = ({ boundingBox }: { boundingBox: THREE.Box3 }) => {
-    const height = boundingBox.max.y - boundingBox.min.y
-    setLabelY(height / 2 + LABEL_OFFSET)
-  }
-
   return {
     hovered,
     active,
     isVisible,
     labelY,
+    setLabelY,
     handlers: {
       onClick: handleClick,
       onPointerOver: handlePointerOver,
       onPointerOut: handlePointerOut,
-      onCentered: handleCentered,
-    }
+    },
   }
 }
 
 // Components
-function FocusableLabel({ name, labelY, isVisible }: { 
+function FocusableLabel({ name, labelY, isVisible }: {
   name: string
   labelY: number
-  isVisible: boolean 
+  isVisible: boolean
 }) {
   const textRef = useFadeAnimation(isVisible)
 
@@ -133,32 +128,43 @@ function FocusableLabel({ name, labelY, isVisible }: {
 }
 
 // Main component
-export function Focusable({ 
-  id, 
-  name, 
-  children, 
-  inspectable = false, 
-  ...props 
+export function Focusable({
+  id,
+  name,
+  children,
+  inspectable = false,
+  ...props
 }: FocusableProps) {
-  const { hovered, active, isVisible, labelY, handlers } = useFocusableState(id)
-  const { onPointerOut, onPointerOver, ...centerHandlers } = handlers
-  
+  const { hovered, active, isVisible, labelY, setLabelY, handlers } = useFocusableState(id)
+  const { onPointerOut, onPointerOver, ...remainingHandlers } = handlers
+  const contentRef = useRef<THREE.Group>(null!)
+
+  useLayoutEffect(() => {
+    if (contentRef.current) {
+      const box = new THREE.Box3().setFromObject(contentRef.current)
+      const height = box.max.y - box.min.y
+      setLabelY(height / 2 + LABEL_OFFSET)
+    }
+  }, [children, setLabelY])
+
   useCursor(hovered)
 
   return (
-    <group {...props} onPointerOver={onPointerOver} onPointerOut={onPointerOut}>
-      <Center
-        name={id}
-        userData={{ inspectable }}
-        {...centerHandlers}
-      >
+    <group
+      name={id}
+      {...props}
+      onPointerOver={onPointerOver}
+      onPointerOut={onPointerOut}
+      userData={{ inspectable }}
+      {...remainingHandlers}
+    >
+      <group ref={contentRef}>
         {React.cloneElement(children, { hovered, active })}
-      </Center>
-      
-      <FocusableLabel 
-        name={name} 
-        labelY={labelY} 
-        isVisible={isVisible} 
+      </group>
+      <FocusableLabel
+        name={name}
+        labelY={labelY}
+        isVisible={isVisible}
       />
     </group>
   )
