@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Environment, Box, MeshTransmissionMaterial, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
+import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import { Leva, useControls } from 'leva'
 import React from 'react'
@@ -52,7 +52,7 @@ export default function App() {
         dpr={[1, 1.2]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
-        {/* <Stats /> */}
+        <Stats />
         <Preload all />
 
         <CameraRig sheetPercentage={sheetPercentage} />
@@ -77,15 +77,15 @@ export default function App() {
           <Focusable id="01" name="pond" position={[-1.2, 1.2, -3]} inspectable>
             <PondSphere />
           </Focusable>
-          <Focusable id="02" name="mindbody" position={[1.8, 0.8, 0.01]}>
+          {/* <Focusable id="02" name="mindbody" position={[1.8, 0.8, 0.01]}>
             <MindBody color="indianred" />
           </Focusable>
           <Focusable id="03" name="wellstone" position={[-1, 0.5, 0]}>
             <WellStone color="limegreen" />
-          </Focusable>
+          </Focusable> */}
 
           {/* Shadows and Ground */}
-          <AccumulativeShadows temporal={true} frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.5} scale={20}>
+          <AccumulativeShadows temporal={false} frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.5} scale={20}>
             <RandomizedLight radius={10} ambient={0.6} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
 
@@ -204,19 +204,39 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
 });
 
 const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  const transmissionControls = useControls('Transmission Material', {
-    samples: { value: 5, min: 1, max: 20, step: 1 },
-    resolution: { value: 512, min: 64, max: 1024, step: 64 },
+  const waterControls = useControls('Water Material', {
+    roughness: { value: 0.05, min: 0, max: 1, step: 0.005 },
+    ior: { value: 1.333, min: 1, max: 2.333, step: 0.001 },
     transmission: { value: 1.0, min: 0, max: 1, step: 0.01 },
-    roughness: { value: 0.0, min: 0, max: 1, step: 0.01 },
-    thickness: { value: 0.8, min: 0, max: 2, step: 0.01 },
-    ior: { value: 1.0, min: 1, max: 3, step: 0.01 },
-    chromaticAberration: { value: 0.02, min: 0, max: 0.1, step: 0.001 },
-    anisotropy: { value: 0.0, min: 0, max: 1, step: 0.01 },
-    distortion: { value: 0.0, min: 0, max: 1, step: 0.01 },
-    distortionScale: { value: 4.3, min: 0, max: 10, step: 0.1 },
-    temporalDistortion: { value: 0.0, min: 0, max: 1, step: 0.01 },
-    clearcoat: { value: 0.0, min: 0, max: 1, step: 0.01 }
+    thickness: { value: 0.05, min: 0, max: 2, step: 0.01 },
+    attenuationDistance: { value: 2.0, min: 0.1, max: 10, step: 0.1 },
+    attenuationColor: '#4fa3ff',
+    specularIntensity: { value: 0.6, min: 0, max: 1, step: 0.01 },
+    normalScale: { value: 0.5, min: 0, max: 2, step: 0.01 },
+    normalTiling: { value: 2.5, min: 0.5, max: 10, step: 0.1 },
+    flowU: { value: 0.03, min: -0.3, max: 0.3, step: 0.001 },
+    flowV: { value: 0.02, min: -0.3, max: 0.3, step: 0.001 }
+  })
+
+  const waterNormals = useTexture('/waternormals.jpg')
+  useMemo(() => {
+    if (waterNormals) {
+      waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping
+      waterNormals.anisotropy = 4
+    }
+  }, [waterNormals])
+
+  useEffect(() => {
+    if (waterNormals) {
+      waterNormals.repeat.set(waterControls.normalTiling, waterControls.normalTiling)
+    }
+  }, [waterNormals, waterControls.normalTiling])
+
+  useFrame((_, delta) => {
+    if (waterNormals) {
+      waterNormals.offset.x += delta * waterControls.flowU
+      waterNormals.offset.y += delta * waterControls.flowV
+    }
   })
 
   return (
@@ -251,28 +271,22 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
         coreBrightness={1.0}
       /> */}
 
-      {/* Performance here is not great, but its dimensionality is evocative, especially when reflecting the Environment */}
-      <DreiSphere castShadow args={[1.01, 64, 64]}>
-        <MeshTransmissionMaterial
-
-          samples={1}
-          resolution={512}
-
-          transmission={transmissionControls.transmission}
-          roughness={transmissionControls.roughness}
-          thickness={transmissionControls.thickness}
-          ior={transmissionControls.ior}
-          chromaticAberration={transmissionControls.chromaticAberration}
-          anisotropy={transmissionControls.anisotropy}
-          distortion={transmissionControls.distortion}
-          distortionScale={transmissionControls.distortionScale}
-          temporalDistortion={transmissionControls.temporalDistortion}
-          clearcoat={transmissionControls.clearcoat}
+      {/* Water sphere using icosahedron to reduce pole pinching */}
+      <Icosahedron castShadow args={[1.01, 6]}>
+        <meshPhysicalMaterial
+          transmission={waterControls.transmission}
+          roughness={waterControls.roughness}
+          ior={waterControls.ior}
+          thickness={waterControls.thickness}
+          attenuationColor={waterControls.attenuationColor as unknown as THREE.ColorRepresentation}
+          attenuationDistance={waterControls.attenuationDistance}
+          specularIntensity={waterControls.specularIntensity}
+          metalness={0}
+          clearcoat={0.1}
+          normalMap={waterNormals as unknown as THREE.Texture}
+          normalScale={new THREE.Vector2(waterControls.normalScale, waterControls.normalScale)}
         />
-
-
-
-      </DreiSphere>
+      </Icosahedron>
 
 
     </group>
