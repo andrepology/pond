@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation } from 'wouter'
+import { useLocation, useRoute } from 'wouter'
 
 // Font loading - same pattern as focusable.tsx
 const loadFont = () => {
@@ -18,6 +18,7 @@ interface DateTimeState {
   fadeClass: string
   promptIndex: number
   promptFadeClass: string
+  displayOpacity: string
 }
 
 function getOrdinalSuffix(day: number): string {
@@ -49,34 +50,45 @@ const PROMPTS = [
   'what am i grateful for?',
   'how is our world today?',
   'what are you observing today?',
-  'what are you avoiding right now',
+  'what are you avoiding right now?',
   'what can i let go of?',
   'what is your inner story about yourself?',
   'what habits do i want to grow?',
   'what beliefs about self do i want to let go of?',
   'what game am i playing right now?',
-  'play around and find out'
 ]
 
 export function DateTimeDisplay() {
   const [location] = useLocation()
+  const [routeMatch] = useRoute('/item/:id')
   const [fontLoaded, setFontLoaded] = useState(false)
   const [state, setState] = useState<DateTimeState>({
     date: '',
     cycle: 0,
     fadeClass: 'opacity-100',
     promptIndex: 0,
-    promptFadeClass: 'opacity-100'
+    promptFadeClass: 'opacity-100',
+    displayOpacity: 'opacity-100'
   })
+
+  const isFocused = !!routeMatch
 
   // Load font on mount
   useEffect(() => {
     loadFont().then(() => setFontLoaded(true))
   }, [])
 
+  // Handle display opacity when focusing/unfocusing
+  useEffect(() => {
+    setState(prev => ({
+      ...prev,
+      displayOpacity: isFocused ? 'opacity-0' : 'opacity-100'
+    }))
+  }, [isFocused])
+
   // Update time and cycle logic
   useEffect(() => {
-    if (location !== '/') return
+    if (isFocused) return
 
     const TITLE_PERIOD_MS = 20000
     const TITLE_FADE_MS = 2000
@@ -126,11 +138,11 @@ export function DateTimeDisplay() {
       if (titleFadeTimeout) clearTimeout(titleFadeTimeout)
       if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
     }
-  }, [location])
+  }, [isFocused])
 
 
-  // Don't render if not at root or font not loaded
-  if (location !== '/' || !fontLoaded) {
+  // Don't render if font not loaded
+  if (!fontLoaded) {
     return null
   }
 
@@ -146,7 +158,7 @@ export function DateTimeDisplay() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 pointer-events-none p-10">
+    <div className={`fixed bottom-0 left-0 z-50 pointer-events-none p-10 transition-opacity duration-1000 ${state.displayOpacity}`}>
       <div
         className={`text-4xl md:text-3xl tracking-tight transition-opacity duration-1000 ${state.fadeClass}`}
         style={{
