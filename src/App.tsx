@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Preload, AccumulativeShadows, RandomizedLight, Sphere as DreiSphere, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
+import { Preload, AccumulativeShadows, RandomizedLight, Sphere, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import { Leva, useControls } from 'leva'
 import React from 'react'
@@ -12,7 +12,8 @@ import { CameraRig } from './components/camera-rig'
 import SphericalSky from './components/SphericalSky'
 import Starfield from './components/Starfield'
 import WaterSphere from './components/WaterSphere'
-// import Innio from './innio/Innio'
+import Innio from './innio/Innio'
+import Fish2 from './fish/Fish2'
 import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/adaptive-fog'
@@ -56,11 +57,11 @@ export default function App() {
         <AdaptiveFog
           color="#f0f0f0"
           defaultFog={{ near: 15, far: 32 }}
-          focusedFog={{ near: 8, far: 9.5 }}
+          focusedFog={{ near: 4, far: 8 }}
           animationDuration={1.2}
         />
 
-        <Environment preset="apartment"  environmentIntensity={1.0}  />
+        <Environment preset="forest"  environmentIntensity={1.0}  />
 
         {/* Lights */}
         <ambientLight intensity={Math.PI / 4} />
@@ -79,7 +80,7 @@ export default function App() {
           </Focusable> */}
 
           {/* Shadows and Ground */}
-          <AccumulativeShadows temporal={false} frames={120} blend={200} alphaTest={0.9} color="#f0f0f0" colorBlend={1} opacity={0.5} scale={20}>
+          <AccumulativeShadows temporal={false} frames={200} blend={10.1} alphaTest={0.7} color="#f0f0f0" colorBlend={1} opacity={0.4} scale={15}>
             <RandomizedLight radius={10} ambient={0.6} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
 
@@ -135,17 +136,17 @@ const generateSphericalUVs = (geometry: THREE.BufferGeometry) => {
 
 const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
   const waterControls = useControls('Water Material', {
-    roughness: { value: 0.05, min: 0, max: 1, step: 0.005 },
-    ior: { value: 1.333, min: 1, max: 2.333, step: 0.001 },
-    transmission: { value: 1.0, min: 0, max: 1, step: 0.01 },
+    roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
+    ior: { value: 1.76, min: 1, max: 2.333, step: 0.001 },
+    transmission: { value: 1.00, min: 0, max: 1, step: 0.01 },
     thickness: { value: 0.05, min: 0, max: 2, step: 0.01 },
-    attenuationDistance: { value: 2.0, min: 0.1, max: 10, step: 0.1 },
-    attenuationColor: '#4fa3ff',
-    specularIntensity: { value: 0.6, min: 0, max: 1, step: 0.01 },
-    normalScale: { value: 0.5, min: 0, max: 2, step: 0.01 },
-    normalTiling: { value: 2.5, min: 0.5, max: 10, step: 0.1 },
-    flowU: { value: 0.03, min: -0.3, max: 0.3, step: 0.001 },
-    flowV: { value: 0.02, min: -0.3, max: 0.3, step: 0.001 }
+    attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
+    attenuationColor: '#ffffff',
+    specularIntensity: { value: 0.92, min: 0, max: 1, step: 0.01 },
+    normalScale: { value: 0.44, min: 0, max: 2, step: 0.01 },
+    normalTiling: { value: 0.3, min: 0.1, max: 10, step: 0.1 },
+    flowU: { value: 0.00, min: -0.3, max: 0.3, step: 0.001 },
+    flowV: { value: -0.01, min: -0.3, max: 0.3, step: 0.001 }
   })
 
   const waterNormals = useTexture('/waternormals.jpg')
@@ -153,6 +154,8 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
     if (waterNormals) {
       waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping
       waterNormals.anisotropy = 4
+      // Reduce UV distortion at poles by using mirrored repeat
+      waterNormals.wrapT = THREE.MirroredRepeatWrapping
     }
   }, [waterNormals])
 
@@ -179,10 +182,10 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
         displayRadius={1000}
         segments={48}
         lowQuality={true}
-        opacity={0.85}
-      />
+        opacity={1.05}
+      /> 
 
-
+    {/* <group position={[0, 0, 0]} scale={0.6}> 
       <Starfield
         radius={1.00}
         count={50}
@@ -196,9 +199,11 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
         distanceFalloff={1.8}
         coreBrightness={1.0}
       />
+    </group>
+      
 
-      {/* Water sphere using icosahedron to reduce pole pinching */}
-      <Icosahedron castShadow args={[1.01, 18]}>
+      {/* Water sphere with UV mapping to prevent pole pinching */}
+      <Sphere castShadow args={[1.01, 64, 32]}>
         <meshPhysicalMaterial
           transmission={waterControls.transmission}
           roughness={waterControls.roughness}
@@ -214,7 +219,12 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
           transparent
           opacity={1.0}
         />
-      </Icosahedron>
+      </Sphere>
+
+      {/* Contained scene (scaled so Innio's [-1,1] bounds fit inside radius ~1.01) */}
+      <group name="innio-container" scale={0.15}>
+        <Fish2 />
+      </group>
 
 
     </group>

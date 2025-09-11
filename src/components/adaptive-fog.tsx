@@ -22,8 +22,8 @@ interface AdaptiveFogProps {
 
 export function AdaptiveFog({
   color = '#f0f0f0',
-  defaultFog = { near: 12, far: 20 },
-  focusedFog = { near: 2, far: 4 },
+  defaultFog = { near: 2, far: 4 },
+  focusedFog = { near: 0.5, far: 1.5 },
   animationDuration = 1.0
 }: AdaptiveFogProps) {
   const { scene } = useThree()

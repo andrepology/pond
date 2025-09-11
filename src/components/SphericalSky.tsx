@@ -226,7 +226,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 		const float rayleighZenithLength = 8.4E3;
 		const float mieZenithLength = 1.25E3;
 		// 66 arc seconds -> degrees, and the cosine of that (enlarged for visibility)
-		const float sunAngularDiameterCos = 0.9995;
+		const float sunAngularDiameterCos = 0.9999;
 
 		// 3.0 / ( 16.0 * pi )
 		const float THREE_OVER_SIXTEENPI = 0.05968310365946075;
@@ -290,8 +290,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           // composition + solar disc
           float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00008, cosTheta );
           // Make the sun disc larger and avoid atmospheric extinction on the disc
-          L0 += ( vSunE * 60000.0 ) * sundisk;
-
+          L0 += ( vSunE * 1.0 ) * sundisk;
           vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
 
           vec3 retColor = pow( texColor, vec3( 1.0 / ( 1.2 + ( 1.2 * vSunfade ) ) ) );
@@ -361,10 +360,10 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
     timeRef.current += delta
 
     // Diurnal arc: compute sun direction from azimuth and altitude
-    const dayLengthSeconds = 20
+    const dayLengthSeconds = 36
     const t = (timeRef.current % dayLengthSeconds) / dayLengthSeconds // 0..1
     const azimuth = t * Math.PI * 2
-    const maxElevationDeg = 0.5
+    const maxElevationDeg = 0.1
     const altitude = THREE.MathUtils.degToRad(Math.sin(azimuth) * maxElevationDeg)
     const cosAlt = Math.cos(altitude)
     const sinAlt = Math.sin(altitude)
@@ -379,7 +378,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
     const horizonProximity = 1 - THREE.MathUtils.clamp(Math.abs(y) / maxAltSin, 0, 1) // 1 near horizon, 0 near noon
 
     const turbidityAnim = 10 + 10 * horizonProximity         // 2 (noon) → 12 (sunrise/sunset)
-    const rayleighAnim = 0.6 + 2.4 * (1 - horizonProximity) // ~1.6 (sunrise) → 4.0 (noon)
+    const rayleighAnim = 0.1 + 2.4 * (1 - horizonProximity) // ~1.6 (sunrise) → 4.0 (noon)
     const mieCoeffAnim = 0.015 + 0.20 * horizonProximity     // 0.015 (noon) → 0.215 (hazy horizon)
     const mieGAnim = 0.2 + 0.25 * horizonProximity           // 0.6 (noon) → 0.85 (glare near horizon)
 
