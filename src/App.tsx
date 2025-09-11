@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Preload, AccumulativeShadows, RandomizedLight, Sphere, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
+import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import { Leva, useControls } from 'leva'
 import React from 'react'
@@ -56,12 +56,12 @@ export default function App() {
         <color attach="background" args={['#f0f0f0']} />
         <AdaptiveFog
           color="#f0f0f0"
-          defaultFog={{ near: 15, far: 32 }}
-          focusedFog={{ near: 4, far: 8 }}
+          defaultFog={{ near: 4, far: 18 }}
+          focusedFog={{ near: 4, far: 12 }}
           animationDuration={1.2}
         />
 
-        <Environment preset="forest"  environmentIntensity={1.0}  />
+        <Environment preset="park"  environmentIntensity={1.0}  />
 
         {/* Lights */}
         <ambientLight intensity={Math.PI / 4} />
@@ -153,23 +153,22 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
   useMemo(() => {
     if (waterNormals) {
       waterNormals.wrapS = THREE.RepeatWrapping
-      // Clamp vertical to avoid seams/pinching at poles
-      waterNormals.wrapT = THREE.ClampToEdgeWrapping
+      waterNormals.wrapT = THREE.RepeatWrapping
       waterNormals.anisotropy = 4
+      waterNormals.needsUpdate = true
     }
   }, [waterNormals])
 
   useEffect(() => {
     if (waterNormals) {
-      waterNormals.repeat.set(waterControls.normalTiling, Math.max(0.15, waterControls.normalTiling))
+      waterNormals.repeat.set(waterControls.normalTiling, waterControls.normalTiling)
     }
   }, [waterNormals, waterControls.normalTiling])
 
   useFrame((_, delta) => {
     if (waterNormals) {
       waterNormals.offset.x += delta * waterControls.flowU
-      // Reduce vertical flow near poles to minimize artifacts
-      waterNormals.offset.y += delta * (waterControls.flowV * 0.5)
+      waterNormals.offset.y += delta * waterControls.flowV
     }
   })
 
@@ -186,11 +185,11 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
         opacity={1.05}
       /> 
 
-    {/* <group position={[0, 0, 0]} scale={0.6}> 
+     <group position={[0, 0, 0]} scale={0.6}> 
       <Starfield
         radius={1.00}
         count={50}
-        minStarSize={0.10}
+        minStarSize={0.01}
 
         twinkleSpeed={1.3}
         twinkleAmount={0.3}
@@ -203,8 +202,8 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
     </group>
       
 
-      {/* Water sphere with UV mapping to prevent pole pinching */}
-      <Sphere castShadow args={[1.01, 64, 32]}>
+      {/* Water sphere using icosahedron to reduce pole pinching */}
+      <Icosahedron castShadow args={[1.01, 18]}>
         <meshPhysicalMaterial
           transmission={waterControls.transmission}
           roughness={waterControls.roughness}
@@ -220,7 +219,7 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
           transparent
           opacity={1.0}
         />
-      </Sphere>
+      </Icosahedron>
 
       {/* Contained scene (scaled so Innio's [-1,1] bounds fit inside radius ~1.01) */}
       <group name="innio-container" scale={0.15}>

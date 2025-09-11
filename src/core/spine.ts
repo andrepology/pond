@@ -11,19 +11,22 @@ export function createSpine(segments: number, spacing: number): SpineState {
   return { points: pts, spacing }
 }
 
+const scratchPrev = new THREE.Vector3()
+const scratchBase = new THREE.Vector3()
+const scratchPerp = new THREE.Vector3()
+
 export function updateSpineFollow(spine: SpineState, headPos: THREE.Vector3, headDir: THREE.Vector3, waveOffset: (i: number) => number) {
-  const prev = new THREE.Vector3().copy(headPos)
-  const perp = new THREE.Vector3()
+  scratchPrev.copy(headPos)
   for (let i = 0; i < spine.points.length; i++) {
     const spacing = spine.spacing
-    const base = prev.clone().addScaledVector(headDir, -spacing)
-    perp.set(-headDir.z, 0, headDir.x)
-    base.addScaledVector(perp, waveOffset(i))
+    scratchBase.copy(scratchPrev).addScaledVector(headDir, -spacing)
+    scratchPerp.set(-headDir.z, 0, headDir.x)
+    scratchBase.addScaledVector(scratchPerp, waveOffset(i))
     const cur = spine.points[i]
-    cur.lerp(base, 0.05)
-    const dist = cur.distanceTo(prev)
-    if (dist > spacing) cur.sub(prev).setLength(spacing).add(prev)
-    prev.copy(cur)
+    cur.lerp(scratchBase, 0.05)
+    const dist = cur.distanceTo(scratchPrev)
+    if (dist > spacing) cur.sub(scratchPrev).setLength(spacing).add(scratchPrev)
+    scratchPrev.copy(cur)
   }
 }
 

@@ -252,10 +252,10 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           vec3 localPos = normalize(vWorldPosition);
           
           // Apply horizon offset using uniform controls
-          localPos.x += horizonOffset.x;
-          localPos.y += horizonOffset.y;
-          localPos.z += horizonOffset.z;
-          localPos = normalize(localPos);
+          // localPos.x += horizonOffset.x;
+          // localPos.y += horizonOffset.y;
+          // localPos.z += horizonOffset.z;
+          // localPos = normalize(localPos);
           
           direction = normalize(mix(direction, localPos, 1.0));
 

@@ -14,9 +14,20 @@ const loadFont = () => {
 
 interface DateTimeState {
   date: string
-  time: string
   cycle: number // 0 = date, 1 = "andre's pond"
   fadeClass: string
+  promptIndex: number
+  promptFadeClass: string
+}
+
+function getOrdinalSuffix(day: number): string {
+  if (day % 100 >= 11 && day % 100 <= 13) return 'th'
+  switch (day % 10) {
+    case 1: return 'st'
+    case 2: return 'nd'
+    case 3: return 'rd'
+    default: return 'th'
+  }
 }
 
 const formatDate = (date: Date): string => {
@@ -30,25 +41,32 @@ const formatDate = (date: Date): string => {
   const dayName = days[date.getDay()]
   const month = months[date.getMonth()]
   
-  return `${dayName}, ${month} ${day}`
+  return `${dayName}, ${month} ${day}${getOrdinalSuffix(day)}`
 }
 
-const formatTime = (date: Date): string => {
-  return date.toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
-    minute: '2-digit',
-    hour12: true 
-  }).toLowerCase()
-}
+const PROMPTS = [
+  'be and it is',
+  'what am i grateful for?',
+  'how is our world today?',
+  'what are you observing today?',
+  'what are you avoiding right now',
+  'what can i let go of?',
+  'what is your inner story about yourself?',
+  'what habits do i want to grow?',
+  'what beliefs about self do i want to let go of?',
+  'what game am i playing right now?',
+  'play around and find out'
+]
 
 export function DateTimeDisplay() {
   const [location] = useLocation()
   const [fontLoaded, setFontLoaded] = useState(false)
   const [state, setState] = useState<DateTimeState>({
     date: '',
-    time: '',
     cycle: 0,
-    fadeClass: 'opacity-100'
+    fadeClass: 'opacity-100',
+    promptIndex: 0,
+    promptFadeClass: 'opacity-100'
   })
 
   // Load font on mount
@@ -60,30 +78,56 @@ export function DateTimeDisplay() {
   useEffect(() => {
     if (location !== '/') return
 
-    const updateDateTime = () => {
-      const now = new Date()
-      const seconds = now.getSeconds()
-      
-      // Deterministic cycle: each phase lasts 10 seconds
-      // 0-9s: date, 10-19s: "andre's pond", 20-29s: date, etc.
-      const cyclePosition = Math.floor(seconds / 10) % 2
-      
-      // Fade transition: last 2 seconds of each phase
-      const shouldFade = (seconds % 10) >= 8
-      
+    const TITLE_PERIOD_MS = 20000
+    const TITLE_FADE_MS = 2000
+    const PROMPT_PERIOD_MS = 5000
+    const PROMPT_FADE_MS = 1000
+
+    let titleFadeTimeout: number | undefined
+    let promptFadeTimeout: number | undefined
+
+    const runTitlePhase = () => {
       setState(prev => ({
-        date: formatDate(now),
-        time: formatTime(now),
-        cycle: cyclePosition,
-        fadeClass: shouldFade ? 'opacity-0' : 'opacity-100'
+        ...prev,
+        date: formatDate(new Date()),
+        cycle: prev.cycle === 0 ? 1 : 0,
+        fadeClass: 'opacity-100'
       }))
+
+      if (titleFadeTimeout) clearTimeout(titleFadeTimeout)
+      titleFadeTimeout = window.setTimeout(() => {
+        setState(prev => ({ ...prev, fadeClass: 'opacity-0' }))
+      }, Math.max(0, TITLE_PERIOD_MS - TITLE_FADE_MS))
     }
 
-    updateDateTime()
-    const interval = setInterval(updateDateTime, 100) // Update frequently for smooth fading
+    const runPromptPhase = () => {
+      setState(prev => ({
+        ...prev,
+        promptIndex: (prev.promptIndex + 1) % PROMPTS.length,
+        promptFadeClass: 'opacity-100'
+      }))
 
-    return () => clearInterval(interval)
+      if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
+      promptFadeTimeout = window.setTimeout(() => {
+        setState(prev => ({ ...prev, promptFadeClass: 'opacity-0' }))
+      }, Math.max(0, PROMPT_PERIOD_MS - PROMPT_FADE_MS))
+    }
+
+    // Kick off immediately to avoid initial delay
+    runTitlePhase()
+    runPromptPhase()
+
+    const titleInterval = window.setInterval(runTitlePhase, TITLE_PERIOD_MS)
+    const promptInterval = window.setInterval(runPromptPhase, PROMPT_PERIOD_MS)
+
+    return () => {
+      clearInterval(titleInterval)
+      clearInterval(promptInterval)
+      if (titleFadeTimeout) clearTimeout(titleFadeTimeout)
+      if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
+    }
   }, [location])
+
 
   // Don't render if not at root or font not loaded
   if (location !== '/' || !fontLoaded) {
@@ -102,15 +146,24 @@ export function DateTimeDisplay() {
   }
 
   return (
-    <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+    <div className="fixed bottom-0 left-0 z-50 pointer-events-none p-10">
       <div
-        className={`text-2xl tracking-wide transition-opacity duration-1000 ${state.fadeClass}`}
-        style={{ 
+        className={`text-4xl md:text-3xl tracking-tight transition-opacity duration-1000 ${state.fadeClass}`}
+        style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
           color: 'rgba(144, 144, 144, 0.35)'
         }}
       >
         {getCurrentText()}
+      </div>
+      <div
+        className={`mt-0 text-2xl md:text-xl tracking-wide transition-opacity duration-1000 ${state.promptFadeClass}`}
+        style={{
+          fontFamily: 'AlteHaasGroteskBold, sans-serif',
+          color: 'rgba(144, 144, 144, 0.35)'
+        }}
+      >
+        {PROMPTS[state.promptIndex]}
       </div>
     </div>
   )

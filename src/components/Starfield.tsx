@@ -79,7 +79,7 @@ const Starfield: React.FC<StarfieldProps> = ({
       Stars: folder({
         count: { value: count, min: 50, max: 1000, step: 10, label: 'Star Count' },
         radius: { value: radius, min: 10, max: 200, step: 1, label: 'Starfield Radius' },
-        minStarSize: { value: minStarSize, min: 0.5, max: 5.0, step: 0.1, label: 'Min Star Size (px)' },
+        minStarSize: { value: minStarSize, min: 0.0, max: 5.0, step: 0.1, label: 'Min Star Size (px)' },
         maxRenderDistance: { value: maxRenderDistance, min: 50, max: 300, step: 10, label: 'Max Render Distance' },
         centerBias: { value: centerBias, min: 0.3, max: 2.0, step: 0.1, label: 'Center Bias (0.5=center, 1.0=uniform, 1.5=outer)' },
       }),
@@ -251,27 +251,29 @@ const Starfield: React.FC<StarfieldProps> = ({
         vec2 center = vec2(0.5, 0.5);
         float dist = distance(gl_PointCoord, center);
         
-        // Soft edge falloff instead of hard cutoff
-        float edgeFalloff = smoothstep(0.5, 0.35, dist);
-        if (edgeFalloff <= 0.001) {
+        // Much softer edge falloff with no hard cutoff
+        float edgeFalloff = smoothstep(0.5, 0.0, dist);
+        if (edgeFalloff <= 0.0001) {
           discard;
         }
         
-        // Softer core with gradual transition
-        float coreRadius = 0.08;
-        float coreTransition = 0.25;
-        float coreIntensity = 1.8;
+        // Even smaller core with dimmer glow
+        float coreRadius = 0.02;        // Even smaller core (was 0.04)
+        float coreTransition = 0.12;    // Tighter transition
+        float coreIntensity = 1.8;      // Reduced core intensity
         
-        // Multi-layer intensity calculation for softer appearance  
+        // Dimmer halo with smoother falloff
         float coreFactor = smoothstep(coreRadius + coreTransition, coreRadius, dist);
-        float haloFactor = exp(-bloomSoftness * dist * 1.5) * edgeFalloff;
-        float outerGlow = exp(-dist * 3.0) * 0.3;
+        float haloFactor = exp(-bloomSoftness * dist * 0.8) * edgeFalloff;  // Same falloff rate
+        float outerGlow = exp(-dist * 1.8) * 0.3;  // Dimmer outer glow (was 0.5)
+        float extendedGlow = exp(-dist * 0.9) * 0.1;  // Dimmer extended glow (was 0.2)
         
-        // Blend core and halo smoothly
+        // Blend core and halo with smoother transitions
+        float haloIntensity = haloFactor * bloomStrength + outerGlow + extendedGlow;
         float intensity = mix(
-          haloFactor * bloomStrength + outerGlow,
+          haloIntensity,
           coreIntensity,
-          coreFactor
+          coreFactor * 0.8  // Softer core blending
         );
         
         // Enhanced distance dimming for depth
@@ -281,10 +283,10 @@ const Starfield: React.FC<StarfieldProps> = ({
           1.0 / (1.0 + pow(vCameraDistance * 0.8, distanceFalloff))
         );
         
-        // Warmer center, cooler edges with softer transition
-        vec3 warmCenter = vec3(1.0, 0.98, 0.94);
-        vec3 coolEdge = vec3(0.92, 0.96, 1.0);
-        vec3 starColor = mix(warmCenter, coolEdge, smoothstep(0.0, 0.4, dist));
+        // Softer, never pure white colors with smooth transition
+        vec3 warmCenter = vec3(0.95, 0.92, 0.85);  // Warm but not pure white
+        vec3 coolEdge = vec3(0.85, 0.88, 0.95);    // Cool but dimmer
+        vec3 starColor = mix(warmCenter, coolEdge, smoothstep(0.0, 0.6, dist));
         
         vec3 finalColor = starColor * intensity * distanceDimming;
         float finalAlpha = intensity * opacity * vBrightness * distanceDimming * vDistanceAlpha * edgeFalloff;
