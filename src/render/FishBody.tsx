@@ -20,19 +20,27 @@ export function FishBody({ spine, headRef, headDirection, bankRadians = 0 }: Fis
       const m = spineSphereRefs.current[i]
       if (m) m.position.copy(pts[i])
     }
+    // Head sphere position is already managed by movement system via headRef
   })
 
   return (
     <group rotation={[0, 0, bankRadians]}>
-      {/* Render spheres first, then tube body for proper transparency layering */}
+      {/* Head sphere with matching material */}
+      <mesh ref={headRef}>
+        <sphereGeometry args={[0.02, 16, 16]} />
+        <meshToonMaterial blending={THREE.AdditiveBlending} color="#9FA8DA" emissive="#FFFFFF" emissiveIntensity={0.6} toneMapped={false} transparent opacity={0.1} depthWrite={false} />
+      </mesh>
+      
+      {/* Render spine spheres first, then tube body for proper transparency layering */}
       {spine.points.map((_, idx) => {
         const segProgress = idx / Math.max(1, spine.points.length - 1)
-        const base = 0.06
-        const radius = Math.max(0.012, base * (1 - Math.pow(segProgress, 1.6)) * 0.6)
+        const base = 0.045
+        const radius = Math.max(0.012, base * (1 - Math.pow(segProgress, 0.9)) * 0.6)
+        const opacity = 0.1 * (1 - segProgress)
         return (
           <mesh key={`spine-sphere-${idx}`} ref={(el) => (spineSphereRefs.current[idx] = el)}>
             <sphereGeometry args={[radius, 12, 12]} />
-            <meshToonMaterial color="#9FA8DA" emissive="#9FA8DA" emissiveIntensity={0.6} toneMapped={false} transparent opacity={0.3} depthWrite={false} />
+            <meshToonMaterial blending={THREE.AdditiveBlending} color="#9FA8DA" emissive="#FFFFFF" emissiveIntensity={0.6} toneMapped={false} transparent opacity={opacity} depthWrite={false} />
           </mesh>
         )
       })}

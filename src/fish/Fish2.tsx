@@ -108,10 +108,7 @@ export function Fish2({ debug = false }: Fish2Props) {
         onPointerLeave={gestures.onPointerLeave}
       />
 
-      <mesh ref={movement.headRef}>
-        <sphereGeometry args={[0.02, 16, 16]} />
-        <meshStandardMaterial color="#8888ff" transparent opacity={0.3} depthWrite={false} />
-      </mesh>
+      {/* Head sphere moved to FishBody component */}
       <FishBody spine={movement.spine} headRef={movement.headRef} headDirection={movement.headDirection} bankRadians={movement.bankRadians.current} />
 
 

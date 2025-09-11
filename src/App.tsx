@@ -152,23 +152,24 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
   const waterNormals = useTexture('/waternormals.jpg')
   useMemo(() => {
     if (waterNormals) {
-      waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping
+      waterNormals.wrapS = THREE.RepeatWrapping
+      // Clamp vertical to avoid seams/pinching at poles
+      waterNormals.wrapT = THREE.ClampToEdgeWrapping
       waterNormals.anisotropy = 4
-      // Reduce UV distortion at poles by using mirrored repeat
-      waterNormals.wrapT = THREE.MirroredRepeatWrapping
     }
   }, [waterNormals])
 
   useEffect(() => {
     if (waterNormals) {
-      waterNormals.repeat.set(waterControls.normalTiling, waterControls.normalTiling)
+      waterNormals.repeat.set(waterControls.normalTiling, Math.max(0.15, waterControls.normalTiling))
     }
   }, [waterNormals, waterControls.normalTiling])
 
   useFrame((_, delta) => {
     if (waterNormals) {
       waterNormals.offset.x += delta * waterControls.flowU
-      waterNormals.offset.y += delta * waterControls.flowV
+      // Reduce vertical flow near poles to minimize artifacts
+      waterNormals.offset.y += delta * (waterControls.flowV * 0.5)
     }
   })
 

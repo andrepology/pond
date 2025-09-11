@@ -29,8 +29,8 @@ export const PHYSICS = {
 }
 
 export const SPINE = {
-  segments: 6,
-  segmentSpacing: 0.1,
+  segments: 12,
+  segmentSpacing: 0.10,
 }
 
 export const BODY = {
