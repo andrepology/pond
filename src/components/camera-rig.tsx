@@ -86,7 +86,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       makeDefault
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 2}
-      smoothTime={0.4}
+      smoothTime={0.5}
       draggingSmoothTime={0.2}
     />
   )

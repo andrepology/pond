@@ -34,14 +34,15 @@ interface SphericalSkyProps {
   // Time animation
   initialTimeScale?: number
   initialEnableTimeAnimation?: boolean
+  opacity?: number
 }
 
 const SphericalSky: React.FC<SphericalSkyProps> = ({
-  turbidity = 7,
-  rayleigh = 2,
+  turbidity = 1,
+  rayleigh = 1,
   mieCoefficient = 0.07,
   mieDirectionalG = 0.35,
-  sunPosition: initialSunPosition = [0, 0, 1],
+  sunPosition: initialSunPosition = [0, 1, 0],
   up: initialUp = [0, 1, 0],
   radius = 1000,
   displayRadius = 1000, // Default to a large radius for the visual effect
@@ -49,7 +50,8 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   updateFrequency = 20, // Only update every 10 frames
   lowQuality = false,
   initialTimeScale = 0.01,
-  initialEnableTimeAnimation = true
+  initialEnableTimeAnimation = true,
+  opacity = 1.0
 }) => {
 
   // Default values for properties that were in Leva
@@ -120,6 +122,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           cameraForward: { value: new THREE.Vector3(...directionOverride) },
           displayRadius: { value: displayRadius },
           horizonOffset: { value: new THREE.Vector3(horizonOffset.x, horizonOffset.y, horizonOffset.z) },
+          opacity: { value: opacity },
         },
       ]),
       vertexShader: /* glsl */ `
@@ -211,6 +214,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 		uniform vec3 up;
 		uniform vec3 cameraForward; // Camera direction override for orthographic view
 		uniform vec3 horizonOffset; // Horizon position offset
+        uniform float opacity; // Sky transparency
 
 		// constants for atmospheric scattering
 		const float pi = 3.141592653589793238462643383279502884197169;
@@ -221,8 +225,8 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 		// optical length at zenith for molecules
 		const float rayleighZenithLength = 8.4E3;
 		const float mieZenithLength = 1.25E3;
-		// 66 arc seconds -> degrees, and the cosine of that
-		const float sunAngularDiameterCos = 0.999956676946448443553574619906976478926848692873900859324;
+		// 66 arc seconds -> degrees, and the cosine of that (enlarged for visibility)
+		const float sunAngularDiameterCos = 0.9995;
 
 		// 3.0 / ( 16.0 * pi )
 		const float THREE_OVER_SIXTEENPI = 0.05968310365946075;
@@ -253,7 +257,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           localPos.z += horizonOffset.z;
           localPos = normalize(localPos);
           
-          direction = normalize(mix(direction, localPos, 1.50));
+          direction = normalize(mix(direction, localPos, 1.0));
 
           // optical length
           // cutoff angle at 90 to avoid singularity in next formula.
@@ -266,7 +270,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           vec3 Fex = exp( -( vBetaR * sR + vBetaM * sM ) );
 
           // in scattering
-          float cosTheta = dot( direction, vSunDirection );
+          float cosTheta = dot( localPos, vSunDirection );
 
           float rPhase = rayleighPhase( cosTheta * 0.5 + 0.5 );
           vec3 betaRTheta = vBetaR * rPhase;
@@ -284,16 +288,15 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           vec3 L0 = vec3( 0.1 ) * Fex;
 
           // composition + solar disc
-          float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00002, cosTheta );
-          L0 += ( vSunE * 19000.0 * Fex ) * sundisk;
+          float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00008, cosTheta );
+          // Make the sun disc larger and avoid atmospheric extinction on the disc
+          L0 += ( vSunE * 60000.0 ) * sundisk;
 
           vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
 
           vec3 retColor = pow( texColor, vec3( 1.0 / ( 1.2 + ( 1.2 * vSunfade ) ) ) );
 
-          retColor = min(retColor, vec3(1.0));
-
-          gl_FragColor = vec4( retColor, 1.0 );
+          gl_FragColor = vec4( retColor, opacity );
 
 		  #include <fog_fragment>
           #include <tonemapping_fragment>
@@ -302,7 +305,8 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 		}`,
       side: THREE.BackSide,
       depthWrite: true,
-      fog: true,
+      transparent: false,
+      fog: false,
    
     })
 
@@ -331,8 +335,9 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
       materialRef.current.uniforms.cameraForward.value.set(...directionOverride)
       materialRef.current.uniforms.displayRadius.value = displayRadius
       materialRef.current.uniforms.horizonOffset.value.set(horizonOffset.x, horizonOffset.y, horizonOffset.z)
+      materialRef.current.uniforms.opacity.value = opacity
     }
-  }, [turbidity, rayleigh, mieCoefficient, mieDirectionalG, sunPositionArray, directionOverride, displayRadius, horizonOffset])
+  }, [turbidity, rayleigh, mieCoefficient, mieDirectionalG, sunPositionArray, directionOverride, displayRadius, horizonOffset, opacity])
 
   // Update camera direction in the shader
   useFrame(() => {
@@ -352,26 +357,36 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   useFrame((_, delta) => {
     if (!enableTimeAnimation || !materialRef.current) return
 
-    // Update time based on timeScale
-    timeRef.current += delta * timeScale
+    // Advance real time; map to day length for visible diurnal cycle
+    timeRef.current += delta
 
-    // Calculate x position: linear back and forth between -3 and 3
-    // Create a triangle wave using modulo and linear interpolation
-    const period = 4 // Full cycle duration
-    const normalizedTime = (timeRef.current % period) / period // 0 to 1
-    const triangleWave = normalizedTime < 0.5 
-      ? normalizedTime * 2 // 0 to 1 in first half
-      : 2 - (normalizedTime * 2) // 1 to 0 in second half
-    const xPosition = -3 + (triangleWave * 6) // Map from [0,1] to [-3,3]
+    // Diurnal arc: compute sun direction from azimuth and altitude
+    const dayLengthSeconds = 20
+    const t = (timeRef.current % dayLengthSeconds) / dayLengthSeconds // 0..1
+    const azimuth = t * Math.PI * 2
+    const maxElevationDeg = 0.5
+    const altitude = THREE.MathUtils.degToRad(Math.sin(azimuth) * maxElevationDeg)
+    const cosAlt = Math.cos(altitude)
+    const sinAlt = Math.sin(altitude)
+    const x = Math.cos(azimuth) * cosAlt
+    const y = sinAlt
+    const z = Math.sin(azimuth) * cosAlt
 
-    // Calculate y position: oscillate between -0.1 and 0.1
-    const yPosition = 0.0 * Math.sin(timeRef.current * 0.3)
+    materialRef.current.uniforms.sunPosition.value.set(x, y, z)
 
-    // Update sun position with the new x and y values
-    if (materialRef.current) {
-      materialRef.current.uniforms.sunPosition.value.x = xPosition
-      materialRef.current.uniforms.sunPosition.value.y = yPosition
-    }
+    // Dramatic diurnal parameter variation
+    const maxAltSin = Math.sin(THREE.MathUtils.degToRad(maxElevationDeg))
+    const horizonProximity = 1 - THREE.MathUtils.clamp(Math.abs(y) / maxAltSin, 0, 1) // 1 near horizon, 0 near noon
+
+    const turbidityAnim = 10 + 10 * horizonProximity         // 2 (noon) → 12 (sunrise/sunset)
+    const rayleighAnim = 0.6 + 2.4 * (1 - horizonProximity) // ~1.6 (sunrise) → 4.0 (noon)
+    const mieCoeffAnim = 0.015 + 0.20 * horizonProximity     // 0.015 (noon) → 0.215 (hazy horizon)
+    const mieGAnim = 0.2 + 0.25 * horizonProximity           // 0.6 (noon) → 0.85 (glare near horizon)
+
+    materialRef.current.uniforms.turbidity.value = turbidityAnim
+    materialRef.current.uniforms.rayleigh.value = rayleighAnim
+    materialRef.current.uniforms.mieCoefficient.value = mieCoeffAnim
+    materialRef.current.uniforms.mieDirectionalG.value = mieGAnim
   })
 
   // PERFORMANCE: Use frame skipping with ref comparison

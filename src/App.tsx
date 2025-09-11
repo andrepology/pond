@@ -18,13 +18,7 @@ import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/adaptive-fog'
 
 
-// Pre-create reusable materials for better performance
-const MATERIALS = {
-  dodgerblue: new THREE.MeshStandardMaterial({ color: 'dodgerblue' }),
-  indianred: new THREE.MeshStandardMaterial({ color: 'indianred' }),
-  limegreen: new THREE.MeshStandardMaterial({ color: 'limegreen' }),
-  hotpink: new THREE.MeshStandardMaterial({ color: 'hotpink' })
-}
+
 
 useGLTF.preload('/models/mindbody.glb')
 useGLTF.preload('/models/wellstone.glb')
@@ -66,7 +60,7 @@ export default function App() {
           animationDuration={1.2}
         />
 
-        <Environment preset="forest"  environmentIntensity={1.0}  />
+        <Environment preset="apartment"  environmentIntensity={1.0}  />
 
         {/* Lights */}
         <ambientLight intensity={Math.PI / 4} />
@@ -89,9 +83,6 @@ export default function App() {
             <RandomizedLight radius={10} ambient={0.6} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
           </AccumulativeShadows>
 
-          
-
-
         </Center>
 
 
@@ -99,8 +90,9 @@ export default function App() {
       </Canvas>
 
       <DateTimeDisplay />
-      <Sheet sheetPercentage={sheetPercentage} />
-      <Controls onPercentageChange={setSheetPercentage} />
+    
+      {/* <Sheet sheetPercentage={sheetPercentage} /> */}
+      {/* <Controls onPercentageChange={setSheetPercentage} /> */}
     </>
   )
 }
@@ -139,6 +131,95 @@ const generateSphericalUVs = (geometry: THREE.BufferGeometry) => {
   
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
 }
+
+
+const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
+  const waterControls = useControls('Water Material', {
+    roughness: { value: 0.05, min: 0, max: 1, step: 0.005 },
+    ior: { value: 1.333, min: 1, max: 2.333, step: 0.001 },
+    transmission: { value: 1.0, min: 0, max: 1, step: 0.01 },
+    thickness: { value: 0.05, min: 0, max: 2, step: 0.01 },
+    attenuationDistance: { value: 2.0, min: 0.1, max: 10, step: 0.1 },
+    attenuationColor: '#4fa3ff',
+    specularIntensity: { value: 0.6, min: 0, max: 1, step: 0.01 },
+    normalScale: { value: 0.5, min: 0, max: 2, step: 0.01 },
+    normalTiling: { value: 2.5, min: 0.5, max: 10, step: 0.1 },
+    flowU: { value: 0.03, min: -0.3, max: 0.3, step: 0.001 },
+    flowV: { value: 0.02, min: -0.3, max: 0.3, step: 0.001 }
+  })
+
+  const waterNormals = useTexture('/waternormals.jpg')
+  useMemo(() => {
+    if (waterNormals) {
+      waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping
+      waterNormals.anisotropy = 4
+    }
+  }, [waterNormals])
+
+  useEffect(() => {
+    if (waterNormals) {
+      waterNormals.repeat.set(waterControls.normalTiling, waterControls.normalTiling)
+    }
+  }, [waterNormals, waterControls.normalTiling])
+
+  useFrame((_, delta) => {
+    if (waterNormals) {
+      waterNormals.offset.x += delta * waterControls.flowU
+      waterNormals.offset.y += delta * waterControls.flowV
+    }
+  })
+
+  return (
+    <group  {...props} ref={ref}>
+
+
+
+      <SphericalSky
+        radius={1.01}
+        displayRadius={1000}
+        segments={48}
+        lowQuality={true}
+        opacity={0.85}
+      />
+
+
+      <Starfield
+        radius={1.00}
+        count={50}
+        minStarSize={0.10}
+
+        twinkleSpeed={1.3}
+        twinkleAmount={0.3}
+
+        bloomSize={0.3}
+        bloomStrength={0.1}
+        distanceFalloff={1.8}
+        coreBrightness={1.0}
+      />
+
+      {/* Water sphere using icosahedron to reduce pole pinching */}
+      <Icosahedron castShadow args={[1.01, 18]}>
+        <meshPhysicalMaterial
+          transmission={waterControls.transmission}
+          roughness={waterControls.roughness}
+          ior={waterControls.ior}
+          thickness={waterControls.thickness}
+          attenuationColor={waterControls.attenuationColor as unknown as THREE.ColorRepresentation}
+          attenuationDistance={waterControls.attenuationDistance}
+          specularIntensity={waterControls.specularIntensity}
+          metalness={0}
+          clearcoat={0.0}
+          normalMap={waterNormals as unknown as THREE.Texture}
+          normalScale={new THREE.Vector2(waterControls.normalScale, waterControls.normalScale)}
+          transparent
+          opacity={1.0}
+        />
+      </Icosahedron>
+
+
+    </group>
+  )
+});
 
 const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
   const groupRef = useRef<THREE.Group>(null)
@@ -203,95 +284,6 @@ const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, active, ..
   )
 });
 
-const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  const waterControls = useControls('Water Material', {
-    roughness: { value: 0.05, min: 0, max: 1, step: 0.005 },
-    ior: { value: 1.333, min: 1, max: 2.333, step: 0.001 },
-    transmission: { value: 1.0, min: 0, max: 1, step: 0.01 },
-    thickness: { value: 0.05, min: 0, max: 2, step: 0.01 },
-    attenuationDistance: { value: 2.0, min: 0.1, max: 10, step: 0.1 },
-    attenuationColor: '#4fa3ff',
-    specularIntensity: { value: 0.6, min: 0, max: 1, step: 0.01 },
-    normalScale: { value: 0.5, min: 0, max: 2, step: 0.01 },
-    normalTiling: { value: 2.5, min: 0.5, max: 10, step: 0.1 },
-    flowU: { value: 0.03, min: -0.3, max: 0.3, step: 0.001 },
-    flowV: { value: 0.02, min: -0.3, max: 0.3, step: 0.001 }
-  })
-
-  const waterNormals = useTexture('/waternormals.jpg')
-  useMemo(() => {
-    if (waterNormals) {
-      waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping
-      waterNormals.anisotropy = 4
-    }
-  }, [waterNormals])
-
-  useEffect(() => {
-    if (waterNormals) {
-      waterNormals.repeat.set(waterControls.normalTiling, waterControls.normalTiling)
-    }
-  }, [waterNormals, waterControls.normalTiling])
-
-  useFrame((_, delta) => {
-    if (waterNormals) {
-      waterNormals.offset.x += delta * waterControls.flowU
-      waterNormals.offset.y += delta * waterControls.flowV
-    }
-  })
-
-  return (
-    <group  {...props} ref={ref}>
-
-
-      {/* <WaterSphere radius={1.00} /> */}
-
-      {/* <Innio /> */}
-
-
-
-      <SphericalSky
-        radius={1.01}
-        displayRadius={1000}
-        segments={48}
-        lowQuality={true}
-      />
-
-
-      {/* <Starfield
-        radius={1.00}
-        count={50}
-        minStarSize={0.10}
-
-        twinkleSpeed={1.3}
-        twinkleAmount={0.3}
-
-        bloomSize={0.3}
-        bloomStrength={0.1}
-        distanceFalloff={1.8}
-        coreBrightness={1.0}
-      /> */}
-
-      {/* Water sphere using icosahedron to reduce pole pinching */}
-      <Icosahedron castShadow args={[1.01, 6]}>
-        <meshPhysicalMaterial
-          transmission={waterControls.transmission}
-          roughness={waterControls.roughness}
-          ior={waterControls.ior}
-          thickness={waterControls.thickness}
-          attenuationColor={waterControls.attenuationColor as unknown as THREE.ColorRepresentation}
-          attenuationDistance={waterControls.attenuationDistance}
-          specularIntensity={waterControls.specularIntensity}
-          metalness={0}
-          clearcoat={0.1}
-          normalMap={waterNormals as unknown as THREE.Texture}
-          normalScale={new THREE.Vector2(waterControls.normalScale, waterControls.normalScale)}
-        />
-      </Icosahedron>
-
-
-    </group>
-  )
-});
 
 const WellStone = forwardRef<any, InteractiveProps>(({ color, hovered, active, ...props }, ref) => {
   const groupRef = useRef<THREE.Group>(null)

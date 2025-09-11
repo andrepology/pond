@@ -1,6 +1,7 @@
-# Silk Components API Reference
+# Silk Components API Reference (updated)
 
 > Native‑like swipeable sheets on the web for React applications.
+> Reference: [Silk Components](https://silkhq.notion.site/Silk-Components-fad7232e08a24cf6bf9008749cc09879)
 
 ## Core Components
 
@@ -35,6 +36,8 @@ Defines the sheet's presentation behavior and interactions.
 **Props:**
 ```typescript
 interface SheetViewProps {
+  // IMPORTANT when using Portal or multiple sheets:
+  // bind to the specific Root via forComponent
   forComponent?: SheetId
   children: React.ReactNode
   contentPlacement?: "top" | "bottom" | "left" | "right" | "center"
@@ -125,6 +128,10 @@ interface SheetTriggerProps {
 }
 ```
 
+Best practices:
+- Prefer using `Trigger` directly (without `asChild`) unless you need custom elements. If using `asChild`, the child must forward refs and support `onClick`. Otherwise runtime errors like "Cannot set properties of undefined (setting 'current')" can occur.
+- When using a `Portal` or multiple sheets, set `forComponent` to a stable `SheetId` that matches the `componentId` of `Sheet.Root`.
+
 #### Sheet.Portal
 Portal component to render sheet in specific container.
 
@@ -135,6 +142,9 @@ interface SheetPortalProps {
   children: React.ReactNode
 }
 ```
+
+Notes:
+- If you render through a `Portal`, also set `forComponent` on `Sheet.View` to the same `componentId` passed to `Sheet.Root` so that gestures and animations target the correct instance.
 
 #### Sheet.Title & Sheet.Description
 Accessibility components for sheet content.
@@ -354,6 +364,16 @@ Defines the direction users swipe to dismiss:
 - Or bi-directional: `["top", "bottom"]`
 
 ### Travel Status
+### Controlled vs Uncontrolled Sheets
+
+`Sheet.Root` supports both patterns:
+
+- Uncontrolled: `defaultPresented` and `defaultActiveDetent`.
+- Controlled: `presented`/`onPresentedChange` and `activeDetent`/`onActiveDetentChange`.
+
+Detents are indexed (0..n-1). With `detents={["30%","60%","90%"]}`, index 0=30%, 1=60%, 2=90%.
+
+When combined with `Portal` and multiple triggers, controlled mode provides clearer state management. Otherwise, ensure `Trigger.forComponent` and `View.forComponent` point to the same `componentId`.
 Sheet animation states:
 - `"entering"` - Sheet is appearing
 - `"idleInside"` - Sheet is stationary and visible
@@ -389,30 +409,60 @@ Components use `data-silk` attributes for internal styling hooks:
 ## Best Practices
 
 1. **Always set license prop** on `Sheet.Root`
-2. **Use Portal for containment** when rendering within specific containers
+2. **Use Portal for containment** when rendering within specific containers; bind `View.forComponent` to `Root`'s `componentId`
 3. **Match tracks with contentPlacement** for intuitive interactions
 4. **Provide multiple detents** for better UX
 5. **Use semantic HTML** with `Sheet.Title` and `Sheet.Description`
 6. **Handle keyboard events** with `onEscapeKeyDown`
 7. **Implement proper focus management** with AutoFocusTarget
 8. **Test on mobile devices** for optimal gesture handling
+9. **Trigger usage**: Prefer direct `Trigger`; if `asChild` is used, ensure ref forwarding
 
 ## Examples
 
-### Basic Bottom Sheet
-```typescript
-<Sheet.Root license="non-commercial" presented={isPresented}>
-  <Sheet.View contentPlacement="bottom" tracks="bottom" detents={["300px", "60%"]}>
-    <Sheet.Backdrop className="bg-black/20" />
-    <Sheet.Content className="bg-white rounded-t-lg">
-      <Sheet.Handle className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-2" />
-      <div className="p-6">
-        <Sheet.Title>Sheet Title</Sheet.Title>
-        <Sheet.Description>Sheet description content</Sheet.Description>
-      </div>
-    </Sheet.Content>
-  </Sheet.View>
-</Sheet.Root>
+### Basic Bottom Sheet (Controlled)
+```tsx
+const SHEET_ID = createComponentId()
+
+function Example() {
+  const [presented, setPresented] = useState(false)
+  const [activeDetent, setActiveDetent] = useState(1)
+
+  return (
+    <>
+      <Sheet.Root
+        license="non-commercial"
+        componentId={SHEET_ID}
+        presented={presented}
+        onPresentedChange={setPresented}
+        activeDetent={activeDetent}
+        onActiveDetentChange={setActiveDetent}
+      >
+        <Sheet.Portal>
+          <Sheet.View
+            forComponent={SHEET_ID}
+            contentPlacement="bottom"
+            tracks="bottom"
+            detents={["30%","60%","90%"]}
+          >
+            <Sheet.Backdrop className="bg-black/20" />
+            <Sheet.Content className="bg-white rounded-t-lg max-w-[600px] w-full mx-auto">
+              <Sheet.Handle className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-2" />
+              <div className="p-6">
+                <Sheet.Title>Sheet Title</Sheet.Title>
+                <Sheet.Description>Sheet description content</Sheet.Description>
+              </div>
+            </Sheet.Content>
+          </Sheet.View>
+        </Sheet.Portal>
+      </Sheet.Root>
+
+      <Sheet.Trigger forComponent={SHEET_ID} action="present" className="btn">Open</Sheet.Trigger>
+      <Sheet.Trigger forComponent={SHEET_ID} action="dismiss" className="btn">Close</Sheet.Trigger>
+      <Sheet.Trigger forComponent={SHEET_ID} action="step" className="btn">Step</Sheet.Trigger>
+    </>
+  )
+}
 ```
 
 ### Scrollable Sheet Content
@@ -427,3 +477,33 @@ Components use `data-silk` attributes for internal styling hooks:
   </Scroll.Root>
 </Sheet.Content>
 ``` 
+
+### Persistent Sheet (No Backdrop Fade)
+```tsx
+const SHEET_ID = createComponentId()
+
+function Persistent() {
+  const [activeDetent, setActiveDetent] = useState(1)
+
+  return (
+    <Sheet.Root license="non-commercial" componentId={SHEET_ID} presented activeDetent={activeDetent} onActiveDetentChange={setActiveDetent}>
+      <Sheet.Portal>
+        <Sheet.View forComponent={SHEET_ID} contentPlacement="bottom" tracks="bottom" detents={["30%","60%","90%"]} swipeDismissal={false} swipeOvershoot={false} swipeTrap>
+          {/* No dimming behind sheet */}
+          <Sheet.Backdrop className="pointer-events-none" />
+          <Sheet.Content className="bg-white rounded-t-lg max-w-[600px] w-full mx-auto">
+            <Sheet.Handle className="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-2" />
+            <div className="p-6">Persistent content</div>
+          </Sheet.Content>
+        </Sheet.View>
+      </Sheet.Portal>
+    </Sheet.Root>
+  )
+}
+```
+
+## Troubleshooting
+
+- "Cannot set properties of undefined (setting 'current')": Occurs when using `Trigger asChild` with a child that doesn't forward refs. Remove `asChild` or forward refs properly.
+- Triggers don’t work with `Portal`: Ensure `View.forComponent` and `Trigger.forComponent` match the `Root` `componentId`.
+- Sheet not visible: Check `presented`/`defaultPresented`, `contentPlacement`/`tracks` alignment, container stacking context, and backdrop/content z-index.
