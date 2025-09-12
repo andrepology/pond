@@ -1,4 +1,4 @@
-import type { Vec3, FishIntent } from '../config/types'
+import type { Vec3, FishIntent } from '../../config/Types'
 
 export interface FishBehaviorOptions {
   approachThreshold?: number

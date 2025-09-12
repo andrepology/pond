@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useState } from 'react'
-import type { SpineState } from '../fish/core/Spine'
+import type { SpineState } from '../core/Spine'
 import { TubeBody } from './TubeBody'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'

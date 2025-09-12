@@ -2,11 +2,11 @@ import * as THREE from 'three'
 import React, { forwardRef, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Icosahedron, Center, useTexture } from '@react-three/drei'
-import SphericalSky from '../SphericalSky'
-import Starfield, { type StarfieldHandle } from '../Starfield'
-import Fish2 from '../../fish/Fish2'
+import SphericalSky from './SphericalSky'
+import Starfield, { type StarfieldHandle } from './Starfield'
+import Fish2 from '../fish/Fish2'
 import { useControls } from 'leva'
-import { computeFade, classifyRegion, type CrossfadeRegion } from '../../helpers/fade'
+import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/Fade'
 
 interface InteractiveProps {
   hovered?: boolean;

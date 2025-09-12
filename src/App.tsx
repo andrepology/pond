@@ -3,13 +3,13 @@ import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
 import { Leva, useControls } from 'leva'
-import { Focusable } from './components/focusable'
-import { CameraRig } from './components/camera-rig'
-import PondSphere from './components/pond-sphere'
+import { Focusable } from './components/Focusable'
+import { CameraRig } from './components/CameraRig'
+import PondSphere from './components/PondSphere'
 
 import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
-import { AdaptiveFog } from './components/adaptive-fog'
+import { AdaptiveFog } from './components/AdaptiveFog'
 
 
 

@@ -23,7 +23,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": false,
     "noImplicitAny": false,
-    "skipLibCheck": true,
     "noImplicitReturns": false,
     "noUncheckedIndexedAccess": false
   },

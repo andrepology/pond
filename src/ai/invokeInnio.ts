@@ -1,4 +1,4 @@
-import type { InnioClient } from '../config/types'
+import type { InnioClient } from '../config/Types'
 
 export function createDefaultInnioClient(): InnioClient {
   return {

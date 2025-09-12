@@ -169,7 +169,7 @@ export function DateTimeDisplay() {
         {getCurrentText()}
       </div>
       <div
-        className={`mt-0 text-2xl md:text-xl tracking-wide transition-opacity duration-1000 ${state.promptFadeClass}`}
+        className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass}`}
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
           color: 'rgba(144, 144, 144, 0.35)'

@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect } from 'react'
 import * as THREE from 'three'
-import type { SpineState } from '../core/spine'
+import type { SpineState } from '../core/Spine'
 import { useFrame } from '@react-three/fiber'
 
 interface TubeBodyProps {

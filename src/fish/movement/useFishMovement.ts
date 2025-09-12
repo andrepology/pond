@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { createVectorPool } from '../core/vector-pool'
-import { clampSpeed, applyDrag } from '../core/integrator'
-import { createSpine, updateSpineFollow } from '../core/spine'
-import { PHYSICS, SPINE } from '../config/constants'
+import { createVectorPool } from '../core/VectorPool'
+import { clampSpeed, applyDrag } from '../core/Integrator'
+import { createSpine, updateSpineFollow } from '../core/Spine'
+import { PHYSICS, SPINE } from '../../config/Constants'
 
 export interface MovementParams {
   maxSpeed: number
