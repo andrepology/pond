@@ -253,11 +253,11 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           
           // Apply horizon offset using uniform controls
           // localPos.x += horizonOffset.x;
-          // localPos.y += horizonOffset.y;
+          localPos.y += horizonOffset.y + 0.2;
           // localPos.z += horizonOffset.z;
           // localPos = normalize(localPos);
           
-          direction = normalize(mix(direction, localPos, 1.0));
+          direction = normalize(mix(direction, localPos, 0.3));
 
           // optical length
           // cutoff angle at 90 to avoid singularity in next formula.

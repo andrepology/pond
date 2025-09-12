@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats } from '@react-three/drei'
 import { Perf } from 'r3f-perf'
 import { Leva, useControls } from 'leva'
@@ -10,14 +10,17 @@ import { Controls } from './Controls'
 import { Focusable } from './components/focusable'
 import { CameraRig } from './components/camera-rig'
 import SphericalSky from './components/SphericalSky'
-import Starfield from './components/Starfield'
-import WaterSphere from './components/WaterSphere'
-import Innio from './innio/Innio'
+import Starfield, { type StarfieldHandle } from './components/Starfield'
 import Fish2 from './fish/Fish2'
 import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/adaptive-fog'
+// import { smoothstep } from './helpers/fade'
 
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
 
 
 
@@ -30,7 +33,7 @@ export default function App() {
 
   return (
     <>
-      <Leva collapsed  />
+      <Leva collapsed   hidden />
       
 
       <Canvas
@@ -47,7 +50,7 @@ export default function App() {
         dpr={[1, 1.2]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
-        <Stats />
+        {/* <Stats /> */}
         <Preload all />
 
         <CameraRig sheetPercentage={sheetPercentage} />
@@ -92,8 +95,8 @@ export default function App() {
 
       <DateTimeDisplay />
     
-      {/* <Sheet sheetPercentage={sheetPercentage} /> */}
-      {/* <Controls onPercentageChange={setSheetPercentage} /> */}
+      {/* <Sheet sheetPercentage={sheetPercentage} />
+       <Controls onPercentageChange={setSheetPercentage} /> */}
     </>
   )
 }
@@ -172,39 +175,74 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
     }
   })
 
+  const waterMaterialRef = useRef<THREE.MeshPhysicalMaterial | null>(null)
+  const starfieldRef = useRef<StarfieldHandle>(null)
+  const { controls } = useThree()
+
+  // Crossfade thresholds
+  const start = 1.4
+  const end = 1.5
+
+  useFrame(() => {
+    const cameraControls = controls as unknown as { distance?: number } | null
+    const d = cameraControls?.distance ?? 0
+    const fade = 1 - smoothstep(start, end, d)
+
+    // Stars use fade directly
+    if (starfieldRef.current) {
+      starfieldRef.current.setOpacity(fade)
+    }
+
+    // Water uses inverse
+    if (waterMaterialRef.current) {
+      waterMaterialRef.current.opacity = 1 - fade
+    }
+  })
+
+
+
   return (
     <group  {...props} ref={ref}>
 
 
 
-      <SphericalSky
-        radius={1.01}
-        displayRadius={1000}
-        segments={48}
-        lowQuality={true}
-        opacity={1.05}
-      /> 
+      {/* Background elements - render first */}
+      <group renderOrder={-3}>
+        <SphericalSky
+          radius={1.01}
+          displayRadius={1000}
+          segments={48}
+          lowQuality={true}
+          opacity={1.05}
+        /> 
+      </group>
 
-     <group position={[0, 0, 0]} scale={0.6}> 
-      <Starfield
-        radius={1.00}
-        count={50}
-        minStarSize={0.01}
+      <group position={[0, 0, 0]} scale={1.1} renderOrder={1}> 
+        <Starfield
+          ref={starfieldRef}
+          radius={1.00}
+          count={50}
+          minStarSize={1.2}
 
-        twinkleSpeed={1.3}
-        twinkleAmount={0.3}
+          twinkleSpeed={1.3}
+          twinkleAmount={0.3}
 
-        bloomSize={0.3}
-        bloomStrength={0.1}
-        distanceFalloff={1.8}
-        coreBrightness={1.0}
-      />
-    </group>
-      
+          bloomSize={0.3}
+          bloomStrength={0.1}
+          distanceFalloff={1.8}
+          coreBrightness={1.0}
+        />
+      </group>
 
-      {/* Water sphere using icosahedron to reduce pole pinching */}
-      <Icosahedron castShadow args={[1.01, 18]}>
+      {/* Fish inside sphere - render before water */}
+      <group name="innio-container" scale={0.15} renderOrder={-1}>
+        <Fish2 />
+      </group>
+
+      {/* Water sphere using icosahedron - render last for proper transparency */}
+      <Icosahedron castShadow args={[1.01, 18]} renderOrder={0}>
         <meshPhysicalMaterial
+          ref={(mat) => { waterMaterialRef.current = mat as unknown as THREE.MeshPhysicalMaterial }}
           transmission={waterControls.transmission}
           roughness={waterControls.roughness}
           ior={waterControls.ior}
@@ -218,13 +256,9 @@ const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref)
           normalScale={new THREE.Vector2(waterControls.normalScale, waterControls.normalScale)}
           transparent
           opacity={1.0}
+          depthWrite={false}
         />
       </Icosahedron>
-
-      {/* Contained scene (scaled so Innio's [-1,1] bounds fit inside radius ~1.01) */}
-      <group name="innio-container" scale={0.15}>
-        <Fish2 />
-      </group>
 
 
     </group>

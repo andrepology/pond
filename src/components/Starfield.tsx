@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react'
+import React, { useMemo, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Points } from '@react-three/drei'
@@ -36,7 +36,11 @@ interface StarfieldProps {
   shellColor?: string;
 }
 
-const Starfield: React.FC<StarfieldProps> = ({
+export interface StarfieldHandle {
+  setOpacity: (value: number) => void;
+}
+
+const Starfield = forwardRef<StarfieldHandle, StarfieldProps>(({ 
   // Core configuration
   seed = 'default-seed',
   count = 300,
@@ -65,7 +69,7 @@ const Starfield: React.FC<StarfieldProps> = ({
   outsideThreshold,
   insideThreshold,
   shellColor,
-}) => {
+}, ref) => {
   const { camera } = useThree();
 
   const pointsRef = useRef<THREE.Points>(null);
@@ -297,7 +301,7 @@ const Starfield: React.FC<StarfieldProps> = ({
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      depthTest: true,
+      depthTest: false,
     });
 
     return [
@@ -313,6 +317,17 @@ const Starfield: React.FC<StarfieldProps> = ({
     controls.maxRenderDistance
   ]);
 
+  useImperativeHandle(ref, () => ({
+    setOpacity: (value: number) => {
+      const clamped = Math.max(0, Math.min(1, value))
+      opacityRef.current = clamped
+      if (starMaterial instanceof THREE.ShaderMaterial) {
+        (starMaterial as THREE.ShaderMaterial).uniforms.opacity.value = clamped
+      }
+      if (pointsRef.current) pointsRef.current.visible = clamped > 0.001
+    },
+  }), [starMaterial])
+
   useFrame((state, delta) => {
     const now = performance.now();
     const elapsed = now - lastFrameTime.current;
@@ -327,24 +342,10 @@ const Starfield: React.FC<StarfieldProps> = ({
         (starMaterial as THREE.ShaderMaterial).uniforms.time.value = accumulatedStarTimeRef.current;
     }
 
-    const zoom = camera.zoom;
-    const maxZoom = 15;
-    const minZoom = 4;
-    let newStarsOpacity = 1.0; // Temporarily force opacity to 1.0
-
-    // if (zoom > maxZoom) {
-    //   newStarsOpacity = 1.0;
-    // } else if (zoom < minZoom) {
-    //   newStarsOpacity = 0.0;
-    // } else {
-    //   const normalizedZoom = (zoom - minZoom) / (maxZoom - minZoom);
-    //   newStarsOpacity = Math.pow(normalizedZoom, 2.5);
-    // }
-
-    opacityRef.current = newStarsOpacity;
+    // Keep last external opacity; we only update uniforms here
     if (pointsRef.current && starMaterial instanceof THREE.ShaderMaterial) {
-        (starMaterial as THREE.ShaderMaterial).uniforms.opacity.value = newStarsOpacity;
-        pointsRef.current.visible = newStarsOpacity > 0.01;
+      (starMaterial as THREE.ShaderMaterial).uniforms.opacity.value = opacityRef.current;
+      pointsRef.current.visible = opacityRef.current > 0.001;
     }
 
   
@@ -376,7 +377,7 @@ const Starfield: React.FC<StarfieldProps> = ({
       ref={pointsRef}
       positions={starPositions}
       material={starMaterial}
-      frustumCulled
+      frustumCulled={false}
     >
       <bufferAttribute
         attach="geometry-attributes-scale"
@@ -392,6 +393,6 @@ const Starfield: React.FC<StarfieldProps> = ({
       />
     </Points>
   );
-};
+});
 
 export default Starfield; 

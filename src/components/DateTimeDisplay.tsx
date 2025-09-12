@@ -151,7 +151,7 @@ export function DateTimeDisplay() {
       case 0:
         return state.date
       case 1:
-        return "andre's pond"
+        return "andre's pond ☼ ☽ ⚘ "
       default:
         return ''
     }

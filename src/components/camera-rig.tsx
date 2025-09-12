@@ -38,7 +38,7 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
       const inspectable = active.userData.inspectable
       
       if (cameraControls) {
-        cameraControls.minDistance = inspectable ? 0.01 : 5
+        cameraControls.minDistance = inspectable ? 1.0 : 5
         cameraControls.maxDistance = 20
         cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
       }
