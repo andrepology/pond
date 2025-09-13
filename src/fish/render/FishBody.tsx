@@ -149,6 +149,7 @@ interface FishBodyProps {
 export function FishBody({ spine, headRef, headDirection, bankRadians = 0 }: FishBodyProps) {
   const spineSphereRefs = useRef<(THREE.Mesh | null)[]>([])
   const [finData, setFinData] = useState<FinAttachmentData[]>([])
+  const groupRef = useRef<THREE.Group>(null)
 
   useFrame(() => {
     const pts = spine.points
@@ -157,6 +158,9 @@ export function FishBody({ spine, headRef, headDirection, bankRadians = 0 }: Fis
       if (m) m.position.copy(pts[i])
     }
     // Head sphere position is already managed by movement system via headRef
+    if (groupRef.current) {
+      groupRef.current.rotation.z = bankRadians
+    }
   })
 
   const handleFinData = (data: FinAttachmentData[]) => {
@@ -164,7 +168,7 @@ export function FishBody({ spine, headRef, headDirection, bankRadians = 0 }: Fis
   }
 
   return (
-    <group rotation={[0, 0, bankRadians]}>
+    <group ref={groupRef}>
       {/* Head sphere with matching material */}
       <mesh ref={headRef}>
         <sphereGeometry args={[0.02, 16, 16]} />

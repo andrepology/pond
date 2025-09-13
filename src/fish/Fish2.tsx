@@ -12,7 +12,8 @@ export interface Fish2Props {
 }
 
 export function Fish2({ debug = false }: Fish2Props) {
-  const { scene } = useThree()
+  const { scene, camera } = useThree()
+  const rootRef = useRef<THREE.Group>(null)
   const GROUND_Y = 0
   // Interaction sphere radius should match movement bounds
   const INTERACTION_RADIUS = 6
@@ -29,7 +30,18 @@ export function Fish2({ debug = false }: Fish2Props) {
     bounds: { min: -6, max: 6, buffer: 0.8 },
   })
 
+  const planeRef = useRef<THREE.Mesh>(null)
+
   useFrame((_, dt) => {
+    // Face the invisible plane toward the camera and keep it through the sphere center
+    if (planeRef.current) {
+      const camDir = new THREE.Vector3()
+      camera.getWorldDirection(camDir)
+      camDir.normalize()
+      const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), camDir)
+      planeRef.current.setRotationFromQuaternion(q)
+      planeRef.current.position.set(0, 0, 0)
+    }
     movement.step(dt)
     // Update ripples
     const now = performance.now()
@@ -83,16 +95,12 @@ export function Fish2({ debug = false }: Fish2Props) {
 
   interface ActiveRipple { mesh: THREE.Mesh; startTime: number; duration: number }
 
-  function handleFeed(pt: THREE.Vector3) {
-    // Place within the pond volume along the clicked surface direction.
-    // Incoming pt is on the interaction sphere surface; push slightly inward.
-    const radial = pt.clone()
-    const len = radial.length() || 1
-    const inside = radial.multiplyScalar((INTERACTION_RADIUS - 0.05) / len)
-    movement.setFoodTarget(inside)
-    foodMarkersRef.current = [...foodMarkersRef.current, inside.clone()]
+  function handleFeed(ptWorld: THREE.Vector3) {
+    const local = rootRef.current ? rootRef.current.worldToLocal(ptWorld.clone()) : ptWorld.clone()
+    movement.setFoodTarget(local)
+    foodMarkersRef.current = [...foodMarkersRef.current, local.clone()]
     setFoodMarkers(foodMarkersRef.current)
-    createRipple(inside)
+    createRipple(local)
   }
 
   function createRipple(position: THREE.Vector3) {
@@ -108,16 +116,17 @@ export function Fish2({ debug = false }: Fish2Props) {
 
 
   return (
-    <group>
-      {/* Invisible interaction sphere covering the pond volume for pointer capture */}
+    <group ref={rootRef}>
+      {/* Invisible interaction plane through the center, always facing the camera */}
       <mesh
+        ref={planeRef}
         onPointerDown={gestures.onPointerDown}
         onPointerUp={gestures.onPointerUp}
         onPointerMove={gestures.onPointerMove}
         onPointerLeave={gestures.onPointerLeave}
       >
-        <sphereGeometry args={[INTERACTION_RADIUS, 32, 32]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        <planeGeometry args={[INTERACTION_RADIUS * 2 + 2, INTERACTION_RADIUS * 2 + 2, 1, 1]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
 
       {/* Head sphere moved to FishBody component */}
@@ -126,8 +135,8 @@ export function Fish2({ debug = false }: Fish2Props) {
 
       {/* Food markers */}
       {foodMarkers.map((pt, idx) => (
-        <mesh key={`food-${idx}`} position={[pt.x, GROUND_Y + 0.02, pt.z]}>
-          <sphereGeometry args={[0.035, 12, 12]} />
+        <mesh key={`food-${idx}`} position={[pt.x, pt.y, pt.z]}>
+          <sphereGeometry args={[0.018, 12, 12]} />
           <meshToonMaterial color="#FFFFFF" emissive="#FFFFFF" emissiveIntensity={3.2} toneMapped={false} />
         </mesh>
       ))}

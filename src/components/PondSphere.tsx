@@ -105,7 +105,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
         <Starfield
           ref={starfieldRef}
           radius={1.00}
-          count={50}
+          count={80}
           minStarSize={1.2}
 
           twinkleSpeed={1.3}
@@ -124,7 +124,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
-      <Icosahedron castShadow args={[1.01, 18]} renderOrder={0}>
+      <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
         <meshPhysicalMaterial
           ref={(mat) => { waterMaterialRef.current = mat as unknown as THREE.MeshPhysicalMaterial }}
           transmission={waterControls.transmission}

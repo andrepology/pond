@@ -6,9 +6,10 @@ export interface PointerGesturesProps {
   isMobile: boolean
   onDoubleTap: (point: THREE.Vector3) => void
   onLongPress: (point: THREE.Vector3) => void
+  onSingleTap?: (point: THREE.Vector3) => void
 }
 
-export function usePointerGestures({ isMobile, onDoubleTap, onLongPress }: PointerGesturesProps) {
+export function usePointerGestures({ isMobile, onDoubleTap, onLongPress, onSingleTap }: PointerGesturesProps) {
   const lastPointerDownRef = useRef<{ time: number; point: THREE.Vector3 | null }>({ time: 0, point: null })
   const lastTapTimeRef = useRef(0)
   const pressStartRef = useRef<number | null>(null)
@@ -20,6 +21,7 @@ export function usePointerGestures({ isMobile, onDoubleTap, onLongPress }: Point
   const MOVE_THRESH_SQ = 25
 
   const onPointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation()
     lastPointerDownRef.current = { time: performance.now(), point: e.point.clone() }
     if (isMobile) {
       pressStartRef.current = Date.now()
@@ -28,6 +30,7 @@ export function usePointerGestures({ isMobile, onDoubleTap, onLongPress }: Point
   }, [isMobile])
 
   const onPointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation()
     const down = lastPointerDownRef.current
     const upTime = performance.now()
     const pressStart = pressStartRef.current
@@ -51,6 +54,8 @@ export function usePointerGestures({ isMobile, onDoubleTap, onLongPress }: Point
         onDoubleTap(e.point)
         lastTapTimeRef.current = 0
       } else {
+        // Trigger single-tap immediately for desktop UX; still allow double-tap within window
+        if (onSingleTap) onSingleTap(e.point)
         lastTapTimeRef.current = upTime
       }
     } else {
