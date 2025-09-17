@@ -46,16 +46,12 @@ const formatDate = (date: Date): string => {
 }
 
 const PROMPTS = [
-  'be and it is',
-  'what am i grateful for?',
-  'how is our world today?',
+  'what are you grateful for?',
+  'how is your world today?',
   'what are you observing today?',
   'what are you avoiding right now?',
-  'what can i let go of?',
+  'what can you let go of?',
   'what is your inner story about yourself?',
-  'what habits do i want to grow?',
-  'what beliefs about self do i want to let go of?',
-  'what game am i playing right now?',
 ]
 
 export function DateTimeDisplay() {
@@ -160,7 +156,7 @@ export function DateTimeDisplay() {
   return (
     <div className={`fixed bottom-0 left-0 z-50 pointer-events-none p-10 transition-opacity duration-1000 ${state.displayOpacity}`}>
       <div
-        className={`text-4xl md:text-3xl tracking-tight transition-opacity duration-1000 ${state.fadeClass}`}
+        className={`text-4xl md:text-3xl transition-all tracking-tight duration-1000 ${state.fadeClass}`}
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
           color: 'rgba(144, 144, 144, 0.35)'

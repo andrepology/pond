@@ -1,4 +1,4 @@
-import type { InnioClient } from '../config/Types'
+import type { InnioClient } from '../components/fish/config/Types'
 
 export function createDefaultInnioClient(): InnioClient {
   return {

@@ -4,7 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Icosahedron, Center, useTexture } from '@react-three/drei'
 import SphericalSky from './SphericalSky'
 import Starfield, { type StarfieldHandle } from './Starfield'
-import Fish2 from '../fish/Fish2'
+import Fish2 from './fish/Fish2'
 import { useControls } from 'leva'
 import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/Fade'
 

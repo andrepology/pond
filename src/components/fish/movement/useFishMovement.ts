@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { createVectorPool } from '../core/VectorPool'
 import { clampSpeed, applyDrag } from '../core/Integrator'
 import { createSpine, updateSpineFollow } from '../core/Spine'
-import { PHYSICS, SPINE } from '../../config/Constants'
+import { PHYSICS, SPINE } from '../config/Constants'
 
 export interface MovementParams {
   maxSpeed: number
@@ -43,6 +43,7 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
   const swimTimer = useRef(0)
   const swimDuration = useRef(1)
   const foodTarget = useRef<THREE.Vector3 | null>(null)
+  const approachSwayTime = useRef(0)
 
   // Minimal per-frame API; caller wires into useFrame externally
   useEffect(() => {
@@ -156,6 +157,19 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     const targetSpeed = dist < params.slowingRadius ? params.maxSpeed * (dist / params.slowingRadius) : params.maxSpeed
     desired.multiplyScalar(targetSpeed * speedScale)
 
+    // Gentle lateral sway during approach for more lifelike motion
+    if (foodTarget.current && dist > params.arrivalThreshold) {
+      approachSwayTime.current += delta
+      const worldUp = new THREE.Vector3(0, 1, 0)
+      const forwardDir = headDirection.current.lengthSq() > 1e-6 ? headDirection.current.clone().normalize() : new THREE.Vector3(0, 0, 1)
+      const lateral = new THREE.Vector3().crossVectors(worldUp, forwardDir).normalize()
+      const swayAmp = THREE.MathUtils.clamp(dist / (params.slowingRadius * 2), 0.02, 0.2)
+      const sway = Math.sin(approachSwayTime.current * 2.5) * swayAmp
+      desired.addScaledVector(lateral, sway * targetSpeed)
+    } else {
+      approachSwayTime.current = 0
+    }
+
     const steer = desired.clone().sub(velocity.current)
     const steerLen = steer.length()
     if (steerLen > params.maxSteer) steer.multiplyScalar(params.maxSteer / (steerLen || 1))
@@ -188,12 +202,7 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     const wave = (i: number) => Math.sin(t * 3 + i * 0.5) * 0.05 * THREE.MathUtils.clamp(velocity.current.length() * 20, 0.2, 1)
     updateSpineFollow(spine, headRef.current.position, headDirection.current, wave)
 
-    // Arrival check: clear food target when arrived
-    if (foodTarget.current) {
-      if (pos.distanceTo(foodTarget.current) <= params.arrivalThreshold) {
-        foodTarget.current = null
-      }
-    }
+    // Do not auto-clear food target here; consumption is managed externally
   }
 
   const setFoodTarget = (p: THREE.Vector3) => {

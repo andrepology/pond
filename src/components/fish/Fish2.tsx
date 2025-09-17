@@ -1,7 +1,7 @@
 import React from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
-import { MOVEMENT_DEFAULTS } from '../config/Constants'
+import { MOVEMENT_DEFAULTS } from './config/Constants'
 import { useFishMovement } from './movement/useFishMovement'
 import { FishBody } from './render/FishBody'
 import { usePointerGestures } from './interaction/usePointerGestures'
@@ -31,6 +31,9 @@ export function Fish2({ debug = false }: Fish2Props) {
   })
 
   const planeRef = useRef<THREE.Mesh>(null)
+  const activeMarkerIndex = useRef<number | null>(null)
+  const feedingPhase = useRef<'idle' | 'approach'>('idle')
+  const BITE_THRESHOLD = 0.06
 
   useFrame((_, dt) => {
     // Face the invisible plane toward the camera and keep it through the sphere center
@@ -61,16 +64,30 @@ export function Fish2({ debug = false }: Fish2Props) {
       })
       activeRipples.current = activeRipples.current.filter((r) => !toRemove.includes(r))
     }
-    // Remove food markers when fish reaches them
+    // Feeding control: steer toward active target and consume by mouth-distance
     if (movement.headRef.current) {
       const head = movement.headRef.current.position
-      if (foodMarkersRef.current.length) {
-        // Drive target to first marker if any
-        movement.setFoodTarget(foodMarkersRef.current[0])
-        // Remove consumed
-        if (head.distanceTo(foodMarkersRef.current[0]) <= MOVEMENT_DEFAULTS.arrivalThreshold) {
-          foodMarkersRef.current.shift()
-          setFoodMarkers([...foodMarkersRef.current])
+      if (feedingPhase.current === 'approach') {
+        const idx = activeMarkerIndex.current ?? 0
+        const target = foodMarkersRef.current[idx]
+        if (target) {
+          movement.setFoodTarget(target)
+          const dist = head.distanceTo(target)
+          if (dist <= BITE_THRESHOLD) {
+            // Remove consumed and advance
+            foodMarkersRef.current.splice(idx, 1)
+            setFoodMarkers([...foodMarkersRef.current])
+            if (foodMarkersRef.current.length > 0) {
+              activeMarkerIndex.current = Math.min(idx, foodMarkersRef.current.length - 1)
+            } else {
+              activeMarkerIndex.current = null
+              feedingPhase.current = 'idle'
+            }
+          }
+        } else {
+          // Safety reset
+          activeMarkerIndex.current = null
+          feedingPhase.current = 'idle'
         }
       }
     }
@@ -100,6 +117,11 @@ export function Fish2({ debug = false }: Fish2Props) {
     movement.setFoodTarget(local)
     foodMarkersRef.current = [...foodMarkersRef.current, local.clone()]
     setFoodMarkers(foodMarkersRef.current)
+    // Initialize feeding state if idle
+    if (feedingPhase.current === 'idle') {
+      activeMarkerIndex.current = foodMarkersRef.current.length - 1
+      feedingPhase.current = 'approach'
+    }
     createRipple(local)
   }
 
