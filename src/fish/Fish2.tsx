@@ -130,7 +130,7 @@ export function Fish2({ debug = false }: Fish2Props) {
       </mesh>
 
       {/* Head sphere moved to FishBody component */}
-      <FishBody spine={movement.spine} headRef={movement.headRef} headDirection={movement.headDirection} bankRadians={movement.bankRadians.current} />
+      <FishBody spine={movement.spine} headRef={movement.headRef} headDirection={movement.headDirection} velocity={movement.velocity} bankRadians={movement.bankRadians.current} />
 
 
       {/* Food markers */}
