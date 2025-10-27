@@ -17,7 +17,7 @@ interface InteractiveProps {
 export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
   const waterControls = useControls('Water Material', {
     roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
-    ior: { value: 1.76, min: 1, max: 2.333, step: 0.001 },
+    ior: { value: 2.26, min: 1, max: 2.333, step: 0.001 },
     transmission: { value: 1.00, min: 0, max: 1, step: 0.01 },
     thickness: { value: 0.05, min: 0, max: 2, step: 0.01 },
     attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
