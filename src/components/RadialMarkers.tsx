@@ -75,15 +75,15 @@ export function RadialMarkers({ count = 12, radius = 1.3 }: RadialMarkersProps) 
           rotation={[0, 0, angle + Math.PI / 2]}
         >
           <mesh>
-            <boxGeometry args={[0.03, 0.3, 0.08]} />
+            <capsuleGeometry args={[0.02, 0.28, 8, 16]} />
             <meshPhysicalMaterial
               transmission={1.0}
-              roughness={0.3}
+              roughness={0.35}
               ior={1.5}
               thickness={0.5}
               metalness={0}
               clearcoat={1.2}
-              color="#FFFFFF"
+              color="#E0E0E0"
               transparent
               opacity={1.0}
             />
