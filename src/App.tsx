@@ -12,8 +12,6 @@ import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
 
 
-
-
 useGLTF.preload('/models/mindbody.glb')
 useGLTF.preload('/models/wellstone.glb')
 
@@ -37,7 +35,11 @@ export default function App() {
         eventSource={document.getElementById('root')!}
         eventPrefix="client"
         // needed for switching back to default camera
-        onPointerMissed={() => setLocation('/')}
+        onPointerMissed={(event) => {
+          const target = event.target as HTMLElement
+          if (target?.closest('[class*="leva-c-"]')) return
+          setLocation('/')
+        }}
         gl={{
           antialias: true,
           powerPreference: "high-performance"
@@ -60,7 +62,8 @@ export default function App() {
         />
 
         <Environment
-           files={['/rogland_clear_night_2k.hdr']}
+          //  files={['/rogland_clear_night_2k.hdr']}
+           preset='sunset'
            backgroundBlurriness={1.0} 
            environmentIntensity={1.0} 
            
@@ -75,16 +78,26 @@ export default function App() {
 
         {/* Main Scene Content */}
         <Center position={[0, 0.5, 1.5]}>
-          <Focusable id="01" name="pond" position={[-1.2, 1.5, -3]} inspectable>
+          <Focusable id="01" name="" position={[-1.2, 2.5, -3]} inspectable>
             <PondSphere />
           </Focusable>
 
-          {/* Shadows and Ground */}
-          <AccumulativeShadows temporal={false} frames={200} blend={1.1} alphaTest={0.7} color="#f0f0f0" colorBlend={1} opacity={0.4} scale={15}>
-            <RandomizedLight radius={10} ambient={0.6} intensity={Math.PI} position={[2.5, 8, -2.5]} bias={0.001} />
+           {/* Shadows and Ground */}
+           <AccumulativeShadows
+             temporal={false}
+             frames={200}
+             blend={0}
+             alphaTest={0.62}
+             color="#e0e7ef" // very light gray-blue (lighter than slate-400)
+             colorBlend={1.0}
+             opacity={0.4}
+             scale={20}
+           >
+            <RandomizedLight radius={8} ambient={0.2} intensity={Math.PI } position={[0, 11, -25]} bias={0.001} />
           </AccumulativeShadows>
-
         </Center>
+
+         
 
 
         <Tone mapping={mapping} exposure={exposure} />

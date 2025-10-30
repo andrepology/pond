@@ -47,8 +47,8 @@ export function RadialMarkers({ count = 12, radius = 1.3 }: RadialMarkersProps) 
       .normalize()
 
     // Add subtle noise to direction for organic feel
-    const noiseX = Math.sin(noiseTimeRef.current * 0.5) * 0.02
-    const noiseY = Math.cos(noiseTimeRef.current * 0.7) * 0.02
+    const noiseX = Math.sin(noiseTimeRef.current * 0.9) * 0.2
+    const noiseY = Math.cos(noiseTimeRef.current * 0.7) * 0.2
     direction.x += noiseX
     direction.y += noiseY
     direction.normalize()
@@ -78,12 +78,12 @@ export function RadialMarkers({ count = 12, radius = 1.3 }: RadialMarkersProps) 
             <capsuleGeometry args={[0.02, 0.28, 8, 16]} />
             <meshPhysicalMaterial
               transmission={1.0}
-              roughness={0.35}
+              roughness={0.0}
               ior={1.5}
-              thickness={0.5}
+              thickness={0.1}
               metalness={0}
-              clearcoat={1.2}
-              color="#E0E0E0"
+              clearcoat={0.5}
+              color="#ffffff"
               transparent
               opacity={1.0}
             />
