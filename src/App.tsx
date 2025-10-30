@@ -17,6 +17,7 @@ useGLTF.preload('/models/wellstone.glb')
 
 export default function App() {
   const [sheetPercentage, setSheetPercentage] = useState(0)
+  const markersVisibleRef = useRef(false)
   const [, setLocation] = useLocation()
 
   const { mapping, exposure } = useControls({
@@ -38,6 +39,7 @@ export default function App() {
         onPointerMissed={(event) => {
           const target = event.target as HTMLElement
           if (target?.closest('[class*="leva-c-"]')) return
+          if (target?.closest('[data-ui]')) return
           setLocation('/')
         }}
         gl={{
@@ -79,7 +81,7 @@ export default function App() {
         {/* Main Scene Content */}
         <Center position={[0, 0.5, 1.5]}>
           <Focusable id="01" name="" position={[-1.2, 2.5, -3]} inspectable>
-            <PondSphere />
+            <PondSphere markersVisibleRef={markersVisibleRef} />
           </Focusable>
 
            {/* Shadows and Ground */}
@@ -109,6 +111,26 @@ export default function App() {
       <div style={{ transform: 'scale(1.5)', transformOrigin: 'bottom left' }}>
         <DateTimeDisplay />
       </div>
+
+      <button
+        data-ui
+        onClick={() => { markersVisibleRef.current = !markersVisibleRef.current }}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          padding: '10px 20px',
+          fontSize: '16px',
+          cursor: 'pointer',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          backgroundColor: '#fff',
+          zIndex: 1000
+        }}
+      >
+        Toggle Timer
+      </button>
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
        <Controls onPercentageChange={setSheetPercentage} /> */}

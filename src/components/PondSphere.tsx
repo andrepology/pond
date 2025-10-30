@@ -13,6 +13,7 @@ interface InteractiveProps {
   hovered?: boolean;
   active?: boolean;
   color: string;
+  markersVisibleRef?: React.MutableRefObject<boolean>;
 }
 
 export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
@@ -175,7 +176,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Radial markers */}
-      <RadialMarkers count={12} radius={1.5} />
+      <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
