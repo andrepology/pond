@@ -75,13 +75,9 @@ export default function App() {
 
         {/* Main Scene Content */}
         <Center position={[0, 0.5, 1.5]}>
-          <Focusable id="01" name="pond" position={[-1.2, 1.2, -3]} inspectable>
+          <Focusable id="01" name="pond" position={[-1.2, 1.5, -3]} inspectable>
             <PondSphere />
           </Focusable>
-
-          {/* <Focusable id="03" name="wellstone" position={[-1, 0.5, 0]}>
-            <WellStone color="limegreen" />
-          </Focusable> */}
 
           {/* Shadows and Ground */}
           <AccumulativeShadows temporal={false} frames={200} blend={1.1} alphaTest={0.7} color="#f0f0f0" colorBlend={1} opacity={0.4} scale={15}>
@@ -97,7 +93,9 @@ export default function App() {
 
       </Canvas>
 
-      <DateTimeDisplay />
+      <div style={{ transform: 'scale(1.5)', transformOrigin: 'bottom left' }}>
+        <DateTimeDisplay />
+      </div>
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
        <Controls onPercentageChange={setSheetPercentage} /> */}
@@ -140,4 +138,5 @@ function Tone({ mapping, exposure }) {
       THREE.ShaderChunk.tonemapping_pars_fragment = prevFrag
     }
   }, [mapping, exposure])
+  return null
 }

@@ -7,6 +7,7 @@ import Starfield, { type StarfieldHandle } from './Starfield'
 import Fish2 from '../fish/Fish2'
 import { useControls } from 'leva'
 import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/Fade'
+import { RadialMarkers } from './RadialMarkers'
 
 interface InteractiveProps {
   hovered?: boolean;
@@ -122,6 +123,9 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       <group name="innio-container" scale={0.15} renderOrder={-1}>
         <Fish2 />
       </group>
+
+      {/* Radial markers */}
+      <RadialMarkers count={12} radius={1.3} />
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
