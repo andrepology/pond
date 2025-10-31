@@ -202,7 +202,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
 
       {/* UIKit 3D Input at sphere center */}
-      <group ref={inputGroupRef} renderOrder={2}>
+      {/* <group ref={inputGroupRef} renderOrder={2}>
         <Input
           value={inputText}
           onValueChange={setInputText}
@@ -226,7 +226,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           caretBorderRadius={4}
           selectionColor="rgba(255,255,255,0.3)"
         />
-      </group>
+      </group> */}
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>

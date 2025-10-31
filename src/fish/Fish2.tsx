@@ -5,7 +5,10 @@ import { MOVEMENT_DEFAULTS } from '../config/constants'
 import { useFishMovement } from './movement/useFishMovement'
 import { FishBody } from './render/FishBody'
 import { usePointerGestures } from './interaction/usePointerGestures'
+import { useFoodSystem } from './hooks/useFoodSystem'
+import { FoodVisuals } from './components/FoodVisuals'
 import { useMemo, useRef, useState } from 'react'
+
 
 export interface Fish2Props {
   debug?: boolean
@@ -33,35 +36,8 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
 
   const planeRef = useRef<THREE.Mesh>(null)
 
-  // --- Food marker and ripple feedback ---
-  const [foodMarkers, setFoodMarkers] = useState<THREE.Vector3[]>([])
-  const foodMarkersRef = useRef<THREE.Vector3[]>([])
-  const activeRipples = useRef<ActiveRipple[]>([])
-  const RIPPLE_DURATION = 1800
-  const RIPPLE_INITIAL_OPACITY = 0.05
-  const RIPPLE_EXPANSION_FACTOR = 5
-  const RIPPLE_INITIAL_SCALE = 0.1
-
-  interface ActiveRipple { mesh: THREE.Mesh; startTime: number; duration: number }
-
-  function handleFeed(ptWorld: THREE.Vector3) {
-    const local = rootRef.current ? rootRef.current.worldToLocal(ptWorld.clone()) : ptWorld.clone()
-    movement.setFoodTarget(local)
-    foodMarkersRef.current = [...foodMarkersRef.current, local.clone()]
-    setFoodMarkers(foodMarkersRef.current)
-    createRipple(local)
-  }
-
-  function createRipple(position: THREE.Vector3) {
-    const geometry = new THREE.CircleGeometry(RIPPLE_INITIAL_SCALE, 32)
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: RIPPLE_INITIAL_OPACITY, side: THREE.DoubleSide })
-    const rippleMesh = new THREE.Mesh(geometry, material)
-    rippleMesh.position.copy(position)
-    rippleMesh.position.y = GROUND_Y + 0.01
-    rippleMesh.rotation.x = -Math.PI / 2
-    scene.add(rippleMesh)
-    activeRipples.current.push({ mesh: rippleMesh, startTime: performance.now(), duration: RIPPLE_DURATION })
-  }
+  // Food system manages markers and ripples
+  const { foodMarkers, ripples, handleFeed } = useFoodSystem(rootRef, movement)
 
   useFrame((_, dt) => {
     // Face the invisible plane toward the camera and keep it through the sphere center
@@ -74,42 +50,12 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
       planeRef.current.position.set(0, 0, 0)
     }
     movement.step(dt)
-    // Update ripples
-    const now = performance.now()
-    const toRemove: ActiveRipple[] = []
-    activeRipples.current.forEach((r) => {
-      const progress = Math.min((now - r.startTime) / r.duration, 1)
-      const currentScale = RIPPLE_INITIAL_SCALE + progress * RIPPLE_EXPANSION_FACTOR
-      r.mesh.scale.set(currentScale, currentScale, 1)
-      ;(r.mesh.material as THREE.MeshBasicMaterial).opacity = RIPPLE_INITIAL_OPACITY * (1 - progress)
-      if (progress >= 1) toRemove.push(r)
-    })
-    if (toRemove.length) {
-      toRemove.forEach((r) => {
-        scene.remove(r.mesh)
-        r.mesh.geometry.dispose()
-        ;(r.mesh.material as THREE.MeshBasicMaterial).dispose()
-      })
-      activeRipples.current = activeRipples.current.filter((r) => !toRemove.includes(r))
-    }
-    // Remove food markers when fish reaches them
-    if (movement.headRef.current) {
-      const head = movement.headRef.current.position
-      if (foodMarkersRef.current.length) {
-        // Drive target to first marker if any
-        movement.setFoodTarget(foodMarkersRef.current[0])
-        // Remove consumed
-        if (head.distanceTo(foodMarkersRef.current[0]) <= MOVEMENT_DEFAULTS.arrivalThreshold) {
-          foodMarkersRef.current.shift()
-          setFoodMarkers([...foodMarkersRef.current])
-        }
-      }
-      // Report head world position for star repulsion
-      if (onHeadPositionUpdate && rootRef.current) {
-        const worldPos = new THREE.Vector3()
-        movement.headRef.current.getWorldPosition(worldPos)
-        onHeadPositionUpdate(worldPos)
-      }
+
+    // Report head world position for star repulsion
+    if (onHeadPositionUpdate && rootRef.current) {
+      const worldPos = new THREE.Vector3()
+      movement.headRef.current.getWorldPosition(worldPos)
+      onHeadPositionUpdate(worldPos)
     }
   })
 
@@ -134,17 +80,11 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
         <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Head sphere moved to FishBody component */}
+      {/* Fish body */}
       <FishBody spine={movement.spine} headRef={movement.headRef} headDirection={movement.headDirection} velocity={movement.velocity} bankRadians={movement.bankRadians.current} />
 
-
-      {/* Food markers */}
-      {foodMarkers.map((pt, idx) => (
-        <mesh key={`food-${idx}`} position={[pt.x, pt.y, pt.z]}>
-          <sphereGeometry args={[0.018, 12, 12]} />
-          <meshToonMaterial color="#FFFFFF" emissive="#FFFFFF" emissiveIntensity={3.2} toneMapped={false} />
-        </mesh>
-      ))}
+      {/* Food system visuals */}
+      <FoodVisuals foodMarkers={foodMarkers} ripples={ripples} />
     </group>
   )
 }
