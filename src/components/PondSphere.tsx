@@ -9,12 +9,14 @@ import { useControls } from 'leva'
 import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/Fade'
 import { RadialMarkers } from './RadialMarkers'
 import { Input, Container, Text } from '@react-three/uikit'
+import type { Signal } from '@preact/signals-core'
 
 interface InteractiveProps {
   hovered?: boolean;
   active?: boolean;
   color: string;
   markersVisibleRef?: React.MutableRefObject<boolean>;
+  hasInputSignal?: Signal<boolean>;
 }
 
 export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
@@ -64,6 +66,14 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
 
   // UIKit input state
   const [inputText, setInputText] = useState('')
+
+  // Update signal when input changes
+  useEffect(() => {
+    if (props.hasInputSignal) {
+      const hasInput = inputText.trim().length > 0
+      props.hasInputSignal.value = hasInput
+    }
+  }, [inputText, props.hasInputSignal])
 
   // Setup vertex displacement shader (once)
   useEffect(() => {
@@ -180,7 +190,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Radial markers */}
-      {/* <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} /> */}
+      <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
@@ -216,14 +226,12 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           fontWeight="bold"
           opacity={0.4}
           letterSpacing={-0.01}
-          multiline={true}
           borderRadius={12}
           padding={12}
           alignItems="center"
           justifyContent="center"
           flexDirection="column"
           textAlign="center"
-          style={{ mixBlendMode: 'screen' }}
         />
       </group>
 
@@ -232,5 +240,9 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
 })
 
 export default PondSphere
+
+
+
+
 
 

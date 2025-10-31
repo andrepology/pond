@@ -3,9 +3,10 @@ import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats, Backdrop } from '@react-three/drei'
 import { Leva, useControls } from 'leva'
+import { signal } from '@preact/signals-core'
 import { Focusable } from './components/Focusable'
 import { CameraRig } from './components/CameraRig'
-import PondSphere from './components/PondSphere'
+import { PondSphere } from './components/PondSphere'
 
 import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
@@ -19,7 +20,18 @@ useGLTF.preload('/models/wellstone.glb')
 export default function App() {
   const [sheetPercentage, setSheetPercentage] = useState(0)
   const markersVisibleRef = useRef(false)
+  const hasInputSignal = useMemo(() => signal(false), [])
   const [, setLocation] = useLocation()
+
+  // Sync signal to ref for RadialMarkers (inverted: visible when no input)
+  useEffect(() => {
+    const unsubscribe = hasInputSignal.subscribe(() => {
+      markersVisibleRef.current = !hasInputSignal.value
+    })
+    // Initial sync
+    markersVisibleRef.current = !hasInputSignal.value
+    return unsubscribe
+  }, [hasInputSignal])
 
   const { mapping, exposure } = useControls({
     exposure: { value: 0.85, min: 0, max: 4 },
@@ -83,7 +95,7 @@ export default function App() {
         {/* Main Scene Content */}
         <Center position={[0, 0.5, 1.5]}>
           <Focusable id="01" name="" position={[-1.2, 2.5, -3]} inspectable>
-            <PondSphere markersVisibleRef={markersVisibleRef} />
+            <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </Focusable>
 
            {/* Shadows and Ground */}
@@ -114,7 +126,7 @@ export default function App() {
         <DateTimeDisplay />
       
 
-      <MeditationContainer markersVisibleRef={markersVisibleRef} />
+      <MeditationContainer markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
        <Controls onPercentageChange={setSheetPercentage} /> */}

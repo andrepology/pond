@@ -1,17 +1,28 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import type { Signal } from '@preact/signals-core'
 
-type Stage = 'passive' | 'setUp' | 'inProgress' | 'end'
+type Stage = 'setUp' | 'inProgress' | 'end'
 
 interface MeditationContainerProps {
   markersVisibleRef: React.RefObject<boolean>
+  hasInputSignal?: Signal<boolean>
 }
 
-export function MeditationContainer({ markersVisibleRef }: MeditationContainerProps) {
-  const [stage, setStage] = useState<Stage>('passive')
+export function MeditationContainer({ markersVisibleRef, hasInputSignal }: MeditationContainerProps) {
+  const [stage, setStage] = useState<Stage>('setUp')
+
+  // Subscribe to signal for input visibility
+  const hasInput = useSyncExternalStore(
+    (onStoreChange) => {
+      if (!hasInputSignal) return () => {}
+      return hasInputSignal.subscribe(onStoreChange)
+    },
+    () => hasInputSignal?.value ?? false,
+    () => hasInputSignal?.value ?? false
+  )
 
   // SetUp stage state
-  const [intention, setIntention] = useState('')
   const [duration, setDuration] = useState(15)
 
   // InProgress stage state
@@ -22,30 +33,27 @@ export function MeditationContainer({ markersVisibleRef }: MeditationContainerPr
   // End stage state
   const [reflection, setReflection] = useState('')
 
-  // Focus management
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  // Handle empty intention text - go back to passive stage
-  useEffect(() => {
-    if (stage === 'setUp' && intention === '') {
-      setStage('passive')
-      markersVisibleRef.current = false
-    }
-  }, [intention, stage, markersVisibleRef])
-
-  // Maintain focus on input during transitions
-  useEffect(() => {
-    if ((stage === 'passive' || stage === 'setUp') && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [stage])
-
-  // Container animation variants (width only - height handled by layout prop)
+  // Container animation variants (width + enter/exit animations)
   const containerVariants = {
-    passive: { width: 300 }, // Wider for bigger input field
     setUp: { width: 400 },
     inProgress: { width: 350 },
-    end: { width: 500 }
+    end: { width: 500 },
+    // Entrance animation (mirrored by exit)
+    initial: {
+      opacity: 0,
+      y: 20,
+      scale: 0.9
+    },
+    animate: {
+      opacity: 1,
+      y: 0,
+      scale: 1
+    },
+    exit: {
+      opacity: 0,
+      y: -20,
+      scale: 0.9
+    }
   }
 
   // Stage content animation variants
@@ -87,8 +95,7 @@ export function MeditationContainer({ markersVisibleRef }: MeditationContainerPr
   }
 
   const handleCollapse = () => {
-    setStage('passive')
-    markersVisibleRef.current = false
+    // Markers visibility is now tied directly to input presence
   }
 
   const handleEnd = () => {
@@ -104,59 +111,40 @@ export function MeditationContainer({ markersVisibleRef }: MeditationContainerPr
   }
 
   return (
-    <div
-      data-ui
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000
-      }}
-      onPointerDown={(e) => e.stopPropagation()}
-      onPointerMove={(e) => e.stopPropagation()}
-      onPointerUp={(e) => e.stopPropagation()}
-    >
-      <motion.div
-        layout
-        variants={containerVariants}
-        animate={stage}
-        transition={springTransition}
-        style={{
-          backgroundColor: stage === 'end' ? 'transparent' : 'rgba(229, 229, 229, 0.6)',
-          borderRadius: '12px',
-          border: stage === 'end' ? 'none' : '1px solid rgba(204, 204, 204, 0.5)',
-          overflow: 'hidden',
-          position: 'relative',
-          height: 'auto',
-          backdropFilter: stage === 'end' ? 'none' : 'blur(4px)',
-          WebkitBackdropFilter: stage === 'end' ? 'none' : 'blur(4px)' // Safari support
-        }}
-      >
+    <AnimatePresence>
+      {hasInput && (
+        <div
+          data-ui
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerMove={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <motion.div
+            layout
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={springTransition}
+            style={{
+              backgroundColor: stage === 'end' ? 'transparent' : 'rgba(229, 229, 229, 0.6)',
+              borderRadius: '12px',
+              border: stage === 'end' ? 'none' : '1px solid rgba(204, 204, 204, 0.5)',
+              overflow: 'hidden',
+              position: 'relative',
+              height: 'auto',
+              backdropFilter: stage === 'end' ? 'none' : 'blur(4px)',
+              WebkitBackdropFilter: stage === 'end' ? 'none' : 'blur(4px)' // Safari support
+            }}
+          >
         <AnimatePresence mode="popLayout">
-          {stage === 'passive' && (
-            <motion.div
-              key="passive"
-              variants={stageVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={springTransition}
-              style={{ padding: '10px 20px' }}
-            >
-              <PassiveStage
-                intention={intention}
-                setIntention={setIntention}
-                onStartTyping={() => {
-                  setStage('setUp')
-                  markersVisibleRef.current = true
-                }}
-                inputRef={inputRef}
-                stage={stage}
-              />
-            </motion.div>
-          )}
-
           {stage === 'setUp' && (
             <motion.div
               key="setUp"
@@ -168,19 +156,16 @@ export function MeditationContainer({ markersVisibleRef }: MeditationContainerPr
               style={{ padding: '24px' }}
             >
               <SetUpStage
-                intention={intention}
-                setIntention={setIntention}
                 duration={duration}
                 setDuration={setDuration}
                 onContinue={handleSetUpContinue}
                 onCollapse={handleCollapse}
-                inputRef={inputRef}
               />
             </motion.div>
           )}
 
 
-          {stage === 'inProgress' && (
+          {stage === 'inProgress' && hasInput && (
             <motion.div
               key="inProgress"
               variants={stageVariants}
@@ -226,8 +211,8 @@ export function MeditationContainer({ markersVisibleRef }: MeditationContainerPr
                 onSubmit={() => {
                   handleCollapse()
                   setReflection('')
-                  setIntention('')
                   setDuration(15)
+                  setStage('setUp')
                 }}
               />
             </motion.div>
@@ -235,72 +220,22 @@ export function MeditationContainer({ markersVisibleRef }: MeditationContainerPr
         </AnimatePresence>
       </motion.div>
     </div>
+      )}
+    </AnimatePresence>
   )
 }
 
-function PassiveStage({ intention, setIntention, onStartTyping, inputRef, stage }: { intention: string, setIntention: (value: string) => void, onStartTyping: () => void, inputRef: React.RefObject<HTMLInputElement>, stage: string }) {
-  return (
-    <motion.input
-      ref={inputRef}
-      layout
-      layoutId="intention-input"
-      type="text"
-      placeholder="set intention"
-      value={intention}
-      onChange={(e) => {
-        setIntention(e.target.value)
-        if (stage === 'passive') {
-          onStartTyping()
-        }
-      }}
-      style={{
-        width: '250px',
-        border: 'none',
-        background: 'transparent',
-        outline: 'none',
-        fontSize: '20px',
-        fontWeight: '600',
-        color: '#333',
-        textAlign: 'center'
-      }}
-      autoFocus
-    />
-  )
-}
 
 interface SetUpStageProps {
-  intention: string
-  setIntention: (value: string) => void
   duration: number
   setDuration: (value: number) => void
   onContinue: () => void
   onCollapse: () => void
-  inputRef: React.RefObject<HTMLInputElement>
 }
 
-function SetUpStage({ intention, setIntention, duration, setDuration, onContinue, onCollapse, inputRef }: SetUpStageProps) {
+function SetUpStage({ duration, setDuration, onContinue, onCollapse }: SetUpStageProps) {
   return (
     <div>
-      <motion.input
-        ref={inputRef}
-        layout
-        layoutId="intention-input"
-        type="text"
-        placeholder="set an intention"
-        value={intention}
-        onChange={(e) => setIntention(e.target.value)}
-        style={{
-          width: '100%',
-          border: 'none',
-          background: 'transparent',
-          outline: 'none',
-          fontSize: '24px',
-          fontWeight: '600',
-          color: '#333',
-          marginBottom: '20px'
-        }}
-      />
-
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -390,33 +325,7 @@ function SetUpStage({ intention, setIntention, duration, setDuration, onContinue
         </div>
       </motion.div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button
-          onClick={onCollapse}
-          style={{
-            padding: '8px',
-            background: 'transparent',
-            color: '#666',
-            border: 'none',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            fontSize: '16px',
-            width: '32px',
-            height: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background-color 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f0f0f0';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          ‹
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <button
           onClick={onContinue}
           style={{

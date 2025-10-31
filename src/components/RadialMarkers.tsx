@@ -82,6 +82,10 @@ export function RadialMarkers({
   const markerMaterials = useRef<(THREE.MeshPhysicalMaterial | null)[]>([])
   const prevIsVisible = useRef(false)
 
+  // Debounced visibility change
+  const visibilityTimeoutRef = useRef<number | null>(null)
+  const pendingVisibilityRef = useRef<boolean | null>(null)
+
   // Create marker positions and angles in XY plane (vertical ring)
   const markers = useMemo(() => {
     return Array.from({ length: count }, (_, i) => {
@@ -105,7 +109,7 @@ export function RadialMarkers({
     markerPositions.current = markers.map(m => m.position.clone())
     markerRefs.current = new Array(count).fill(null)
     markerMaterials.current = new Array(count).fill(null)
-    
+
     // Initialize markers to center position
     markerRefs.current.forEach((ref) => {
       if (ref) {
@@ -114,11 +118,20 @@ export function RadialMarkers({
     })
     markerMaterials.current.forEach((material) => {
       if (material) {
-        material.opacity = 0
-        material.transmission = 0
+        material.opacity = 1
+        material.transmission = 1
       }
     })
   }, [count, markers])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (visibilityTimeoutRef.current !== null) {
+        clearTimeout(visibilityTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // No useEffect needed - we read the ref directly in useFrame
 
@@ -249,10 +262,11 @@ export function RadialMarkers({
       tempPos.copy(centerPos).lerp(targetPos, easedProgress)
       markerRef.position.copy(tempPos)
 
-      // Update opacity and transmission
+      // Update opacity and transmission (invisible longer - fade in only in last 20%)
       if (material) {
-        material.opacity = easedProgress
-        material.transmission = easedProgress
+        const opacityProgress = Math.max(0, (easedProgress - 0.8) / 0.2)
+        material.opacity = opacityProgress
+        material.transmission = opacityProgress
       }
     })
   }
@@ -280,11 +294,24 @@ export function RadialMarkers({
 
     // Read visibility from ref (bypasses React entirely)
     const isVisible = isVisibleRef?.current ?? false
-    
-    // Handle visibility changes in animation loop
+
+    // Handle visibility changes with debounce
     if (isVisible !== prevIsVisible.current) {
-      handleVisibilityChange(isVisible)
-      prevIsVisible.current = isVisible
+      // Clear existing timeout
+      if (visibilityTimeoutRef.current !== null) {
+        clearTimeout(visibilityTimeoutRef.current)
+      }
+
+      // Set pending visibility and debounce timer
+      pendingVisibilityRef.current = isVisible
+      visibilityTimeoutRef.current = window.setTimeout(() => {
+        if (pendingVisibilityRef.current !== null) {
+          handleVisibilityChange(pendingVisibilityRef.current)
+          prevIsVisible.current = pendingVisibilityRef.current
+          pendingVisibilityRef.current = null
+        }
+        visibilityTimeoutRef.current = null
+      }, 800) // 800ms debounce delay
     }
 
     // Update animations if animating

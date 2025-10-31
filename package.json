@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@pmndrs/assets": "^1.7.0",
+    "@preact/signals-core": "^1.12.1",
     "@react-spring/three": "^10.0.1",
     "@react-three/drei": "^10.3.0",
     "@react-three/fiber": "^9.1.4",
