@@ -123,6 +123,10 @@ float inkDispersion(float spineT) {
 }
 
 void main() {
+  // Ensure normals always face outward relative to camera
+  vec3 normal = vWorldNormal;
+  if (!gl_FrontFacing) normal = -normal;
+  
   // Compute cloud density using UV coordinates
   float cloud = inkNoise(vUv, time);
   
@@ -136,7 +140,7 @@ void main() {
   float density = cloud * 0.7 + disperse * 0.5 + veins * 0.15;
   
   // Fresnel effect - edges glow softly
-  float fresnel = pow(1.0 - max(0.0, dot(vWorldNormal, vViewDir)), 1.5);
+  float fresnel = pow(1.0 - max(0.0, dot(normal, vViewDir)), 1.5);
   
   // Modulate density with fresnel for silhouette glow
   float auraStrength = mix(0.3, 1.0, fresnel);

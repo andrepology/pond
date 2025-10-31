@@ -126,7 +126,7 @@ export default function App() {
         <DateTimeDisplay />
       
 
-      <MeditationContainer markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
+      {/* <MeditationContainer markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} /> */}
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
        <Controls onPercentageChange={setSheetPercentage} /> */}

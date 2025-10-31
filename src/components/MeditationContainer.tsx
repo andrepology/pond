@@ -35,9 +35,9 @@ export function MeditationContainer({ markersVisibleRef, hasInputSignal }: Medit
 
   // Container animation variants (width + enter/exit animations)
   const containerVariants = {
-    setUp: { width: 400 },
-    inProgress: { width: 350 },
-    end: { width: 500 },
+    setUp: { width: 480 },
+    inProgress: { width: 360 },
+    end: { width: 600 },
     // Entrance animation (mirrored by exit)
     initial: {
       opacity: 0,
@@ -139,7 +139,7 @@ export function MeditationContainer({ markersVisibleRef, hasInputSignal }: Medit
               border: stage === 'end' ? 'none' : '1px solid rgba(204, 204, 204, 0.5)',
               overflow: 'hidden',
               position: 'relative',
-              height: 'auto',
+              maxHeight: '128px',
               backdropFilter: stage === 'end' ? 'none' : 'blur(4px)',
               WebkitBackdropFilter: stage === 'end' ? 'none' : 'blur(4px)' // Safari support
             }}
@@ -153,7 +153,7 @@ export function MeditationContainer({ markersVisibleRef, hasInputSignal }: Medit
               animate="center"
               exit="exit"
               transition={springTransition}
-              style={{ padding: '24px' }}
+              style={{ padding: '20px' }}
             >
               <SetUpStage
                 duration={duration}
@@ -173,14 +173,13 @@ export function MeditationContainer({ markersVisibleRef, hasInputSignal }: Medit
               animate="center"
               exit="exit"
               transition={springTransition}
-              style={{ padding: '20px' }}
+              style={{ padding: '16px' }}
             >
               <InProgressStage
                 timeRemaining={timeRemaining}
                 formatTime={formatTime}
                 isPaused={isPaused}
                 onPauseResume={() => setIsPaused(!isPaused)}
-                onAddMinute={() => setTimeRemaining(prev => prev + 60)}
                 onEnd={handleEnd}
                 onBack={() => {
                   setStage('setUp')
@@ -199,7 +198,7 @@ export function MeditationContainer({ markersVisibleRef, hasInputSignal }: Medit
               animate="center"
               exit="exit"
               transition={springTransition}
-              style={{ padding: '32px' }}
+              style={{ padding: '24px' }}
             >
               <EndStage
                 reflection={reflection}
@@ -240,13 +239,16 @@ function SetUpStage({ duration, setDuration, onContinue, onCollapse }: SetUpStag
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
-        style={{ marginBottom: '24px' }}
+        style={{ marginBottom: '12px' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <motion.div
-            style={{ fontSize: '32px', fontWeight: 'bold', color: '#333', width: '80px', textAlign: 'center' }}
+            style={{ fontSize: '24px', fontWeight: 'bold', color: '#333', width: '60px', textAlign: 'center', display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '2px' }}
           >
-            {duration}:00
+            {duration}
+            <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#e0e0e0', opacity: 0.7 }}>
+              m
+            </span>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scaleX: 0 }}
@@ -271,50 +273,64 @@ function SetUpStage({ duration, setDuration, onContinue, onCollapse }: SetUpStag
               }}
               style={{
                 width: '100%',
-                height: '24px',
-                background: '#e5e7eb',
+                height: '28px',
+                background: 'rgba(210, 210, 210, 0.8)',
                 outline: 'none',
-                borderRadius: '12px',
+                borderRadius: '8px',
                 appearance: 'none',
                 WebkitAppearance: 'none',
-                border: '2px solid #d1d5db',
-                cursor: 'pointer'
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0 6px'
               }}
             />
+            <div
+              style={{
+                position: 'absolute',
+                left: '20px',
+                top: '45%',
+                transform: 'translateY(-50%)',
+                fontSize: '10px',
+                fontWeight: '600',
+                color: '#555',
+                letterSpacing: '0.1em',
+                textTransform: 'none',
+                pointerEvents: 'none',
+                zIndex: -1
+              }}
+            >
+              duration
+            </div>
             <style dangerouslySetInnerHTML={{
               __html: `
                 input[type="range"]::-webkit-slider-thumb {
                   appearance: none;
                   -webkit-appearance: none;
-                  width: 32px;
-                  height: 32px;
-                  border-radius: 50%;
-                  background: #1f2937;
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 6px;
+                  background: #ffffff;
                   cursor: pointer;
-                  border: 4px solid #ffffff;
-                  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                  margin-top: -4px;
+                  margin-top: 4px;
                 }
                 input[type="range"]::-webkit-slider-track {
-                  background: #e5e7eb;
-                  height: 24px;
+                  background: rgba(210, 210, 210, 0.8);
+                  height: 28px;
                   border-radius: 12px;
-                  border: 2px solid #d1d5db;
+                  border: none;
                 }
                 input[type="range"]::-moz-range-thumb {
-                  width: 32px;
-                  height: 32px;
-                  border-radius: 50%;
-                  background: #1f2937;
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 6px;
+                  background: #ffffff;
                   cursor: pointer;
-                  border: 4px solid #ffffff;
-                  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                 }
                 input[type="range"]::-moz-range-track {
-                  background: #e5e7eb;
-                  height: 24px;
+                  background: rgba(210, 210, 210, 0.8);
+                  height: 28px;
                   border-radius: 12px;
-                  border: 2px solid #d1d5db;
+                  border: none;
                 }
                 input[type="range"]:focus {
                   outline: none;
@@ -325,17 +341,18 @@ function SetUpStage({ duration, setDuration, onContinue, onCollapse }: SetUpStag
         </div>
       </motion.div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
         <button
           onClick={onContinue}
           style={{
-            padding: '8px 16px',
+            padding: '6px 12px',
             background: '#333',
             color: '#fff',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '14px'
+            fontSize: '12px',
+            fontWeight: '500'
           }}
         >
           Continue
@@ -351,122 +368,117 @@ interface InProgressStageProps {
   formatTime: (seconds: number) => string
   isPaused: boolean
   onPauseResume: () => void
-  onAddMinute: () => void
   onEnd: () => void
   onBack: () => void
 }
 
-function InProgressStage({ timeRemaining, formatTime, isPaused, onPauseResume, onAddMinute, onEnd, onBack }: InProgressStageProps) {
+function InProgressStage({ timeRemaining, formatTime, isPaused, onPauseResume, onEnd, onBack }: InProgressStageProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
-        <motion.div layoutId="timer-display" style={{ fontSize: '32px', color: '#333', fontWeight: 'bold' }}>
-          {formatTime(timeRemaining)}
-        </motion.div>
-        {!isPaused && (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+      <button
+        onClick={onBack}
+        style={{
+          position: 'absolute',
+          left: '0',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          padding: '4px',
+          background: 'transparent',
+          color: '#999',
+          border: 'none',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          fontSize: '12px',
+          width: '20px',
+          height: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)';
+          e.currentTarget.style.color = '#666';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.color = '#999';
+        }}
+      >
+        ‹
+      </button>
+
+      <motion.div
+        layoutId="timer-display"
+        style={{
+          fontSize: '32px',
+          color: '#333',
+          fontWeight: 'bold',
+          fontVariantNumeric: 'tabular-nums'
+        }}
+      >
+        {formatTime(timeRemaining)}
+      </motion.div>
+
+      <button
+        onClick={onPauseResume}
+        style={{
+          padding: '8px',
+          background: '#333',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          fontSize: '16px',
+          width: '40px',
+          height: '40px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+      >
+        {isPaused ? '▶' : '⏸'}
+      </button>
+
+      <AnimatePresence mode="wait">
+        {isPaused && (
           <motion.button
-            onClick={onAddMinute}
+            key="end"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            onClick={onEnd}
             style={{
-              padding: '6px',
+              padding: '6px 12px',
               background: 'transparent',
               color: '#666',
-              border: 'none',
-              borderRadius: '50%',
+              border: '1px solid #ddd',
+              borderRadius: '20px',
               cursor: 'pointer',
               fontSize: '12px',
-              width: '28px',
-              height: '28px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontWeight: '500',
               transition: 'all 0.2s ease'
             }}
-            whileHover={{
-              backgroundColor: '#f0f0f0',
-              scale: 1.05
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f8f8f8';
+              e.currentTarget.style.borderColor = '#bbb';
             }}
-            whileTap={{ scale: 0.95 }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = '#ddd';
+            }}
           >
-            +1
+            End
           </motion.button>
         )}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '20px' }}>
-        <button
-          onClick={onBack}
-          style={{
-            padding: '8px',
-            background: 'transparent',
-            color: '#666',
-            border: 'none',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            fontSize: '16px',
-            width: '32px',
-            height: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background-color 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f0f0f0';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          ‹
-        </button>
-
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button
-            onClick={onPauseResume}
-            style={{
-              padding: '8px',
-              background: '#333',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              fontSize: '16px',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {isPaused ? '▶' : '⏸'}
-          </button>
-
-          <AnimatePresence mode="wait">
-            {isPaused && (
-              <motion.button
-                key="end"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                onClick={onEnd}
-                style={{
-                  padding: '8px 20px',
-                  background: '#ef4444',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '20px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  opacity: 0.8,
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                End
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+      </AnimatePresence>
     </div>
   )
 }
@@ -480,70 +492,69 @@ interface EndStageProps {
 
 function EndStage({ reflection, setReflection, onSubmit, onBack }: EndStageProps) {
   return (
-    <div>
-      <textarea
-        placeholder="Short reflection"
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <input
+        placeholder="Quick reflection..."
         value={reflection}
         onChange={(e) => setReflection(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            onSubmit()
+          }
+        }}
         style={{
-          width: '100%',
-          minHeight: '120px',
-          maxHeight: '200px',
+          flex: 1,
+          height: '32px',
           border: 'none',
-          borderRadius: '8px',
-          padding: '16px',
-          fontSize: '18px',
-          resize: 'vertical',
-          marginBottom: '20px',
+          borderRadius: '16px',
+          padding: '0 12px',
+          fontSize: '14px',
           color: '#333',
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           outline: 'none'
         }}
       />
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button
-          onClick={onBack}
-          style={{
-            padding: '12px',
-            background: 'transparent',
-            color: '#666',
-            border: 'none',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            fontSize: '20px',
-            width: '44px',
-            height: '44px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background-color 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          ‹
-        </button>
-        <button
-          onClick={onSubmit}
-          style={{
-            padding: '12px 24px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            color: '#333',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: '500'
-          }}
-        >
-          Submit
-        </button>
-      </div>
+      <button
+        onClick={onBack}
+        style={{
+          padding: '6px',
+          background: 'transparent',
+          color: '#666',
+          border: 'none',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          fontSize: '16px',
+          width: '28px',
+          height: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'background-color 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
+      >
+        ‹
+      </button>
+      <button
+        onClick={onSubmit}
+        style={{
+          padding: '6px 12px',
+          background: 'rgba(255, 255, 255, 0.2)',
+          color: '#333',
+          border: 'none',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: '500'
+        }}
+      >
+        Done
+      </button>
     </div>
   )
 }

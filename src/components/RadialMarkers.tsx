@@ -59,8 +59,8 @@ function calculateElapsedFromProgress(
   return startTime + progress * animationDuration
 }
 
-export function RadialMarkers({ 
-  count = 12, 
+export function RadialMarkers({
+  count = 12,
   radius = 1.3,
   isVisibleRef,
   animationDuration = 0.6,
@@ -348,15 +348,15 @@ export function RadialMarkers({
               ref={(mat) => {
                 markerMaterials.current[i] = mat as THREE.MeshPhysicalMaterial
               }}
-              transmission={1.0}
-              roughness={0.0}
-              ior={1.5}
-              thickness={0.1}
-              metalness={0}
-              clearcoat={0.5}
+              transmission={1}
+              roughness={0}
+              ior={2.5}
+              thickness={0.02}
+              metalness={0.05}
+              clearcoat={0.0}
               color="#ffffff"
               transparent
-              opacity={0}
+              opacity={1.0}
               depthTest={false}
             />
           </mesh>

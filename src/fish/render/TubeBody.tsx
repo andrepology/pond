@@ -92,6 +92,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
   const normalsRef = useRef<THREE.Vector3[] | null>(null)
   const binormalsRef = useRef<THREE.Vector3[] | null>(null)
   const ringRadiiRef = useRef<Float32Array | null>(null)
+  const ringRadiiDerivRef = useRef<Float32Array | null>(null)
 
   // Persistent curve and control points
   const controlPointsRef = useRef<THREE.Vector3[] | null>(null)
@@ -133,6 +134,9 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     if (!ringRadiiRef.current || ringRadiiRef.current.length !== sampleCount) {
       ringRadiiRef.current = new Float32Array(sampleCount)
     }
+    if (!ringRadiiDerivRef.current || ringRadiiDerivRef.current.length !== sampleCount) {
+      ringRadiiDerivRef.current = new Float32Array(sampleCount)
+    }
   }, [sampleCount])
 
   // Ensure control points and curve sized to spine length (ghostHead + head + points + ghostTail)
@@ -149,9 +153,8 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     }
   }, [spine.points.length])
 
-  // Update shader uniforms more frequently than geometry for smoother animation
   useFrame((state) => {
-    // Update shader uniforms every frame for smooth animation
+    // Update shader uniforms every frame
     const shaderMat = material as THREE.ShaderMaterial
     if (shaderMat.uniforms) {
       shaderMat.uniforms.time.value = state.clock.elapsedTime
@@ -159,15 +162,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
         shaderMat.uniforms.velocity.value.copy(velocity.current)
       }
     }
-  })
-
-  // Throttle geometry updates to reduce flickering - update at ~30fps instead of 60fps
-  const geometryUpdateRef = useRef({ lastUpdate: 0, interval: 1000 / 30 }) // 30 FPS
-
-  useFrame((state) => {
-    const now = performance.now()
-    if (now - geometryUpdateRef.current.lastUpdate < geometryUpdateRef.current.interval) return
-    geometryUpdateRef.current.lastUpdate = now
 
     const positions = (geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array
     const normals = (geometry.getAttribute('normal') as THREE.BufferAttribute).array as Float32Array
@@ -208,7 +202,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     const upY = new THREE.Vector3(0, 1, 0)
     const upX = new THREE.Vector3(1, 0, 0)
     const t = Math.abs(t0.y)
-    const blendFactor = THREE.MathUtils.smoothstep(0.8, 1.0, t) // Smooth transition zone
+    const blendFactor = THREE.MathUtils.smoothstep(0.6, 1.0, t) // Wider transition zone
     const up = scratchRef.current.a.lerpVectors(upY, upX, blendFactor)
     normalsF[0].copy(up).sub(scratchRef.current.b.copy(t0).multiplyScalar(up.dot(t0))).normalize()
     binormalsF[0].crossVectors(t0, normalsF[0]).normalize()
@@ -244,29 +238,46 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     const tmp = scratchRef.current.a
     const radial = scratchRef.current.b
     const ringRadii = ringRadiiRef.current!
+    const ringRadiiDeriv = ringRadiiDerivRef.current!
+
+    // Teardrop shape parameters
+    const maxR = 0.35
+    const p = 0.6  // controls head roundness (lower = rounder)
+    const q = 2.1  // controls tail sharpness (higher = sharper)
 
     for (let y = 0; y < sampleCount; y++) {
       const center = centers[y]
       const t = y / (sampleCount - 1)
-
-      // Mathematical teardrop using parametric equation for perfect smoothness
-      const maxR = 0.35
-      // Teardrop parameter: s goes from 0 (head) to 1 (tail)
       const s = t
-      // Classic teardrop formula: r(s) = a * sqrt(s) * (1-s)^n
-      // Modified for better head roundness: r(s) = a * s^p * (1-s)^q
-      const p = 0.6  // controls head roundness (lower = rounder)
-      const q = 2.1  // controls tail sharpness (higher = sharper)
-      const baseRadius = Math.pow(s, p) * Math.pow(1 - s, q)
 
-      // Add slight belly curve for organic feel
-      const belly = 1 + 0.08 * Math.sin(Math.PI * s * 0.8)
-
+      // Compute radius: r(s) = maxR * s^p * (1-s)^q * belly(s)
+      const sPowP = Math.pow(s, p)
+      const oneMinusS = 1 - s
+      const oneMinusSPowQ = Math.pow(oneMinusS, q)
+      const baseRadius = sPowP * oneMinusSPowQ
+      
+      // Belly curve
+      const bellyArg = Math.PI * s * 0.8
+      const belly = 1 + 0.08 * Math.sin(bellyArg)
+      
       const radius = Math.max(0.001, maxR * baseRadius * belly)
       ringRadii[y] = radius
 
+      // Compute dr/ds using product rule: d/ds[s^p * (1-s)^q * belly(s)]
+      // = [p * s^(p-1) * (1-s)^q - q * s^p * (1-s)^(q-1)] * belly + s^p * (1-s)^q * d(belly)/ds
+      const dBaseRadius = p * Math.pow(Math.max(0.001, s), p - 1) * oneMinusSPowQ - 
+                          q * sPowP * Math.pow(oneMinusS, q - 1)
+      const dBelly = 0.08 * Math.PI * 0.8 * Math.cos(bellyArg)
+      const dRadius = maxR * (dBaseRadius * belly + baseRadius * dBelly)
+      
+      // Convert ds to dt (since s = t, ds/dt = 1, so dr/dt = dr/ds)
+      // Scale by spine length to get proper world-space derivative
+      ringRadiiDeriv[y] = dRadius
+
       const normal = normalsF[y]
       const binorm = binormalsF[y]
+      const tangent = tangents[y]
+      const drdt = ringRadiiDeriv[y]
 
       for (let x = 0; x <= ringSegments; x++) {
         const idx = (y * (ringSegments + 1) + x) * 3
@@ -280,18 +291,21 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
         positions[idx + 1] = tmp.y
         positions[idx + 2] = tmp.z
 
-        // Compute smooth surface normal
+        // Compute correct surface normal for parametric tube
+        // Surface: P(u,v) = C(u) + r(u) * [N(u) * cos(v) + B(u) * sin(v)]
+        // Normal: (radialVector - tangent * dr/du).normalize()
         radial.set(0, 0, 0)
         radial.addScaledVector(normal, nx)
         radial.addScaledVector(binorm, ny)
+        
+        // Subtract the tangent component weighted by radius derivative
+        const surfaceNormal = scratchRef.current.c
+        surfaceNormal.copy(radial).addScaledVector(tangent, -drdt)
+        surfaceNormal.normalize()
 
-        // Simple radial normals - good enough for toon shading
-        // (Removed expensive analytical computation)
-
-        radial.normalize()
-        normals[idx] = radial.x
-        normals[idx + 1] = radial.y
-        normals[idx + 2] = radial.z
+        normals[idx] = surfaceNormal.x
+        normals[idx + 1] = surfaceNormal.y
+        normals[idx + 2] = surfaceNormal.z
 
         // UV coordinates: x = ring position (0-1), y = spine position (0-1)
         uvs[uvIdx] = x / ringSegments

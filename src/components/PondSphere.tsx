@@ -72,8 +72,8 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   // Billboard the input to face the camera (more weighty than markers)
   useBillboard(inputGroupRef, {
     damping: 0.98,      // Higher damping = more inertia/weight
-    noiseSpeed: 0.5,    // Slower noise oscillation
-    noiseScale: 0.2      // Reduced noise amplitude
+    noiseSpeed: 0.3,    // Slower noise oscillation
+    noiseScale: 0.05      // Reduced noise amplitude
   })
 
   // Update signal when input changes
