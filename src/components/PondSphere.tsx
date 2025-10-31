@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import React, { forwardRef, useEffect, useMemo, useRef } from 'react'
+import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Icosahedron, Center, useTexture } from '@react-three/drei'
 import SphericalSky from './SphericalSky'
@@ -8,6 +8,7 @@ import Fish2 from '../fish/Fish2'
 import { useControls } from 'leva'
 import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/Fade'
 import { RadialMarkers } from './RadialMarkers'
+import { Input, Container, Text } from '@react-three/uikit'
 
 interface InteractiveProps {
   hovered?: boolean;
@@ -61,6 +62,9 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   const { controls } = useThree()
   const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
 
+  // UIKit input state
+  const [inputText, setInputText] = useState('')
+
   // Setup vertex displacement shader (once)
   useEffect(() => {
     const material = waterMaterialRef.current
@@ -69,7 +73,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
     material.onBeforeCompile = (shader) => {
       // Add custom uniform for displacement strength
       shader.uniforms.uDisplacementStrength = { value: waterControls.displacementStrength }
-      
+
       // Store reference to shader uniforms for live updates
       shaderUniformsRef.current = shader.uniforms
 
@@ -151,10 +155,10 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           segments={48}
           lowQuality={true}
           opacity={1.05}
-        /> 
+        />
       </group>
 
-      <group position={[0, 0, 0]} scale={1.1} renderOrder={1}> 
+      <group position={[0, 0, 0]} scale={1.1} renderOrder={1}>
         <Starfield
           ref={starfieldRef}
           radius={1.00}
@@ -176,7 +180,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Radial markers */}
-      <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
+      {/* <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} /> */}
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
@@ -198,6 +202,31 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           depthWrite={false}
         />
       </Icosahedron>
+
+      {/* UIKit 3D Input at sphere center */}
+      <group onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
+        <Input
+          value={inputText}
+          onValueChange={setInputText}
+          placeholder="what is your intention?"
+          width={200}
+          sizeX={0.2}
+          sizeY={0.4}
+          fontSize={12}
+          fontWeight="bold"
+          opacity={0.4}
+          letterSpacing={-0.01}
+          multiline={true}
+          borderRadius={12}
+          padding={12}
+          alignItems="center"
+          justifyContent="center"
+          flexDirection="column"
+          textAlign="center"
+          style={{ mixBlendMode: 'screen' }}
+        />
+      </group>
+
     </group>
   )
 })

@@ -1,7 +1,7 @@
 import React from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
-import { MOVEMENT_DEFAULTS } from '../config/Constants'
+import { MOVEMENT_DEFAULTS } from '../config/constants'
 import { useFishMovement } from './movement/useFishMovement'
 import { FishBody } from './render/FishBody'
 import { usePointerGestures } from './interaction/usePointerGestures'
@@ -32,6 +32,36 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
   })
 
   const planeRef = useRef<THREE.Mesh>(null)
+
+  // --- Food marker and ripple feedback ---
+  const [foodMarkers, setFoodMarkers] = useState<THREE.Vector3[]>([])
+  const foodMarkersRef = useRef<THREE.Vector3[]>([])
+  const activeRipples = useRef<ActiveRipple[]>([])
+  const RIPPLE_DURATION = 1800
+  const RIPPLE_INITIAL_OPACITY = 0.05
+  const RIPPLE_EXPANSION_FACTOR = 5
+  const RIPPLE_INITIAL_SCALE = 0.1
+
+  interface ActiveRipple { mesh: THREE.Mesh; startTime: number; duration: number }
+
+  function handleFeed(ptWorld: THREE.Vector3) {
+    const local = rootRef.current ? rootRef.current.worldToLocal(ptWorld.clone()) : ptWorld.clone()
+    movement.setFoodTarget(local)
+    foodMarkersRef.current = [...foodMarkersRef.current, local.clone()]
+    setFoodMarkers(foodMarkersRef.current)
+    createRipple(local)
+  }
+
+  function createRipple(position: THREE.Vector3) {
+    const geometry = new THREE.CircleGeometry(RIPPLE_INITIAL_SCALE, 32)
+    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: RIPPLE_INITIAL_OPACITY, side: THREE.DoubleSide })
+    const rippleMesh = new THREE.Mesh(geometry, material)
+    rippleMesh.position.copy(position)
+    rippleMesh.position.y = GROUND_Y + 0.01
+    rippleMesh.rotation.x = -Math.PI / 2
+    scene.add(rippleMesh)
+    activeRipples.current.push({ mesh: rippleMesh, startTime: performance.now(), duration: RIPPLE_DURATION })
+  }
 
   useFrame((_, dt) => {
     // Face the invisible plane toward the camera and keep it through the sphere center
@@ -74,7 +104,6 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
           setFoodMarkers([...foodMarkersRef.current])
         }
       }
-      
       // Report head world position for star repulsion
       if (onHeadPositionUpdate && rootRef.current) {
         const worldPos = new THREE.Vector3()
@@ -82,7 +111,6 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
         onHeadPositionUpdate(worldPos)
       }
     }
-
   })
 
   // Invisible ground for feeding
@@ -91,37 +119,6 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
     onDoubleTap: (pt) => handleFeed(pt),
     onLongPress: (pt) => handleFeed(pt),
   })
-
-  // --- Food marker and ripple feedback ---
-  const [foodMarkers, setFoodMarkers] = useState<THREE.Vector3[]>([])
-  const foodMarkersRef = useRef<THREE.Vector3[]>([])
-  const activeRipples = useRef<ActiveRipple[]>([])
-  const RIPPLE_DURATION = 1800
-  const RIPPLE_INITIAL_OPACITY = 0.05
-  const RIPPLE_EXPANSION_FACTOR = 5
-  const RIPPLE_INITIAL_SCALE = 0.1
-
-  interface ActiveRipple { mesh: THREE.Mesh; startTime: number; duration: number }
-
-  function handleFeed(ptWorld: THREE.Vector3) {
-    const local = rootRef.current ? rootRef.current.worldToLocal(ptWorld.clone()) : ptWorld.clone()
-    movement.setFoodTarget(local)
-    foodMarkersRef.current = [...foodMarkersRef.current, local.clone()]
-    setFoodMarkers(foodMarkersRef.current)
-    createRipple(local)
-  }
-
-  function createRipple(position: THREE.Vector3) {
-    const geometry = new THREE.CircleGeometry(RIPPLE_INITIAL_SCALE, 32)
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: RIPPLE_INITIAL_OPACITY, side: THREE.DoubleSide })
-    const rippleMesh = new THREE.Mesh(geometry, material)
-    rippleMesh.position.copy(position)
-    rippleMesh.position.y = GROUND_Y + 0.01
-    rippleMesh.rotation.x = -Math.PI / 2
-    scene.add(rippleMesh)
-    activeRipples.current.push({ mesh: rippleMesh, startTime: performance.now(), duration: RIPPLE_DURATION })
-  }
-
 
   return (
     <group ref={rootRef}>

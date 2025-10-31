@@ -115,6 +115,7 @@ export function RadialMarkers({
     markerMaterials.current.forEach((material) => {
       if (material) {
         material.opacity = 0
+        material.transmission = 0
       }
     })
   }, [count, markers])
@@ -221,6 +222,7 @@ export function RadialMarkers({
           }
           if (material) {
             material.opacity = 0
+            material.transmission = 0
           }
         }
       })
@@ -247,8 +249,11 @@ export function RadialMarkers({
       tempPos.copy(centerPos).lerp(targetPos, easedProgress)
       markerRef.position.copy(tempPos)
 
-      // Update opacity
-      if (material) material.opacity = easedProgress
+      // Update opacity and transmission
+      if (material) {
+        material.opacity = easedProgress
+        material.transmission = easedProgress
+      }
     })
   }
 

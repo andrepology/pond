@@ -45,7 +45,8 @@ export default function App() {
         }}
         gl={{
           antialias: true,
-          powerPreference: "high-performance"
+          powerPreference: "high-performance",
+          localClippingEnabled: true
         }}
         dpr={[1, 1.2]}
       >
