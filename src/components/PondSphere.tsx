@@ -10,6 +10,7 @@ import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/Fa
 import { RadialMarkers } from './RadialMarkers'
 import { Input, Container, Text } from '@react-three/uikit'
 import type { Signal } from '@preact/signals-core'
+import { useBillboard } from '../hooks/useBillboard'
 
 interface InteractiveProps {
   hovered?: boolean;
@@ -61,11 +62,19 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   const waterMaterialRef = useRef<THREE.MeshPhysicalMaterial | null>(null)
   const starfieldRef = useRef<StarfieldHandle>(null)
   const shaderUniformsRef = useRef<any>(null)
+  const inputGroupRef = useRef<THREE.Group>(null)
   const { controls } = useThree()
   const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
 
   // UIKit input state
   const [inputText, setInputText] = useState('')
+
+  // Billboard the input to face the camera (more weighty than markers)
+  useBillboard(inputGroupRef, {
+    damping: 0.98,      // Higher damping = more inertia/weight
+    noiseSpeed: 0.5,    // Slower noise oscillation
+    noiseScale: 0.2      // Reduced noise amplitude
+  })
 
   // Update signal when input changes
   useEffect(() => {
@@ -193,7 +202,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
 
       {/* UIKit 3D Input at sphere center */}
-      <group renderOrder={2}>
+      <group ref={inputGroupRef} renderOrder={2}>
         <Input
           value={inputText}
           onValueChange={setInputText}
@@ -203,6 +212,8 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           sizeY={2}
           fontSize={12}
           fontWeight="bold"
+          // @ts-ignore
+          multiline={true}
           opacity={0.4}
           letterSpacing={-0.01}
           borderRadius={12}
@@ -212,6 +223,8 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           flexDirection="column"
           textAlign="center"
           zIndex={1000}
+          caretBorderRadius={4}
+          selectionColor="rgba(255,255,255,0.3)"
         />
       </group>
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import React, { useRef, useMemo, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
+import { useBillboard } from '../hooks/useBillboard'
 
 interface RadialMarkersProps {
   count?: number
@@ -12,10 +13,7 @@ interface RadialMarkersProps {
 
 type AnimationState = 'idle' | 'animating'
 
-// Constants
-const ROTATION_DAMPING = 0.99
-const NOISE_SPEED = 0.3
-const NOISE_SCALE = 0.2
+// Constants (moved to useBillboard hook)
 
 // Helper functions
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
@@ -70,9 +68,6 @@ export function RadialMarkers({
 }: RadialMarkersProps) {
   const { camera } = useThree()
   const groupRef = useRef<THREE.Group>(null)
-  const currentQuaternion = useRef(new THREE.Quaternion())
-  const targetQuaternion = useRef(new THREE.Quaternion())
-  const targetMatrix = useRef(new THREE.Matrix4())
 
   // Simplified animation state
   const animationState = useRef<AnimationState>('idle')
@@ -136,15 +131,17 @@ export function RadialMarkers({
     }
   }, [])
 
-  // No useEffect needed - we read the ref directly in useFrame
+  // Billboard the markers to face the camera
+  useBillboard(groupRef, {
+    damping: 0.99,
+    noiseSpeed: 0.3,
+    noiseScale: 0.2
+  })
 
-  const noiseTimeRef = useRef(0)
   const animationElapsedRef = useRef(0)
-  
+
   // Reusable vectors to avoid allocations
   const tempPos = useMemo(() => new THREE.Vector3(), [])
-  const groupWorldPos = useMemo(() => new THREE.Vector3(), [])
-  const direction = useMemo(() => new THREE.Vector3(), [])
 
   // Handle visibility changes (runs in animation loop)
   function handleVisibilityChange(isVisible: boolean) {
@@ -294,23 +291,7 @@ export function RadialMarkers({
     })
   }
 
-  // Update camera-facing rotation
-  function updateCameraRotation(delta: number) {
-    if (!groupRef.current) return
-
-    noiseTimeRef.current += delta * NOISE_SPEED
-    groupRef.current.getWorldPosition(groupWorldPos)
-
-    direction.subVectors(camera.position, groupWorldPos).normalize()
-    direction.x += Math.sin(noiseTimeRef.current * 0.9) * NOISE_SCALE
-    direction.y += Math.cos(noiseTimeRef.current * 0.7) * NOISE_SCALE
-    direction.normalize()
-
-    targetMatrix.current.lookAt(direction, centerPos, new THREE.Vector3(0, 1, 0))
-    targetQuaternion.current.setFromRotationMatrix(targetMatrix.current)
-    currentQuaternion.current.slerp(targetQuaternion.current, 1 - ROTATION_DAMPING)
-    groupRef.current.quaternion.copy(currentQuaternion.current)
-  }
+  // Billboard logic moved to useBillboard hook
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
@@ -342,10 +323,7 @@ export function RadialMarkers({
       updateAnimations(delta)
     }
 
-    // Update camera rotation when visible or animating
-    if (animationState.current === 'animating' || targetVisible.current) {
-      updateCameraRotation(delta)
-    }
+    // Billboard rotation handled by useBillboard hook
 
     // Disable raycasting when markers are completely invisible (always allow clicks through)
     const markersVisible = isVisibleRef?.current ?? false
