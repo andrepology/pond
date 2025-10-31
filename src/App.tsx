@@ -10,6 +10,7 @@ import PondSphere from './components/PondSphere'
 import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
+import { MeditationContainer } from './components/MeditationContainer'
 
 
 useGLTF.preload('/models/mindbody.glb')
@@ -108,29 +109,11 @@ export default function App() {
 
       </Canvas>
 
-      <div style={{ transform: 'scale(1.5)', transformOrigin: 'bottom left' }}>
+      
         <DateTimeDisplay />
-      </div>
+      
 
-      <button
-        data-ui
-        onClick={() => { markersVisibleRef.current = !markersVisibleRef.current }}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          padding: '10px 20px',
-          fontSize: '16px',
-          cursor: 'pointer',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          backgroundColor: '#fff',
-          zIndex: 1000
-        }}
-      >
-        Toggle Timer
-      </button>
+      <MeditationContainer markersVisibleRef={markersVisibleRef} />
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
        <Controls onPercentageChange={setSheetPercentage} /> */}

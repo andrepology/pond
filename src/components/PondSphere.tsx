@@ -59,6 +59,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   const starfieldRef = useRef<StarfieldHandle>(null)
   const shaderUniformsRef = useRef<any>(null)
   const { controls } = useThree()
+  const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
 
   // Setup vertex displacement shader (once)
   useEffect(() => {
@@ -159,20 +160,19 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           radius={1.00}
           count={80}
           minStarSize={1.2}
-
           twinkleSpeed={1.3}
           twinkleAmount={0.3}
-
           bloomSize={0.3}
           bloomStrength={0.1}
           distanceFalloff={1.8}
           coreBrightness={1.0}
+          fishPositionRef={fishWorldPositionRef}
         />
       </group>
 
       {/* Fish inside sphere - render before water */}
       <group name="innio-container" scale={0.15} renderOrder={-1}>
-        <Fish2 />
+        <Fish2 onHeadPositionUpdate={(worldPos) => { fishWorldPositionRef.current.copy(worldPos) }} />
       </group>
 
       {/* Radial markers */}

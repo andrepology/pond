@@ -34,6 +34,12 @@ interface StarfieldProps {
   outsideThreshold?: number;
   insideThreshold?: number;
   shellColor?: string;
+  
+  // Fish repulsion
+  fishPositionRef?: React.MutableRefObject<THREE.Vector3>;
+  repulsionInfluenceRadius?: number;
+  repulsionStrength?: number;
+  repulsionDamping?: number;
 }
 
 export interface StarfieldHandle {
@@ -69,6 +75,12 @@ const Starfield = forwardRef<StarfieldHandle, StarfieldProps>(({
   outsideThreshold,
   insideThreshold,
   shellColor,
+  
+  // Fish repulsion
+  fishPositionRef,
+  repulsionInfluenceRadius = 0.5,
+  repulsionStrength = 0.03,
+  repulsionDamping = 0.98,
 }, ref) => {
   const { camera } = useThree();
 
@@ -101,6 +113,10 @@ const Starfield = forwardRef<StarfieldHandle, StarfieldProps>(({
       Distance: folder({
         distanceFalloff: { value: distanceFalloff, min: 0.5, max: 3.0, step: 0.1, label: 'Distance Falloff' },
         coreBrightness: { value: coreBrightness, min: 0.0, max: 5.0, step: 0.1, label: 'Core Brightness' },
+      }),
+      Repulsion: folder({
+        repulsionInfluenceRadius: { value: repulsionInfluenceRadius, min: 0.1, max: 1.5, step: 0.05, label: 'Influence Radius' },
+        repulsionStrength: { value: repulsionStrength, min: 0.0, max: 0.2, step: 0.005, label: 'Repulsion Strength' },
       })
     },
     { collapsed: true }
@@ -163,6 +179,7 @@ const Starfield = forwardRef<StarfieldHandle, StarfieldProps>(({
       ? secondaryOffsets.subarray(0, validStarCount) 
       : secondaryOffsets;
 
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
@@ -179,6 +196,9 @@ const Starfield = forwardRef<StarfieldHandle, StarfieldProps>(({
         coreBrightness: { value: controls.coreBrightness },
         minStarSize: { value: minStarSize },
         maxRenderDistance: { value: controls.maxRenderDistance },
+        fishPosition: { value: new THREE.Vector3(0, 0, 0) },
+        repulsionInfluenceRadius: { value: controls.repulsionInfluenceRadius },
+        repulsionStrength: { value: controls.repulsionStrength },
       },
       vertexShader: `
       attribute float scale;
@@ -195,14 +215,38 @@ const Starfield = forwardRef<StarfieldHandle, StarfieldProps>(({
       uniform float sphereRadius;
       uniform float minStarSize;
       uniform float maxRenderDistance;
+      uniform vec3 fishPosition;
+      uniform float repulsionInfluenceRadius;
+      uniform float repulsionStrength;
       varying float vBrightness;
       varying vec3 vWorldPosition;
       varying float vDistance;
       varying float vCameraDistance;
       varying float vDistanceAlpha;
       void main() {
-        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        // Calculate repulsion from fish in world space
+        vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+        vec3 toFish = worldPos - fishPosition;
+        float distToFish = length(toFish);
+        
+        vec3 repulsionOffset = vec3(0.0);
+        if (distToFish < repulsionInfluenceRadius && distToFish > 0.001) {
+          vec3 repulsionDir = normalize(toFish);
+          float influence = (repulsionInfluenceRadius - distToFish) / repulsionInfluenceRadius;
+          // Inverse square falloff for natural feel
+          float force = influence * influence * repulsionStrength;
+          vec3 worldOffset = repulsionDir * force;
+          
+          // Transform world offset to local space using inverse model matrix
+          // modelMatrix transforms local->world, so we need inverse for world->local
+          // For uniform scaling, we can approximate: localOffset ≈ worldOffset / scale
+          // Starfield group has scale 1.1, so divide by that
+          repulsionOffset = worldOffset / 1.1;
+        }
+        
+        vec3 finalPosition = position + repulsionOffset;
+        vWorldPosition = (modelMatrix * vec4(finalPosition, 1.0)).xyz;
+        vec4 mvPosition = modelViewMatrix * vec4(finalPosition, 1.0);
         
         // Calculate distance for culling
         float cameraDistance = -mvPosition.z;
@@ -344,8 +388,20 @@ const Starfield = forwardRef<StarfieldHandle, StarfieldProps>(({
 
     // Keep last external opacity; we only update uniforms here
     if (pointsRef.current && starMaterial instanceof THREE.ShaderMaterial) {
-      (starMaterial as THREE.ShaderMaterial).uniforms.opacity.value = opacityRef.current;
+      const material = starMaterial as THREE.ShaderMaterial;
+      material.uniforms.opacity.value = opacityRef.current;
       pointsRef.current.visible = opacityRef.current > 0.001;
+      
+      // Update fish position uniform and repulsion params
+      if (fishPositionRef?.current && material.uniforms.fishPosition) {
+        material.uniforms.fishPosition.value.copy(fishPositionRef.current);
+      }
+      if (material.uniforms.repulsionInfluenceRadius) {
+        material.uniforms.repulsionInfluenceRadius.value = controls.repulsionInfluenceRadius;
+      }
+      if (material.uniforms.repulsionStrength) {
+        material.uniforms.repulsionStrength.value = controls.repulsionStrength;
+      }
     }
 
   

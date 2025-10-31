@@ -317,6 +317,7 @@ export function RadialMarkers({
               clearcoat={0.5}
               color="#ffffff"
               transparent
+              opacity={0}
             />
           </mesh>
         </group>

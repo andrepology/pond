@@ -9,9 +9,10 @@ import { useMemo, useRef, useState } from 'react'
 
 export interface Fish2Props {
   debug?: boolean
+  onHeadPositionUpdate?: (worldPos: THREE.Vector3) => void
 }
 
-export function Fish2({ debug = false }: Fish2Props) {
+export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
   const { scene, camera } = useThree()
   const rootRef = useRef<THREE.Group>(null)
   const GROUND_Y = 0
@@ -72,6 +73,13 @@ export function Fish2({ debug = false }: Fish2Props) {
           foodMarkersRef.current.shift()
           setFoodMarkers([...foodMarkersRef.current])
         }
+      }
+      
+      // Report head world position for star repulsion
+      if (onHeadPositionUpdate && rootRef.current) {
+        const worldPos = new THREE.Vector3()
+        movement.headRef.current.getWorldPosition(worldPos)
+        onHeadPositionUpdate(worldPos)
       }
     }
 

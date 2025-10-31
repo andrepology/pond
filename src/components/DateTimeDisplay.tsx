@@ -163,7 +163,7 @@ export function DateTimeDisplay() {
         className={`text-4xl md:text-3xl tracking-tight transition-opacity duration-1000 ${state.fadeClass}`}
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          color: 'rgba(144, 144, 144, 0.45)'
+          color: 'rgba(144, 144, 144, 0.40)'
         }}
       >
         {getCurrentText()}
@@ -172,7 +172,7 @@ export function DateTimeDisplay() {
         className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass}`}
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          color: 'rgba(144, 144, 144, 0.45)'
+          color: 'rgba(144, 144, 144, 0.40)'
         }}
       >
         {PROMPTS[state.promptIndex]}
