@@ -81,11 +81,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     }
   }, [material, color])
 
-  // Temporal smoothing refs
-  const prevCentersRef = useRef<THREE.Vector3[] | null>(null)
-  const prevNormalsRef = useRef<THREE.Vector3[] | null>(null)
-  const prevBinormalsRef = useRef<THREE.Vector3[] | null>(null)
-
   // Working arrays to avoid per-frame allocations
   const centersRef = useRef<THREE.Vector3[] | null>(null)
   const tangentsRef = useRef<THREE.Vector3[] | null>(null)
@@ -118,19 +113,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     ensureVecArray(tangentsRef)
     ensureVecArray(normalsRef)
     ensureVecArray(binormalsRef)
-    // prev arrays for smoothing
-    if (!prevCentersRef.current || prevCentersRef.current.length !== sampleCount) {
-      prevCentersRef.current = new Array(sampleCount)
-      for (let i = 0; i < sampleCount; i++) prevCentersRef.current[i] = new THREE.Vector3()
-    }
-    if (!prevNormalsRef.current || prevNormalsRef.current.length !== sampleCount) {
-      prevNormalsRef.current = new Array(sampleCount)
-      for (let i = 0; i < sampleCount; i++) prevNormalsRef.current[i] = new THREE.Vector3()
-    }
-    if (!prevBinormalsRef.current || prevBinormalsRef.current.length !== sampleCount) {
-      prevBinormalsRef.current = new Array(sampleCount)
-      for (let i = 0; i < sampleCount; i++) prevBinormalsRef.current[i] = new THREE.Vector3()
-    }
     if (!ringRadiiRef.current || ringRadiiRef.current.length !== sampleCount) {
       ringRadiiRef.current = new Float32Array(sampleCount)
     }
@@ -218,20 +200,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
         ni.multiplyScalar(1 / len)
       }
       binormalsF[i].crossVectors(ti, ni).normalize()
-    }
-
-    // Temporal smoothing
-    const smoothAlpha = 0.35
-    if (prevCentersRef.current && prevCentersRef.current.length === centers.length) {
-      for (let i = 0; i < centers.length; i++) {
-        centers[i].lerpVectors(prevCentersRef.current[i], centers[i], smoothAlpha)
-      }
-    }
-    if (prevNormalsRef.current && prevNormalsRef.current.length === normalsF.length && prevBinormalsRef.current) {
-      for (let i = 0; i < normalsF.length; i++) {
-        normalsF[i].lerpVectors(prevNormalsRef.current[i], normalsF[i], smoothAlpha).normalize()
-        binormalsF[i].lerpVectors(prevBinormalsRef.current[i], binormalsF[i], smoothAlpha).normalize()
-      }
     }
 
     // Fill vertex buffers with teardrop geometry
@@ -357,17 +325,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
       onFinData(finBuf)
       // Flip buffer index for next frame
       finActiveIdxRef.current = 1 - activeIdx
-    }
-
-    // Store for next frame smoothing
-    if (prevCentersRef.current) {
-      for (let i = 0; i < sampleCount; i++) prevCentersRef.current[i].copy(centers[i])
-    }
-    if (prevNormalsRef.current) {
-      for (let i = 0; i < sampleCount; i++) prevNormalsRef.current[i].copy(normalsF[i])
-    }
-    if (prevBinormalsRef.current) {
-      for (let i = 0; i < sampleCount; i++) prevBinormalsRef.current[i].copy(binormalsF[i])
     }
   })
 
