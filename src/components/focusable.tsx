@@ -147,7 +147,7 @@ export function Focusable({
     }
   }, [children, setLabelY])
 
-  useCursor(hovered)
+  // useCursor(hovered) // disabled
 
   return (
     <group

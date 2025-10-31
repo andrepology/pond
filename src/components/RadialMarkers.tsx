@@ -110,16 +110,19 @@ export function RadialMarkers({
     markerRefs.current = new Array(count).fill(null)
     markerMaterials.current = new Array(count).fill(null)
 
-    // Initialize markers to center position
+    // Initialize markers to center position and invisible state
     markerRefs.current.forEach((ref) => {
       if (ref) {
         ref.position.set(0, 0, 0)
+        ref.visible = false
       }
     })
     markerMaterials.current.forEach((material) => {
       if (material) {
         material.opacity = 1
         material.transmission = 1
+        material.depthWrite = false // Start with depth writing disabled
+        material.depthTest = false // Start with depth testing disabled
       }
     })
   }, [count, markers])
@@ -224,25 +227,31 @@ export function RadialMarkers({
           // Final visible state
           if (ref && targetPos) {
             ref.position.copy(targetPos)
+            ref.visible = true
           }
           if (material) {
             material.opacity = 1
+            material.depthWrite = true
+            material.depthTest = true
           }
         } else {
           // Final hidden state
           if (ref) {
             ref.position.copy(centerPos)
+            ref.visible = false
           }
           if (material) {
             material.opacity = 0
             material.transmission = 0
+            material.depthWrite = false
+            material.depthTest = false
           }
         }
       })
       return
     }
 
-    // Update each marker (calculate progress on-demand, no storage)
+      // Update each marker (calculate progress on-demand, no storage)
     markerRefs.current.forEach((markerRef, i) => {
       const material = markerMaterials.current[i]
       const targetPos = markerPositions.current[i]
@@ -262,11 +271,25 @@ export function RadialMarkers({
       tempPos.copy(centerPos).lerp(targetPos, easedProgress)
       markerRef.position.copy(tempPos)
 
-      // Update opacity and transmission (invisible longer - fade in only in last 20%)
+      // Update visibility, opacity and transmission
+      // Use visible=false when completely invisible, opacity/transmission when fading
+      const opacityProgress = Math.max(0, (easedProgress - 0.8) / 0.2)
+      const isCompletelyInvisible = opacityProgress === 0
+
       if (material) {
-        const opacityProgress = Math.max(0, (easedProgress - 0.8) / 0.2)
-        material.opacity = opacityProgress
-        material.transmission = opacityProgress
+        if (isCompletelyInvisible) {
+          // Completely invisible - set visible=false and disable depth testing/writing
+          markerRef.visible = false
+          material.depthWrite = false
+          material.depthTest = false
+        } else {
+          // Fading in/out - use opacity and enable depth testing/writing
+          markerRef.visible = true
+          material.opacity = opacityProgress
+          material.transmission = opacityProgress
+          material.depthWrite = true
+          material.depthTest = true
+        }
       }
     })
   }
@@ -323,6 +346,12 @@ export function RadialMarkers({
     if (animationState.current === 'animating' || targetVisible.current) {
       updateCameraRotation(delta)
     }
+
+    // Disable raycasting when markers are completely invisible (always allow clicks through)
+    const markersVisible = isVisibleRef?.current ?? false
+    if (groupRef.current) {
+      // groupRef.current.raycast = !markersVisible ? () => null : undefined
+    }
   })
 
   return (
@@ -350,6 +379,7 @@ export function RadialMarkers({
               color="#ffffff"
               transparent
               opacity={0}
+              depthTest={false}
             />
           </mesh>
         </group>

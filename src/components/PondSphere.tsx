@@ -192,6 +192,29 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       {/* Radial markers */}
       <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
 
+      {/* UIKit 3D Input at sphere center */}
+      <group renderOrder={2}>
+        <Input
+          value={inputText}
+          onValueChange={setInputText}
+          placeholder="what is your intention?"
+          width={200}
+          sizeX={20}
+          sizeY={2}
+          fontSize={12}
+          fontWeight="bold"
+          opacity={0.4}
+          letterSpacing={-0.01}
+          borderRadius={12}
+          padding={12}
+          alignItems="center"
+          justifyContent="center"
+          flexDirection="column"
+          textAlign="center"
+          zIndex={1000}
+        />
+      </group>
+
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
         <meshPhysicalMaterial
@@ -212,28 +235,6 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           depthWrite={false}
         />
       </Icosahedron>
-
-      {/* UIKit 3D Input at sphere center */}
-      <group onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
-        <Input
-          value={inputText}
-          onValueChange={setInputText}
-          placeholder="what is your intention?"
-          width={200}
-          sizeX={0.2}
-          sizeY={0.4}
-          fontSize={12}
-          fontWeight="bold"
-          opacity={0.4}
-          letterSpacing={-0.01}
-          borderRadius={12}
-          padding={12}
-          alignItems="center"
-          justifyContent="center"
-          flexDirection="column"
-          textAlign="center"
-        />
-      </group>
 
     </group>
   )
