@@ -23,10 +23,13 @@ RUN pnpm build
 # Production stage
 FROM base AS runtime
 ENV NODE_ENV=production
+# Copy package files (including lockfile)
+COPY package.json pnpm-lock.yaml ./
 # Install only production dependencies
 RUN pnpm install --prod --frozen-lockfile
+# Copy built files and config
 COPY --from=build /app/dist ./dist
-COPY package.json better-auth.config.ts ./
+COPY better-auth.config.ts ./
 
 # Expose port
 EXPOSE 3000
