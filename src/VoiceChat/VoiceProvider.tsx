@@ -65,7 +65,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
       .slice(0, 5)
       .map(conv => ({
         id: conv.$jazz.id,
-        content: conv.summary || conv.messages?.[0]?.content || '',
+        content: conv.summary || '',
         createdAt: new Date(conv.startTime).toISOString().split('T')[0] // Just the date
       }))
 
@@ -76,9 +76,24 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
   const getDynamicVariables = useCallback(() => {
     const variables: Record<string, any> = {}
 
+    // Current timestamp - formatted as readable date/time
+    const now = new Date();
+    variables.now_timestamp = now.toLocaleString('en-US', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+
     // User name
     if (me?.profile?.name) {
       variables.first_name = me.profile.name
+    }
+
+    // User pronouns
+    if (me?.profile?.pronouns) {
+      variables.pronouns = me.profile.pronouns
     }
 
     // User bio (not in current schema, but could be added later)
@@ -121,7 +136,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
     variables.conversation_count = conversationCount
 
     return variables
-  }, [me?.profile?.name, me?.root?.worldModel, getRecentConversations, me?.root?.intentions, me?.root?.conversations])
+  }, [me?.profile?.name, me?.profile?.pronouns, me?.root?.worldModel, getRecentConversations, me?.root?.intentions, me?.root?.conversations])
 
   // Persist conversation to Jazz when call ends
   const persistConversationToJazz = (endTime: number) => {

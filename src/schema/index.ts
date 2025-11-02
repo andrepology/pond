@@ -87,6 +87,7 @@ export const PondAccountRoot = co.map({
 
   // User preferences
   useAiProcessing: z.boolean(), // Enable/disable AI processing of conversations
+  aiProcessingEnabledAt: z.number().optional(), // When user first enabled AI processing (for backfill)
 });
 
 export type PondAccountRoot = co.loaded<typeof PondAccountRoot>;
@@ -96,6 +97,7 @@ export type PondAccountRoot = co.loaded<typeof PondAccountRoot>;
  */
 export const PondProfile = co.profile({
   name: z.string(),
+  pronouns: z.string().optional(),
 });
 
 export type PondProfile = co.loaded<typeof PondProfile>;
@@ -160,10 +162,24 @@ export const PondAccount = co
       account.$jazz.set("profile", PondProfile.create(
         {
           name: creationProps?.name || "New User",
+          pronouns: "they/them", // Default pronouns
         },
         profileGroup
       ));
       console.log(`✅ PondProfile created for: ${creationProps?.name || "New User"}`);
+      didMigrate = true;
+    }
+
+    // Load profile to check for and add missing fields
+    const { profile } = await account.$jazz.ensureLoaded({
+      resolve: { profile: true }
+    });
+
+    // Add pronouns if missing from existing profile
+    if (!profile.$jazz.has('pronouns')) {
+      console.log('🔄 Adding pronouns to existing profile...');
+      profile.$jazz.set("pronouns", "they/them");
+      console.log('✅ pronouns added to profile');
       didMigrate = true;
     }
 

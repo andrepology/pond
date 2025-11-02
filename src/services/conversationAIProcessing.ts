@@ -32,6 +32,7 @@ export async function processConversationAI(conversationId: string, account: Pon
     }));
 
     const userName = account.profile?.name || "User";
+    const userPronouns = account.profile?.pronouns || "they/them";
 
     // 5. Parallel API calls with error handling
     const [worldModelResult, notesResult, summaryResult] = await Promise.allSettled([
@@ -42,13 +43,13 @@ export async function processConversationAI(conversationId: string, account: Pon
       innioAPI.takeNotes({
         conversation_transcript: transcript,
         first_name: userName,
-        pronouns: "they/them", // Could make this configurable later
+        pronouns: userPronouns,
         world_model: account.root.worldModel?.toString()
       }),
       innioAPI.summarizeConversation({
         conversation_transcript: transcript,
         first_name: userName,
-        pronouns: "they/them",
+        pronouns: userPronouns,
         world_model: account.root.worldModel?.toString()
       })
     ]);
