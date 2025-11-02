@@ -15,8 +15,8 @@ import { MeditationContainer } from './components/MeditationContainer'
 import { AuthFlow } from './components/AuthFlow'
 
 
-useGLTF.preload('/models/mindbody.glb')
-useGLTF.preload('/models/wellstone.glb')
+//useGLTF.preload('/models/mindbody.glb')
+//useGLTF.preload('/models/wellstone.glb')
 
 export default function App() {
   const [sheetPercentage, setSheetPercentage] = useState(0)
@@ -72,9 +72,9 @@ export default function App() {
         <CameraRig sheetPercentage={sheetPercentage} />
 
 
-        <color attach="background" args={['#f0f0f0']} />
+        <color attach="background" args={['#F3F0EB']} />
         <AdaptiveFog
-          color="#f0f0f0"
+          color="#F3F0EB"
           defaultFog={{ near: 4, far: 18 }}
           focusedFog={{ near: 4, far: 12 }}
           animationDuration={1.2}

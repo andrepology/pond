@@ -45,7 +45,7 @@ function getDatabaseUrl(): string {
 const databaseUrl = getDatabaseUrl();
 
 // Create PostgreSQL connection pool
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: databaseUrl,
 });
 

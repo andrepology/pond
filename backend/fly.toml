@@ -34,6 +34,10 @@ primary_region = "ams"
   # Run migrations before deploying new release
   release_command = "pnpm migrate"
 
+  [deploy.release_command_vm]
+    size = "shared-cpu-1x"
+    memory = "2gb"
+
 [[vm]]
   cpu_kind = "shared"
   cpus = 1

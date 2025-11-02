@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation, useRoute } from 'wouter'
+import { useAccount } from 'jazz-tools/react'
+import { useIsAuthenticated } from 'jazz-tools/react-core'
+import { PondAccount } from '../schema'
+import { betterAuthClient } from '../lib/auth-client'
 
 // Font loading - same pattern as focusable.tsx
 const loadFont = () => {
@@ -13,9 +17,6 @@ const loadFont = () => {
 }
 
 interface DateTimeState {
-  date: string
-  cycle: number // 0 = date, 1 = "andre's pond"
-  fadeClass: string
   promptIndex: number
   promptFadeClass: string
   displayOpacity: string
@@ -45,6 +46,19 @@ const formatDate = (date: Date): string => {
   return `${dayName}, ${month} ${day}${getOrdinalSuffix(day)}`
 }
 
+const FISH_NAMES = [
+  'sardine',
+  'salmon',
+  'trout',
+  'bass',
+  'carp',
+  'pike',
+  'perch',
+  'roach',
+  'bream',
+  'tench'
+]
+
 const PROMPTS = [
   'be and it is',
   'what am i grateful for?',
@@ -62,10 +76,10 @@ export function DateTimeDisplay() {
   const [location] = useLocation()
   const [routeMatch] = useRoute('/item/:id')
   const [fontLoaded, setFontLoaded] = useState(false)
+  const { me } = useAccount(PondAccount, { resolve: { profile: true } })
+  const isAuthenticated = useIsAuthenticated()
+  const [anonymousFish, setAnonymousFish] = useState<string>('')
   const [state, setState] = useState<DateTimeState>({
-    date: '',
-    cycle: 0,
-    fadeClass: 'opacity-100',
     promptIndex: 0,
     promptFadeClass: 'opacity-100',
     displayOpacity: 'opacity-100'
@@ -73,9 +87,10 @@ export function DateTimeDisplay() {
 
   const isFocused = !!routeMatch
 
-  // Load font on mount
+  // Load font and set random fish name on mount
   useEffect(() => {
     loadFont().then(() => setFontLoaded(true))
+    setAnonymousFish(FISH_NAMES[Math.floor(Math.random() * FISH_NAMES.length)])
   }, [])
 
   // Handle display opacity when focusing/unfocusing
@@ -90,27 +105,10 @@ export function DateTimeDisplay() {
   useEffect(() => {
     if (isFocused) return
 
-    const TITLE_PERIOD_MS = 20000
-    const TITLE_FADE_MS = 2000
     const PROMPT_PERIOD_MS = 5000
     const PROMPT_FADE_MS = 1000
 
-    let titleFadeTimeout: number | undefined
     let promptFadeTimeout: number | undefined
-
-    const runTitlePhase = () => {
-      setState(prev => ({
-        ...prev,
-        date: formatDate(new Date()),
-        cycle: prev.cycle === 0 ? 1 : 0,
-        fadeClass: 'opacity-100'
-      }))
-
-      if (titleFadeTimeout) clearTimeout(titleFadeTimeout)
-      titleFadeTimeout = window.setTimeout(() => {
-        setState(prev => ({ ...prev, fadeClass: 'opacity-0' }))
-      }, Math.max(0, TITLE_PERIOD_MS - TITLE_FADE_MS))
-    }
 
     const runPromptPhase = () => {
       setState(prev => ({
@@ -126,16 +124,12 @@ export function DateTimeDisplay() {
     }
 
     // Kick off immediately to avoid initial delay
-    runTitlePhase()
     runPromptPhase()
 
-    const titleInterval = window.setInterval(runTitlePhase, TITLE_PERIOD_MS)
     const promptInterval = window.setInterval(runPromptPhase, PROMPT_PERIOD_MS)
 
     return () => {
-      clearInterval(titleInterval)
       clearInterval(promptInterval)
-      if (titleFadeTimeout) clearTimeout(titleFadeTimeout)
       if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
     }
   }, [isFocused])
@@ -147,29 +141,72 @@ export function DateTimeDisplay() {
   }
 
   const getCurrentText = () => {
-    switch (state.cycle) {
-      case 0:
-        return state.date
-      case 1:
-        return "andre's pond ☼ ☽ ⚘ "
-      default:
-        return ''
-    }
+    const baseText = isAuthenticated && me ? `${me.profile?.name?.toLowerCase() || 'user'}'s pond` : `anonymous ${anonymousFish}'s pond`
+    return baseText
+  }
+
+  const renderTextWithHoverIcons = () => {
+    const text = getCurrentText()
+    const icons = ['☼', '☽', '⚘']
+
+    return (
+      <>
+        <span
+          className="transition-colors duration-200 cursor-default hover:text-gray-600"
+          style={{
+            color: 'rgba(144, 144, 144, 0.40)'
+          }}
+        >
+          {text}
+        </span>
+        {icons.map((icon, index) => (
+          <span
+            key={index}
+            className="transition-colors duration-200 cursor-default ml-4 hover:text-gray-600"
+            style={{
+              color: 'rgba(144, 144, 144, 0.40)'
+            }}
+          >
+            {icon}
+          </span>
+        ))}
+      </>
+    )
   }
 
   return (
     <div className={`fixed bottom-0 left-0 z-50 pointer-events-none p-10 transition-opacity duration-1000 ${state.displayOpacity}`}>
       <div
-        className={`text-4xl md:text-3xl tracking-tight transition-opacity duration-1000 ${state.fadeClass}`}
+        className="text-4xl md:text-3xl tracking-tight"
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
           color: 'rgba(144, 144, 144, 0.40)'
         }}
       >
-        {getCurrentText()}
+        {renderTextWithHoverIcons()}
+        {isAuthenticated && (
+          <button
+            onClick={async () => {
+              await betterAuthClient.signOut();
+              window.location.reload();
+            }}
+            className="inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto transition-colors hover:bg-gray-600"
+            style={{
+              backgroundColor: 'rgba(144, 144, 144, 0.40)',
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontFamily: 'AlteHaasGroteskBold, sans-serif',
+              fontSize: '0.75rem',
+              lineHeight: '1.2',
+              verticalAlign: 'middle',
+              padding: '0.25rem 0.5rem'
+            }}
+          >
+            logout
+          </button>
+        )}
       </div>
       <div
-        className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass}`}
+        className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass} transition-colors duration-200 cursor-default hover:text-gray-600`}
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
           color: 'rgba(144, 144, 144, 0.40)'

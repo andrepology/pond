@@ -5,12 +5,12 @@ import { PondAccount } from "../schema";
 import { betterAuthClient } from "../lib/auth-client";
 
 /**
- * Authentication flow component for Better Auth + Jazz
- * 
- * With Better Auth + Jazz integration:
- * - Jazz ALWAYS creates an account (anonymous initially)
- * - We check Better Auth session to know if user is truly authenticated
- * - On sign up/in, the anonymous Jazz account transforms to authenticated
+ * Unified authentication flow component for Better Auth + Jazz
+ *
+ * Single form that adapts based on email existence:
+ * - Enter email → check if exists in DB
+ * - If exists: "Welcome back, [Name]" + password field (sign in)
+ * - If new: Name field + password field (sign up)
  */
 export function AuthFlow() {
   const { me } = useAccount(PondAccount, {
@@ -19,47 +19,54 @@ export function AuthFlow() {
     },
   });
 
-  // Check Better Auth authentication state - this determines if user is truly authenticated
+  // Check Better Auth authentication state (distinguishes anonymous from authenticated)
   const isAuthenticated = useIsAuthenticated();
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  // Unified flow state
   const [email, setEmail] = useState("");
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [userExists, setUserExists] = useState(false);
+  const [existingUserName, setExistingUserName] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Loading state: Jazz account loading
-  if (me === undefined) {
-    return (
-      <div className="auth-container">
-        <p>Loading...</p>
-      </div>
-    );
-  }
+  // Email existence checking function
+  const checkEmail = async (emailToCheck: string) => {
+    setChecking(true);
+    setError(null);
 
-  // User is authenticated via Better Auth (is authenticated AND has Jazz account)
-  if (isAuthenticated && me !== null) {
-    return (
-      <div className="auth-container">
-        <div className="auth-success">
-          <h2>Welcome, {me.profile?.name || "Friend"}!</h2>
-          <p>Jazz Account ID: {me.$jazz.id}</p>
-          <p className="status-text">
-            ✓ Authenticated and syncing locally-first
-          </p>
-          <button onClick={async () => {
-            await betterAuthClient.signOut();
-            window.location.reload(); // Refresh to reset state
-          }}>
-            Sign Out
-          </button>
-        </div>
-      </div>
-    );
-  }
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/check-email?email=${encodeURIComponent(emailToCheck)}`);
 
-  // User is NOT authenticated with Better Auth (may have anonymous Jazz account)
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to check email');
+      }
+
+      const data = await response.json();
+      setUserExists(data.exists);
+      setExistingUserName(data.name || null);
+      setEmailChecked(true);
+    } catch (err) {
+      console.error('Email check error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to check email');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  // Handle email input and checking
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+
+    await checkEmail(email);
+  };
+
+  // Handle sign in
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -73,14 +80,14 @@ export function AuthFlow() {
         email,
         password,
       });
-      
+
       console.log("✅ Sign in result:", result);
-      
+
       if (result.error) {
         console.error("❌ Sign in error from server:", result.error);
         setError(result.error.message || "Sign in failed");
       }
-      // On success, Jazz will automatically update and session will be set
+      // On success, Better Auth will handle session creation
     } catch (err) {
       console.error("❌ Sign in error:", err);
       const errorMsg = err instanceof Error ? err.message : "Sign in failed";
@@ -90,6 +97,7 @@ export function AuthFlow() {
     }
   };
 
+  // Handle sign up
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -122,7 +130,6 @@ export function AuthFlow() {
         console.error("❌ Sign up error from server:", result.error);
         setError(result.error.message || "Sign up failed");
       } else {
-        // Success! Jazz account will transform from anonymous to authenticated
         console.log("✅ Sign up successful! Jazz account transformed.");
       }
     } catch (err) {
@@ -134,85 +141,175 @@ export function AuthFlow() {
     }
   };
 
+  // Reset to email input
+  const resetToEmail = () => {
+    setEmailChecked(false);
+    setUserExists(false);
+    setExistingUserName(null);
+    setPassword("");
+    setName("");
+    setError(null);
+  };
+
+  // Loading state: Jazz account loading
+  if (me === undefined) {
+    return (
+      <div className="auth-container">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // User is authenticated - hide auth flow completely
+  if (isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="auth-container">
       <div className="auth-form">
-        <h2>{mode === "signin" ? "Sign In" : "Sign Up"}</h2>
-        
-        {/* Debug info */}
-        <div style={{ fontSize: '10px', color: '#999', marginBottom: '1rem', padding: '0.5rem', background: '#f5f5f5', borderRadius: '4px' }}>
-          <strong>Debug:</strong> API URL = {import.meta.env.VITE_API_URL || "http://localhost:3000"}
-        </div>
-        <p className="subtitle">
-          {mode === "signin" 
-            ? "Sign in to sync your data across devices" 
-            : "Create an account to get started"}
-        </p>
+        {/* Step 1: Email Input Only */}
+        {!emailChecked && (
+          <>
+            <h2>Get Started</h2>
 
-        <form onSubmit={mode === "signin" ? handleSignIn : handleSignUp}>
-          {mode === "signup" && (
-            <div className="form-group">
-              <label htmlFor="name">Name</label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={loading}
-                placeholder="Your name"
-              />
-            </div>
-          )}
+            <form onSubmit={handleEmailSubmit}>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={checking}
+                  placeholder="your@email.com"
+                  autoComplete="email"
+                  autoFocus
+                />
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              {error && <div className="error">{error}</div>}
+
+              <button type="submit" disabled={checking}>
+                {checking ? "Checking..." : "Continue"}
+              </button>
+            </form>
+          </>
+        )}
+
+        {/* Step 2: Existing User - Sign In */}
+        {emailChecked && userExists && (
+          <>
+            <h2>Welcome back, {existingUserName || "there"}!</h2>
+
+            <form onSubmit={handleSignIn}>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled
+                  style={{ opacity: 0.7 }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  minLength={8}
+                  placeholder="Your password"
+                  autoComplete="current-password"
+                  autoFocus
+                />
+              </div>
+
+              {error && <div className="error">{error}</div>}
+
+              <button type="submit" disabled={loading}>
+                {loading ? "Signing In..." : "Sign In"}
+              </button>
+            </form>
+
+            <button
+              className="link-button"
+              onClick={resetToEmail}
               disabled={loading}
-              placeholder="your@email.com"
-              autoComplete="email"
-            />
-          </div>
+            >
+              Different email?
+            </button>
+          </>
+        )}
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+        {/* Step 3: New User - Sign Up */}
+        {emailChecked && !userExists && (
+          <>
+            <h2>Create Account</h2>
+
+            <form onSubmit={handleSignUp}>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled
+                  style={{ opacity: 0.7 }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="name">Name</label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder="Your name"
+                  autoFocus
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  minLength={8}
+                  placeholder="Min. 8 characters"
+                  autoComplete="new-password"
+                />
+              </div>
+
+              {error && <div className="error">{error}</div>}
+
+              <button type="submit" disabled={loading}>
+                {loading ? "Creating Account..." : "Sign Up"}
+              </button>
+            </form>
+
+            <button
+              className="link-button"
+              onClick={resetToEmail}
               disabled={loading}
-              minLength={8}
-              placeholder="Min. 8 characters"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            />
-          </div>
-
-          {error && <div className="error">{error}</div>}
-
-          <button type="submit" disabled={loading}>
-            {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
-          </button>
-        </form>
-
-        <button
-          className="link-button"
-          onClick={() => {
-            setMode(mode === "signin" ? "signup" : "signin");
-            setError(null);
-          }}
-          disabled={loading}
-        >
-          {mode === "signin"
-            ? "Need an account? Sign up"
-            : "Have an account? Sign in"}
-        </button>
+            >
+              Different email?
+            </button>
+          </>
+        )}
       </div>
 
       <style>{`
@@ -222,77 +319,71 @@ export function AuthFlow() {
           left: 50%;
           transform: translate(-50%, -50%);
           background: white;
-          padding: 2rem;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-          min-width: 360px;
-          max-width: 400px;
+          padding: 1.5rem;
+          border: 1px solid #e0e7ef;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          min-width: 320px;
+          max-width: 360px;
           z-index: 1000;
         }
 
-        .auth-form h2,
-        .auth-success h2 {
-          margin: 0 0 0.5rem;
-          font-size: 1.75rem;
-          font-weight: 600;
-          color: #1a1a1a;
-        }
-
-        .subtitle {
-          margin: 0 0 1.5rem;
-          font-size: 0.9rem;
-          color: #666;
+        .auth-form h2 {
+          margin: 0 0 0.75rem 0;
+          font-size: 1.25rem;
+          font-weight: 500;
+          color: #333;
         }
 
         .form-group {
-          margin-bottom: 1rem;
+          margin-bottom: 0.875rem;
         }
 
         .form-group label {
           display: block;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.375rem;
           font-weight: 500;
-          font-size: 0.9rem;
+          font-size: 0.875rem;
           color: #333;
         }
 
         .form-group input {
           width: 100%;
-          padding: 0.75rem;
+          padding: 0.625rem;
           border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 1rem;
+          border-radius: 4px;
+          font-size: 0.95rem;
           box-sizing: border-box;
           transition: border-color 0.2s;
         }
 
         .form-group input:focus {
           outline: none;
-          border-color: #4a90e2;
-          box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+          border-color: #999;
+          box-shadow: 0 0 0 2px rgba(153, 153, 153, 0.1);
         }
 
         .form-group input:disabled {
-          background-color: #f5f5f5;
+          background-color: #f9f9f9;
           cursor: not-allowed;
         }
 
         .auth-form button[type="submit"] {
           width: 100%;
-          padding: 0.875rem;
-          background: #4a90e2;
+          padding: 0.75rem;
+          background: #666;
           color: white;
           border: none;
-          border-radius: 6px;
-          font-size: 1rem;
-          font-weight: 600;
+          border-radius: 4px;
+          font-size: 0.95rem;
+          font-weight: 500;
           cursor: pointer;
-          margin-top: 1rem;
+          margin-top: 0.875rem;
           transition: background 0.2s;
         }
 
         .auth-form button[type="submit"]:hover:not(:disabled) {
-          background: #357abd;
+          background: #555;
         }
 
         .auth-form button[type="submit"]:disabled {
@@ -302,18 +393,18 @@ export function AuthFlow() {
 
         .link-button {
           width: 100%;
-          padding: 0.75rem;
+          padding: 0.5rem;
           background: none;
           border: none;
-          color: #4a90e2;
-          font-size: 0.9rem;
+          color: #666;
+          font-size: 0.85rem;
           cursor: pointer;
-          margin-top: 1rem;
+          margin-top: 0.75rem;
           transition: color 0.2s;
         }
 
         .link-button:hover:not(:disabled) {
-          color: #357abd;
+          color: #333;
           text-decoration: underline;
         }
 
@@ -323,46 +414,53 @@ export function AuthFlow() {
         }
 
         .error {
-          color: #e74c3c;
-          background: #ffe6e6;
-          padding: 0.75rem;
-          border-radius: 6px;
-          margin-top: 1rem;
-          font-size: 0.875rem;
-          border: 1px solid #ffcccc;
+          color: #d32f2f;
+          background: #ffebee;
+          padding: 0.625rem;
+          border-radius: 4px;
+          margin-top: 0.875rem;
+          font-size: 0.85rem;
+          border: 1px solid #ffcdd2;
         }
 
         .auth-success {
           text-align: center;
         }
 
+        .auth-success h2 {
+          margin: 0 0 0.5rem 0;
+          font-size: 1.25rem;
+          font-weight: 500;
+          color: #333;
+        }
+
         .auth-success p {
-          margin: 0.5rem 0;
+          margin: 0.375rem 0;
           color: #666;
-          font-size: 0.9rem;
+          font-size: 0.875rem;
         }
 
         .status-text {
-          color: #27ae60 !important;
+          color: #2e7d32 !important;
           font-weight: 500;
-          margin-top: 1rem !important;
+          margin-top: 0.875rem !important;
         }
 
         .auth-success button {
-          margin-top: 2rem;
-          padding: 0.875rem 2rem;
-          background: #e74c3c;
+          margin-top: 1.5rem;
+          padding: 0.75rem 1.5rem;
+          background: #d32f2f;
           color: white;
           border: none;
-          border-radius: 6px;
-          font-size: 1rem;
+          border-radius: 4px;
+          font-size: 0.95rem;
           font-weight: 500;
           cursor: pointer;
           transition: background 0.2s;
         }
 
         .auth-success button:hover {
-          background: #c0392b;
+          background: #b71c1c;
         }
       `}</style>
     </div>
