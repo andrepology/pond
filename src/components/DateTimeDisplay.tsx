@@ -154,7 +154,7 @@ export function DateTimeDisplay() {
         <span
           className="transition-colors duration-200 cursor-default hover:text-gray-600"
           style={{
-            color: 'rgba(144, 144, 144, 0.40)'
+            color: 'rgba(206, 205, 195, 0.80)'
           }}
         >
           {text}
@@ -164,7 +164,7 @@ export function DateTimeDisplay() {
             key={index}
             className="transition-colors duration-200 cursor-default ml-4 hover:text-gray-600"
             style={{
-              color: 'rgba(144, 144, 144, 0.40)'
+              color: 'rgba(206, 205, 195, 0.80)'
             }}
           >
             {icon}
@@ -192,7 +192,7 @@ export function DateTimeDisplay() {
             }}
             className="inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto transition-colors hover:bg-gray-600"
             style={{
-              backgroundColor: 'rgba(144, 144, 144, 0.40)',
+              backgroundColor: 'rgba(206, 205, 195, 0.80)',
               color: 'rgba(255, 255, 255, 0.9)',
               fontFamily: 'AlteHaasGroteskBold, sans-serif',
               fontSize: '0.75rem',
@@ -209,7 +209,7 @@ export function DateTimeDisplay() {
         className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass} transition-colors duration-200 cursor-default hover:text-gray-600`}
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          color: 'rgba(144, 144, 144, 0.40)'
+          color: 'rgba(206, 205, 195, 0.80)'
         }}
       >
         {PROMPTS[state.promptIndex]}

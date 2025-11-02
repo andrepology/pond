@@ -1,9 +1,13 @@
-import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react'
+import React, { createContext, useContext, useCallback, useState, useEffect, useRef, useMemo } from 'react'
 import { useConversation } from '@elevenlabs/react'
 import { useAccount } from 'jazz-tools/react'
 import { co } from 'jazz-tools'
 import type { VoiceStatus, VoiceError, VoiceMessage, ConversationConfig } from './types'
 import { PondAccount, Conversation, ConversationMessage } from '../schema'
+
+// Global refs that persist across component re-mounts
+const globalMessagesRef = { current: [] as VoiceMessage[] }
+const globalCallStartTimeRef = { current: null as number | null }
 
 interface VoiceContextValue {
   status: VoiceStatus
@@ -25,10 +29,14 @@ interface VoiceProviderProps {
 export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }) => {
   const [status, setStatus] = useState<VoiceStatus>('idle')
   const [error, setError] = useState<VoiceError | null>(null)
-  const [messages, setMessages] = useState<VoiceMessage[]>([])
   const [volume, setVolume] = useState<number>(0)
-  const [callStartTime, setCallStartTime] = useState<number | null>(null)
+
+  // Local ref for timeout (doesn't need to persist)
   const activityResetTimeoutRef = useRef<number | null>(null)
+
+  // Use global refs for persistence data
+  const messages = globalMessagesRef.current
+  const callStartTime = globalCallStartTimeRef.current
 
   // Access Jazz user data with deep loading for conversations and intentions
   const { me } = useAccount(PondAccount, {
@@ -114,21 +122,27 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
   }, [me?.profile?.name, me?.root?.worldModel, getRecentConversations, me?.root?.intentions, me?.root?.conversations])
 
   // Persist conversation to Jazz when call ends
-  const persistConversationToJazz = useCallback((endTime: number) => {
-    if (!me?.root?.conversations || !callStartTime || messages.length === 0) return
+  const persistConversationToJazz = (endTime: number) => {
+    // Get current values from global refs
+    const currentCallStartTime = globalCallStartTimeRef.current
+    const currentMessages = globalMessagesRef.current
+
+    if (!me?.root?.conversations || !currentCallStartTime || currentMessages.length === 0) {
+      return
+    }
 
     try {
       // Create Conversation covalue with empty messages list
       const conversation = Conversation.create({
         agentId: config.agentId,
-        startTime: callStartTime,
+        startTime: currentCallStartTime,
         endTime: endTime,
         messages: co.list(ConversationMessage).create([]),
         createdAt: Date.now(),
       })
 
       // Add messages to the conversation
-      messages.forEach(msg => {
+      currentMessages.forEach((msg) => {
         const conversationMessage = ConversationMessage.create({
           role: msg.source === 'agent' ? 'agent' : 'user',
           content: msg.content,
@@ -140,13 +154,11 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
       // Add to user's conversations list
       me.root.conversations.$jazz.push(conversation)
 
-      console.log('💾 Conversation persisted to Jazz:', conversation.$jazz.id)
-
     } catch (error) {
       console.error('Failed to persist conversation:', error)
       // Don't break the UI - conversation still worked
     }
-  }, [me?.root?.conversations, callStartTime, messages, config.agentId])
+  }
 
   // Initialize ElevenLabs conversation hook
   const conversation = useConversation({
@@ -159,14 +171,17 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
       setStatus('idle')
       setVolume(0) // Reset volume on disconnect
 
-      // Persist conversation to Jazz
-      if (callStartTime && messages.length > 0) {
+      // Persist conversation to Jazz - access global refs directly
+      const currentCallStartTime = globalCallStartTimeRef.current
+      const currentMessages = globalMessagesRef.current
+
+      if (currentCallStartTime && currentMessages.length > 0) {
         persistConversationToJazz(Date.now())
       }
 
       // Reset call state
-      setCallStartTime(null)
-      setMessages([])
+      globalCallStartTimeRef.current = null
+      globalMessagesRef.current = []
 
       config.onDisconnect?.()
     },
@@ -181,8 +196,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
         timestamp: Date.now(),
         source: (message?.source === 'ai' || message?.source === 'agent') ? 'agent' : 'user'
       }
-      
-      setMessages(prev => [...prev, voiceMessage])
+
+
+      const newMessages = [...globalMessagesRef.current, voiceMessage]
+      globalMessagesRef.current = newMessages
       // Update high-level status to reflect current activity
       if (voiceMessage.source === 'agent') {
         setStatus('speaking')
@@ -229,11 +246,12 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
     config.onStatusChange?.(status)
   }, [status, config])
 
+
   const startConversation = useCallback(async () => {
     try {
       setStatus('connecting')
       setError(null)
-      setCallStartTime(Date.now()) // Track when call started
+      globalCallStartTimeRef.current = Date.now() // Track when call started
 
       // Request microphone permission first (ElevenLabs best practice)
       await navigator.mediaDevices.getUserMedia({ audio: true })

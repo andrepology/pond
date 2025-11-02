@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import { PondAccount } from './schema'
 import { betterAuthClient } from './lib/auth-client'
+import { VoiceProvider } from './VoiceChat'
 
 const JAZZ_PEER = import.meta.env.VITE_JAZZ_SYNC_PEER
 
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')!).render(
     }}
   >
     <AuthProvider betterAuthClient={betterAuthClient}>
-      <App />
+      <VoiceProvider config={{ agentId: import.meta.env.VITE_ELEVENLABS_AGENT_ID }}>
+        <App />
+      </VoiceProvider>
     </AuthProvider>
   </JazzReactProvider>
 )

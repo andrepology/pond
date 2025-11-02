@@ -575,10 +575,10 @@ export function createIntention(me: PondAccount, title: string) {
 
 ### Phase 3: ElevenLabs Integration (Week 4-5)
 
-- [ ] Backend API: `/api/elevenlabs/signed-url`
-- [ ] Client: Request signed URL and initiate call
-- [ ] Client: Create Conversation CoValue from call data
-- [ ] Test voice call flow (stub for now)
+- [x] Backend API: `/api/elevenlabs/signed-url`
+- [x] Client: Request signed URL and initiate call
+- [x] Client: Create Conversation CoValue from call data
+- [x] Test voice call flow (completed - voice conversations now persist to Jazz)
 
 ### Phase 4: AI Processing (Week 6-7)
 
