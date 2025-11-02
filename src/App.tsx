@@ -13,7 +13,7 @@ import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
 import { AuthFlow } from './components/AuthFlow'
-import { CallButton } from './VoiceChat'
+import { JournalBrowser } from './components/JournalBrowser'
 
 
 //useGLTF.preload('/models/mindbody.glb')
@@ -129,16 +129,9 @@ export default function App() {
 
       <DateTimeDisplay />
 
-      {/* Voice Call Button */}
-      <div style={{
-        position: 'fixed',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000
-      }}>
-        <CallButton />
-      </div>
+      {/* Journal Browser */}
+      <JournalBrowser />
+
 
       {/* <MeditationContainer markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} /> */}
 
