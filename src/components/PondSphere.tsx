@@ -1,18 +1,14 @@
 import * as THREE from 'three'
-import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
-import { Icosahedron, Center, useTexture } from '@react-three/drei'
+import React, { forwardRef, useRef } from 'react'
+import { Icosahedron } from '@react-three/drei'
 import SphericalSky from './SphericalSky'
 import Starfield, { type StarfieldHandle } from './Starfield'
 import Fish2 from '../fish/Fish2'
-import { useControls } from 'leva'
-import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/fade'
 import { RadialMarkers } from './RadialMarkers'
-import { Input, Container, Text } from '@react-three/uikit'
+import IntentionInput from './IntentionInput'
 import type { Signal } from '@preact/signals-core'
-import { useBillboard } from '../hooks/useBillboard'
-import { useAccount } from 'jazz-tools/react'
-import { PondAccount, Intention } from '../schema'
+import { usePondCrossfade } from '../hooks/usePondCrossfade'
+import { useWaterMaterial } from '../hooks/useWaterMaterial'
 
 interface InteractiveProps {
   hovered?: boolean;
@@ -23,184 +19,22 @@ interface InteractiveProps {
 }
 
 export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  const waterControls = useControls('Water Material', {
-    roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
-    ior: { value: 2.26, min: 1, max: 2.333, step: 0.001 },
-    transmission: { value: 1.00, min: 0, max: 1, step: 0.01 },
-    thickness: { value: 0.05, min: 0, max: 2, step: 0.01 },
-    attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
-    attenuationColor: '#ffffff',
-    specularIntensity: { value: 0.92, min: 0, max: 1, step: 0.01 },
-    normalScale: { value: 0.44, min: 0, max: 2, step: 0.01 },
-    normalTiling: { value: 0.3, min: 0.1, max: 10, step: 0.1 },
-    flowU: { value: 0.00, min: -0.3, max: 0.3, step: 0.001 },
-    flowV: { value: -0.01, min: -0.3, max: 0.3, step: 0.001 },
-    displacementStrength: { value: 0.02, min: 0, max: 0.1, step: 0.001 }
-  })
+  const { materialRef: waterMaterialRef, controls: waterControls, waterNormals } = useWaterMaterial()
+  const { fade } = usePondCrossfade({ start: 1.4, end: 1.5 })
 
-  const waterNormals = useTexture('/waternormals.jpg')
-  useMemo(() => {
-    if (waterNormals) {
-      waterNormals.wrapS = THREE.RepeatWrapping
-      waterNormals.wrapT = THREE.RepeatWrapping
-      waterNormals.anisotropy = 4
-      waterNormals.needsUpdate = true
-    }
-  }, [waterNormals])
-
-  useEffect(() => {
-    if (waterNormals) {
-      waterNormals.repeat.set(waterControls.normalTiling, waterControls.normalTiling)
-    }
-  }, [waterNormals, waterControls.normalTiling])
-
-  useFrame((_, delta) => {
-    if (waterNormals) {
-      waterNormals.offset.x += delta * waterControls.flowU
-      waterNormals.offset.y += delta * waterControls.flowV
-    }
-  })
-
-  const waterMaterialRef = useRef<THREE.MeshPhysicalMaterial | null>(null)
   const starfieldRef = useRef<StarfieldHandle>(null)
-  const shaderUniformsRef = useRef<any>(null)
-  const inputGroupRef = useRef<THREE.Group>(null)
-  const { controls } = useThree()
   const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
 
-  // Load account with intentions list (shallow)
-  const { me } = useAccount(PondAccount, {
-    resolve: {
-      root: { intentions: true }
-    }
-  })
-
-  // Find current todo intention (only one exists at a time)
-  const currentTodoIntention = useMemo(() => {
-    if (!me?.root.intentions) return null
-    return me.root.intentions.find(intention => intention && intention.status === "todo") || null
-  }, [me?.root.intentions])
-
-  // Billboard the input to face the camera (more weighty than markers)
-  useBillboard(inputGroupRef, {
-    damping: 0.98,      // Higher damping = more inertia/weight
-    noiseSpeed: 0.3,    // Slower noise oscillation
-    noiseScale: 0.05      // Reduced noise amplitude
-  })
-
-  // Handle input changes - create todo intention if needed, then update title
-  const handleInputChange = (newValue: string) => {
-    if (!me) return
-
-    let intention = currentTodoIntention
-
-    // Create new todo intention if none exists and user is typing
-    if (!intention && newValue.trim().length > 0) {
-      
-      intention = Intention.create({
-        title: newValue,
-        status: "todo", 
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }, { owner: me.$jazz.owner }) 
-
-      // Add to user's intentions list
-      me.root.intentions.$jazz.push(intention)
-    }
-    // Update existing intention's title
-    else if (intention) {
-      intention.$jazz.set("title", newValue)
-      intention.$jazz.set("updatedAt", Date.now())
-    }
-  }
-
-  // Update signal when input changes (now based on intention title)
-  useEffect(() => {
-    if (props.hasInputSignal) {
-      const hasInput = currentTodoIntention?.title?.trim().length > 0
-      props.hasInputSignal.value = Boolean(hasInput)
-    }
-  }, [currentTodoIntention?.title, props.hasInputSignal])
-
-  // Setup vertex displacement shader (once)
-  useEffect(() => {
-    const material = waterMaterialRef.current
-    if (!material || !waterNormals) return
-
-    material.onBeforeCompile = (shader) => {
-      // Add custom uniform for displacement strength
-      shader.uniforms.uDisplacementStrength = { value: waterControls.displacementStrength }
-
-      // Store reference to shader uniforms for live updates
-      shaderUniformsRef.current = shader.uniforms
-
-      // Declare custom uniforms in vertex shader
-      // normalMap needs to be declared for vertex shader access
-      shader.vertexShader = shader.vertexShader.replace(
-        'void main() {',
-        `uniform float uDisplacementStrength;
-        #ifdef USE_NORMALMAP
-          uniform sampler2D normalMap;
-        #endif
-        
-        void main() {`
-      )
-
-      // Inject vertex displacement code after begin_vertex
-      shader.vertexShader = shader.vertexShader.replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
-        
-        // Sample normal map for displacement
-        #ifdef USE_NORMALMAP
-          vec2 normalUv = (normalMapTransform * vec3(uv, 1.0)).xy;
-          vec4 normalSample = texture2D(normalMap, normalUv);
-          float displacement = (normalSample.r + normalSample.g + normalSample.b) / 3.0;
-          transformed += objectNormal * displacement * uDisplacementStrength;
-        #endif`
-      )
-    }
-
-    // Force material recompilation
-    material.needsUpdate = true
-  }, [waterNormals])
-
-  // Crossfade thresholds
-  const start = 1.4
-  const end = 1.5
-  const hysteresis = 0.02
-
-  // Region flag ref for optional UI use
-  const regionRef = useRef<CrossfadeRegion>('outside')
-
-  // Throttle to ~60fps
-  const lastTsRef = useRef(0)
-
-  useFrame(() => {
-    const now = performance.now()
-    if (now - lastTsRef.current < 1000 / 60) return
-    lastTsRef.current = now
-
-    const cameraControls = controls as unknown as { distance?: number } | null
-    const d = cameraControls?.distance ?? 0
-    const fade = computeFade(d, { start, end })
-    regionRef.current = classifyRegion(d, { start, end, hysteresis })
-
-    // Stars use fade directly
+  // Update starfield and water opacity based on fade
+  React.useEffect(() => {
     if (starfieldRef.current) {
       starfieldRef.current.setOpacity(fade)
     }
 
-    // Water uses inverse
     if (waterMaterialRef.current) {
       waterMaterialRef.current.opacity = 1 - fade
     }
-
-    // Update displacement strength uniform
-    if (shaderUniformsRef.current?.uDisplacementStrength) {
-      shaderUniformsRef.current.uDisplacementStrength.value = waterControls.displacementStrength
-    }
-  })
+  }, [fade])
 
   return (
     <group  {...props} ref={ref}>
@@ -239,32 +73,8 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       {/* Radial markers */}
       <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
 
-      {/* UIKit 3D Input at sphere center */}
-      <group ref={inputGroupRef} renderOrder={2}>
-        <Input
-          value={currentTodoIntention?.title || ''}
-          onValueChange={handleInputChange}
-          placeholder="what is your intention?"
-          width={200}
-          sizeX={2}
-          sizeY={0.75}
-          fontSize={12}
-          fontWeight="bold"
-          // @ts-ignore
-          multiline={true}
-          opacity={0.4}
-          letterSpacing={-0.01}
-          borderRadius={12}
-          padding={12}
-          alignItems="center"
-          justifyContent="center"
-          flexDirection="column"
-          textAlign="center"
-          zIndex={1000}
-          caretBorderRadius={4}
-          selectionColor="rgba(255,255,255,0.3)"
-        />
-      </group>
+      {/* Intention Input */}
+      <IntentionInput hasInputSignal={props.hasInputSignal} />
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
