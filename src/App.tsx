@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats, Backdrop } from '@react-three/drei'
 import { Leva, useControls } from 'leva'
 import { signal } from '@preact/signals-core'
-import { Focusable } from './components/Focusable'
+import { Focusable } from './components/focusable'
 import { CameraRig } from './components/CameraRig'
 import { PondSphere } from './components/PondSphere'
 

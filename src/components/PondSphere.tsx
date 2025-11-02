@@ -6,11 +6,13 @@ import SphericalSky from './SphericalSky'
 import Starfield, { type StarfieldHandle } from './Starfield'
 import Fish2 from '../fish/Fish2'
 import { useControls } from 'leva'
-import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/Fade'
+import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/fade'
 import { RadialMarkers } from './RadialMarkers'
 import { Input, Container, Text } from '@react-three/uikit'
 import type { Signal } from '@preact/signals-core'
 import { useBillboard } from '../hooks/useBillboard'
+import { useAccount } from 'jazz-tools/react'
+import { PondAccount, Intention } from '../schema'
 
 interface InteractiveProps {
   hovered?: boolean;
@@ -66,8 +68,18 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   const { controls } = useThree()
   const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
 
-  // UIKit input state
-  const [inputText, setInputText] = useState('')
+  // Load account with intentions list (shallow)
+  const { me } = useAccount(PondAccount, {
+    resolve: {
+      root: { intentions: true }
+    }
+  })
+
+  // Find current todo intention (only one exists at a time)
+  const currentTodoIntention = useMemo(() => {
+    if (!me?.root.intentions) return null
+    return me.root.intentions.find(intention => intention && intention.status === "todo") || null
+  }, [me?.root.intentions])
 
   // Billboard the input to face the camera (more weighty than markers)
   useBillboard(inputGroupRef, {
@@ -76,13 +88,39 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
     noiseScale: 0.05      // Reduced noise amplitude
   })
 
-  // Update signal when input changes
+  // Handle input changes - create todo intention if needed, then update title
+  const handleInputChange = (newValue: string) => {
+    if (!me) return
+
+    let intention = currentTodoIntention
+
+    // Create new todo intention if none exists and user is typing
+    if (!intention && newValue.trim().length > 0) {
+      
+      intention = Intention.create({
+        title: newValue,
+        status: "todo", 
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }, { owner: me.$jazz.owner }) 
+
+      // Add to user's intentions list
+      me.root.intentions.$jazz.push(intention)
+    }
+    // Update existing intention's title
+    else if (intention) {
+      intention.$jazz.set("title", newValue)
+      intention.$jazz.set("updatedAt", Date.now())
+    }
+  }
+
+  // Update signal when input changes (now based on intention title)
   useEffect(() => {
     if (props.hasInputSignal) {
-      const hasInput = inputText.trim().length > 0
-      props.hasInputSignal.value = hasInput
+      const hasInput = currentTodoIntention?.title?.trim().length > 0
+      props.hasInputSignal.value = Boolean(hasInput)
     }
-  }, [inputText, props.hasInputSignal])
+  }, [currentTodoIntention?.title, props.hasInputSignal])
 
   // Setup vertex displacement shader (once)
   useEffect(() => {
@@ -202,14 +240,14 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
 
       {/* UIKit 3D Input at sphere center */}
-      {/* <group ref={inputGroupRef} renderOrder={2}>
+      <group ref={inputGroupRef} renderOrder={2}>
         <Input
-          value={inputText}
-          onValueChange={setInputText}
+          value={currentTodoIntention?.title || ''}
+          onValueChange={handleInputChange}
           placeholder="what is your intention?"
           width={200}
-          sizeX={20}
-          sizeY={2}
+          sizeX={2}
+          sizeY={0.75}
           fontSize={12}
           fontWeight="bold"
           // @ts-ignore
@@ -226,7 +264,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           caretBorderRadius={4}
           selectionColor="rgba(255,255,255,0.3)"
         />
-      </group> */}
+      </group>
 
       {/* Water sphere using icosahedron - render last for proper transparency */}
       <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>

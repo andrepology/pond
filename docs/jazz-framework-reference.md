@@ -11,6 +11,119 @@ Jazz is an opinionated collaborative software framework with automatic sync, per
 - **History tracking**: Automatic versioning and audit trails
 - **Schema-driven**: Strongly typed data structures with Zod validation
 
+## ⚠️ Jazz 0.18.0 Breaking Changes & Migration
+
+**CRITICAL**: This reference assumes Jazz 0.18.0+. If upgrading from earlier versions, all code examples below require migration. Use the official codemod for automated migration.
+
+### Major Breaking Changes
+
+#### 1. New `$jazz` Field in CoValues
+CoValues now use a `$jazz` namespace for all Jazz-specific methods and properties. CoValues are now readonly plain objects.
+
+```typescript
+// ❌ BEFORE (0.17.x and earlier)
+coValue.id
+coValue._owner
+coValue._refs
+coValue._edits
+
+person.name = "Alice"
+list.push(item)
+list.splice(1, 1)
+
+// ✅ AFTER (0.18.0+)
+coValue.$jazz.id
+coValue.$jazz.owner
+coValue.$jazz.refs
+coValue.$jazz.getEdits()
+
+person.$jazz.set("name", "Alice")
+list.$jazz.push(item)
+list.$jazz.splice(1, 1)
+```
+
+#### 2. CoValues Are Now Readonly
+Direct property assignments will cause TypeScript errors. Use `$jazz.set()` for CoMaps and appropriate `$jazz` methods for other types.
+
+```typescript
+// ❌ Direct assignment (will cause type errors)
+person.name = "Alice"
+task.completed = true
+
+// ✅ Use $jazz methods
+person.$jazz.set("name", "Alice")
+task.$jazz.set("completed", true)
+```
+
+#### 3. CoLists Are Readonly Arrays
+CoLists are no longer subtypes of Array. Use `$jazz` methods for all mutations.
+
+```typescript
+// ❌ Array methods (will cause runtime errors)
+list.push(item)
+list.splice(index, 1)
+list[0] = newValue
+
+// ✅ $jazz methods
+list.$jazz.push(item)
+list.$jazz.splice(index, 1)
+list.$jazz.set(0, newValue)
+
+// New utility methods
+list.$jazz.remove(item => item.completed)  // Remove by predicate
+list.$jazz.retain(item => !item.completed) // Keep matching items
+```
+
+#### 4. Streamlined CoValue Creation & Updates
+`$jazz.set()` accepts plain JSON objects and creates nested CoValues automatically:
+
+```typescript
+const person = Person.create({
+  name: "John",
+  dog: { name: "Rex" }, // Plain JSON - CoValues created automatically
+});
+
+// Update with nested data
+person.$jazz.set("dog", { name: "Fido" }); // Creates Dog CoValue automatically
+```
+
+#### 5. Group Ownership Changes
+CoValue owners always return a Group (never Account). Accounts as owners now return a Group wrapper.
+
+#### 6. Removed Features
+- `castAs()` method completely removed
+- `_type` field removed from `toJSON()` output
+- `Group.root` and `Group.profile` properties removed
+
+### Migration Strategy
+
+1. **Use the Official Codemod**:
+```bash
+npx jazz-tools-codemod-0-18@latest
+# Or for specific files:
+npx jazz-tools-codemod-0-18@latest ./src
+```
+
+2. **Manual Migration Checklist**:
+   - Replace `coValue.id` → `coValue.$jazz.id`
+   - Replace `coValue._owner` → `coValue.$jazz.owner`
+   - Replace `coValue._refs` → `coValue.$jazz.refs`
+   - Replace `coValue._edits` → `coValue.$jazz.getEdits()`
+   - Replace direct assignments with `$jazz.set()`
+   - Replace array methods on CoLists with `$jazz` equivalents
+
+3. **Testing After Migration**:
+   - Run TypeScript checks to catch remaining issues
+   - Test all collaborative features with multiple users
+   - Verify permission checks still work
+   - Check history access patterns
+
+### Key Benefits of 0.18.0
+- **Better Type Safety**: CoValues behave like readonly JSON objects
+- **Cleaner APIs**: Ergonomic `$jazz.set()` with automatic nested creation
+- **Future-Proofing**: Removes proxies, enables better debugging
+- **Consistent Patterns**: All CoValue types follow same readonly + `$jazz` pattern
+
 ## Mental Model & Architectural Principles
 
 ### Core Mental Model
@@ -84,18 +197,22 @@ Core collaborative data structures that automatically sync across users with bui
 - Supports nested collaborative structures
 ```typescript
 // CoMap operations sync automatically
-coMap.set('key', 'value') // Propagates to all users
-coMap.get('key') // Always returns latest collaborative state
+coMap.$jazz.set('key', 'value') // Propagates to all users
+coMap.key // Always returns latest collaborative state
 ```
 
 **CoLists** - Ordered collaborative lists with positional awareness
 - Maintains consistent ordering across collaborative edits
 - Supports insertions, deletions, reordering without conflicts
 - Perfect for todo lists, ordered items, sequential data
+- **⚠️ Note**: CoList items can become null after reload due to sync issues - always check for null when iterating
 ```typescript
 // List operations maintain order collaboratively
-coList.append(item) // Adds to end for all users
-coList.insert(index, item) // Maintains relative positions
+coList.$jazz.push(item) // Adds to end for all users
+coList.$jazz.splice(index, 0, item) // Inserts at specific position
+
+// Safe iteration - check for null items
+coList.find(item => item && item.status === "active") // Null-safe iteration
 ```
 
 **CoFeeds** - Append-only collaborative feeds for activity streams
@@ -276,7 +393,7 @@ Jazz provides automatic history tracking enabling powerful collaborative feature
 - Essential for compliance and debugging collaborative applications
 ```typescript
 // Access edit history for audit trails
-coValue._edits // Object with field-specific edit history
+coValue.$jazz.getEdits() // Object with field-specific edit history
 // Each edit contains: .by (Account), .value, .meta (timestamp, etc.)
 ```
 
@@ -286,7 +403,7 @@ coValue._edits // Object with field-specific edit history
 - Track user engagement patterns
 ```typescript
 // Filter changes by user, time, or type
-const recentTitleChanges = coValue._edits.title?.all.filter(edit => 
+const recentTitleChanges = coValue.$jazz.getEdits().title?.all.filter(edit =>
   edit.meta.timestamp > someDate
 )
 // Build activity feeds for collaborative interfaces
@@ -298,7 +415,7 @@ const recentTitleChanges = coValue._edits.title?.all.filter(edit =>
 - Provide visual cues for collaborative awareness
 ```typescript
 // Detect what changed and when
-const lastTitleEdit = coValue._edits.title?.last
+const lastTitleEdit = coValue.$jazz.getEdits().title?.last
 // Use for UI indicators like "recently changed" badges
 ```
 
@@ -308,8 +425,8 @@ const lastTitleEdit = coValue._edits.title?.last
 - Build diff views and change tracking
 ```typescript
 // Find specific change patterns
-const titleChanges = coValue._edits.title?.all || []
-const statusChanges = coValue._edits.status?.all || []
+const titleChanges = coValue.$jazz.getEdits().title?.all || []
+const statusChanges = coValue.$jazz.getEdits().status?.all || []
 // Enable targeted change analysis and reversion
 ```
 
@@ -335,23 +452,23 @@ function AutosavingForm({ documentId }: { documentId: string }) {
         value={doc?.title || ''}
         onChange={(e) => {
                   // Automatic save - no submit button needed
-        doc.title = e.target.value
+        doc.$jazz.set("title", e.target.value)
         }}
         placeholder="Document title..."
       />
-      
+
       <textarea
         value={doc?.content || ''}
         onChange={(e) => {
           // Real-time collaboration as user types
-          doc.content = e.target.value
+          doc.$jazz.set("content", e.target.value)
         }}
         placeholder="Start typing..."
       />
       
       {/* Optional: Show sync status */}
       <div className="sync-indicator">
-        {doc._edits.content?.last?.by?.id === me?.id ? 
+        {doc.$jazz.getEdits().content?.last?.by?.id === me?.id ?
           'Synced' : 'Collaborator editing...'}
       </div>
     </form>
@@ -428,8 +545,8 @@ function ProjectsByTeam({ teamGroupId }: { teamGroupId: string }) {
   
   // Projects where user has access through team membership
   const userProjects = me?.root.projects.filter(project =>
-    project._owner.id === teamGroupId || 
-    project._owner.parent?.id === teamGroupId
+    project.$jazz.owner.id === teamGroupId ||
+    project.$jazz.owner.parent?.id === teamGroupId
   )
   
   return (
@@ -613,7 +730,7 @@ function CreateProject() {
     }, { owner: me })
     
     // Store reference in user's personal list
-    me.root.projects.push(newProject)
+    me.root.projects.$jazz.push(newProject)
     
     // Navigate using the new ID
     navigate(`/project/${newProject.id}`)
@@ -630,10 +747,10 @@ function ShareProject({ projectId }: { projectId: string }) {
   
   const shareWithUser = async (userAccount: Account) => {
     if (!project) return
-    
+
     // Share by adding user to project's group
-    await project._owner.addMember(userAccount, "writer")
-    
+    await project.$jazz.owner.addMember(userAccount, "writer")
+
     // IDs remain the same, permissions change
     const shareableLink = `https://app.com/project/${projectId}`
     return shareableLink
@@ -712,14 +829,14 @@ function CollaborativeForm({ documentId }: { documentId: string }) {
         value={doc.title || ''}
         onChange={(e) => {
           // Direct mutation triggers automatic sync
-          doc.title = e.target.value
+          doc.$jazz.set("title", e.target.value)
         }}
       />
       <textarea
         value={doc.content || ''}
         onChange={(e) => {
           // All changes propagate immediately
-          doc.content = e.target.value
+          doc.$jazz.set("content", e.target.value)
         }}
       />
     </form>
@@ -737,12 +854,12 @@ function TodoList({ listId }: { listId: string }) {
   
   const addTodo = (text: string) => {
     // Collaborative list append
-    const newTodo = Todo.create({ 
-      text, 
-      completed: false 
-    }, todoList._owner);
-    
-    todoList.push(newTodo);
+    const newTodo = Todo.create({
+      text,
+      completed: false
+    }, todoList.$jazz.owner);
+
+    todoList.$jazz.push(newTodo);
   }
   
   return (
@@ -754,7 +871,7 @@ function TodoList({ listId }: { listId: string }) {
             checked={todo.completed}
             onChange={(e) => {
               // Direct mutation syncs to all users
-              todo.completed = e.target.checked
+              todo.$jazz.set("completed", e.target.checked)
             }}
           />
           <span>{todo.text}</span>
@@ -1111,10 +1228,10 @@ const UserProfile = co.map({
 function ProfileImageUpload({ profile }: { profile: UserProfile }) {
   const handleFileUpload = async (file: File) => {
     // Create ImageDefinition from File
-    const imageDefinition = ImageDefinition.create(file, profile._owner);
-    
+    const imageDefinition = ImageDefinition.create(file, profile.$jazz.owner);
+
     // Store reference in CoValue
-    profile.avatar = imageDefinition;
+    profile.$jazz.set("avatar", imageDefinition);
   };
 
   return (
@@ -1180,8 +1297,8 @@ function ProfileImagePicker({ profile }: { profile: UserProfile }) {
           name: response.assets[0].fileName,
         };
         
-        const imageDefinition = ImageDefinition.create(file, profile._owner);
-        profile.avatar = imageDefinition;
+        const imageDefinition = ImageDefinition.create(file, profile.$jazz.owner);
+        profile.$jazz.set("avatar", imageDefinition);
       }
     });
   };
@@ -1209,8 +1326,8 @@ const Document = co.map({
 
 function FileUpload({ document }: { document: Document }) {
   const handleFileUpload = async (file: File) => {
-    const binaryData = BinaryCoValue.create(file, document._owner);
-    document.attachment = binaryData;
+    const binaryData = BinaryCoValue.create(file, document.$jazz.owner);
+    document.$jazz.set("attachment", binaryData);
   };
 
   return (
@@ -1382,17 +1499,17 @@ function TaskDetail({ taskId }: { taskId: string }) {
 // Check group membership and permissions
 function DebugPermissions({ coValue }: { coValue: CoValue }) {
   const { me } = useAccount(MyAppAccount);
-  
-  const canRead = me?._owner.canRead(coValue);
-  const canWrite = me?._owner.canWrite(coValue);
-  const owner = coValue._owner;
-  
+
+  const canRead = me?.$jazz.owner.canRead(coValue);
+  const canWrite = me?.$jazz.owner.canWrite(coValue);
+  const owner = coValue.$jazz.owner;
+
   return (
     <div>
       <p>Can read: {String(canRead)}</p>
       <p>Can write: {String(canWrite)}</p>
       <p>Owner: {owner.name}</p>
-      <p>Owner Group: {me?._owner.name || 'Unknown'}</p>
+      <p>Owner Group: {me?.$jazz.owner.name || 'Unknown'}</p>
     </div>
   );
 }
@@ -1405,6 +1522,17 @@ function DebugPermissions({ coValue }: { coValue: CoValue }) {
 - Verify internet connection
 - Use Jazz Inspector to monitor sync status
 - Check browser console for WebSocket errors
+
+**Issue**: "Cannot read properties of null" when iterating CoLists after reload
+- **Cause**: CoList items can become null due to sync/loading issues
+- **Solution**: Always check for null when iterating CoLists
+```typescript
+// ❌ Dangerous - assumes all items are loaded
+coList.find(item => item.status === "active")
+
+// ✅ Safe - null-check each item
+coList.find(item => item && item.status === "active")
+```
 
 ```typescript
 // Add sync status indicator
@@ -1598,7 +1726,7 @@ const { me, logOut } = useAccount(MyAppAccount, {
 me?.id           // string - Unique account identifier
 me?.root         // AccountRoot - Personal data container
 me?.profile      // Profile - Shared user data
-me?._owner       // Group - Account's permission group
+me?.$jazz.owner  // Group - Account's permission group
 ```
 
 **Programmatic Account Access** (for server-side or complex operations):
@@ -1633,7 +1761,7 @@ const coValue = useCoState(SchemaClass, id, {
 // Direct data access (once loaded)
 coValue?.someField  // Access schema-defined fields directly
 coValue?.id         // string - CoValue unique identifier
-coValue?._owner     // Group - Permission group owning this CoValue
+coValue?.$jazz.owner // Group - Permission group owning this CoValue
 ```
 
 **CoValue Creation Methods**:
@@ -1680,15 +1808,15 @@ childGroup.extend(parentGroup, "reader"); // Override role
 // CoMap Edit History - Actual Jazz API
 const task = useCoState(Task, taskId)
 
-// Access field-specific edit history
-const titleEdits = task._edits.title    // LastAndAllCoMapEdits<string>
-const statusEdits = task._edits.status  // LastAndAllCoMapEdits<"todo" | "in-progress" | "completed">
+// Access field-specific edit history via $jazz namespace
+const titleEdits = task.$jazz.getEdits().title    // LastAndAllCoMapEdits<string>
+const statusEdits = task.$jazz.getEdits().status  // LastAndAllCoMapEdits<"todo" | "in-progress" | "completed">
 
 // Edit structure
 if (titleEdits) {
   titleEdits.last    // Most recent edit: CoMapEdit<string>
   titleEdits.all     // All edits: CoMapEdit<string>[]
-  
+
   // Each CoMapEdit contains:
   titleEdits.last?.by       // Account | null - Who made the edit
   titleEdits.last?.value    // string - The actual value
@@ -1697,19 +1825,19 @@ if (titleEdits) {
 
 // Find who made a specific change (Real Jazz pattern)
 function findWhoChangedStatus(task: Task, targetStatus: string): Account | null {
-  const statusEdits = task._edits.status
+  const statusEdits = task.$jazz.getEdits().status
   if (!statusEdits) return null
-  
+
   const matchingEdit = statusEdits.all.find(edit => edit.value === targetStatus)
   return matchingEdit?.by || null
 }
 
 // Usage examples
 const whoCompletedTask = findWhoChangedStatus(task, "completed")
-const whoLastEditedTitle = task._edits.title?.last?.by
+const whoLastEditedTitle = task.$jazz.getEdits().title?.last?.by
 
 // Filter edits by criteria
-const recentTitleEdits = task._edits.title?.all.filter(edit => 
+const recentTitleEdits = task.$jazz.getEdits().title?.all.filter(edit =>
   edit.meta.timestamp > someDate
 )
 ```
@@ -1762,14 +1890,14 @@ function EditableComponent({ dataId }: { dataId: string }) {
   const updateField = (newValue: string) => {
     if (data) {
       // Direct assignment triggers sync
-      data.someField = newValue
+      data.$jazz.set("someField", newValue)
     }
   }
-  
+
   const addToList = (item: any) => {
     if (data?.list) {
       // Array methods work on CoLists
-      data.list.push(item)
+      data.list.$jazz.push(item)
     }
   }
   
@@ -1889,9 +2017,9 @@ function MyComponent() {
   return (
     <div>
       <h1>{project.title}</h1>
-      <input 
+      <input
         value={project.title}
-        onChange={(e) => project.title = e.target.value}
+        onChange={(e) => project.$jazz.set("title", e.target.value)}
       />
     </div>
   );

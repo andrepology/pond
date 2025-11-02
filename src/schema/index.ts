@@ -107,35 +107,26 @@ export const PondAccount = co
     profile: PondProfile,
   })
   .withMigration((account, creationProps?: { name?: string }) => {
-    // Initialize root on first account creation
     if (account.root === undefined) {
-      // Create all nested CoValues first
-      const intentions = co.list(Intention).create([]);
-      const conversations = co.list(Conversation).create([]);
-      const fieldNotes = co.list(FieldNote).create([]);
-      const worldModel = co.plainText().create(
-        JSON.stringify({
-          version: 1,
-          created: Date.now(),
-          values: [],
-          personality: {},
-          fears: [],
-          beliefs: [],
-          memories: [],
-          relationships: [],
-        })
-      );
-
-      // Create the root CoMap with all nested values
       (account as any).root = PondAccountRoot.create({
-        intentions,
-        conversations,
-        fieldNotes,
-        worldModel
+        intentions: co.list(Intention).create([]),
+        conversations: co.list(Conversation).create([]),
+        fieldNotes: co.list(FieldNote).create([]),
+        worldModel: co.plainText().create(
+          JSON.stringify({
+            version: 1,
+            created: Date.now(),
+            values: [],
+            personality: {},
+            fears: [],
+            beliefs: [],
+            memories: [],
+            relationships: [],
+          })
+        )
       });
     }
 
-    // Initialize Jazz's built-in profile (public)
     if (account.profile === undefined) {
       const profileGroup = Group.create();
       profileGroup.makePublic();
