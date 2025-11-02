@@ -12,6 +12,7 @@ import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
+import { AuthFlow } from './components/AuthFlow'
 
 
 useGLTF.preload('/models/mindbody.glb')
@@ -41,7 +42,9 @@ export default function App() {
   return (
     <>
       <Leva collapsed />
-
+      
+      {/* Authentication Flow - shows sign in/sign up forms */}
+      <AuthFlow />
 
       <Canvas
         shadows="soft"
