@@ -338,27 +338,22 @@ const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
 }
 
 const IntentionsView = ({ intentions, conversations }: { intentions: Intention[], conversations: Conversation[] }) => {
-  const sortedIntentions = [...intentions]
-    .filter(intention => intention !== null) // Filter out null items first
-    .sort((a, b) => {
-      const statusOrder = { active: 0, todo: 1, completed: 2, archived: 3 }
-      return statusOrder[a.status] - statusOrder[b.status] || b.updatedAt - a.updatedAt
-    })
+  const sortedIntentions = [...intentions].sort((a, b) => {
+    const statusOrder = { active: 0, todo: 1, completed: 2, archived: 3 }
+    return statusOrder[a.status] - statusOrder[b.status] || b.updatedAt - a.updatedAt
+  })
 
   // Group conversations by intention
-  const conversationsByIntention = conversations
-    .filter(conv => conv !== null) // Filter out null conversations
-    .reduce((acc, conv) => {
-      if (conv.intentionRef) {
-        const intentionId = conv.intentionRef.$jazz.id
-        if (!acc[intentionId]) acc[intentionId] = []
-        acc[intentionId].push(conv)
-      }
-      return acc
-    }, {} as Record<string, Conversation[]>)
+  const conversationsByIntention = conversations.reduce((acc, conv) => {
+    if (conv.intentionRef) {
+      const intentionId = conv.intentionRef.$jazz.id
+      if (!acc[intentionId]) acc[intentionId] = []
+      acc[intentionId].push(conv)
+    }
+    return acc
+  }, {} as Record<string, Conversation[]>)
 
-  const filteredConversations = conversations.filter(conv => conv !== null)
-  if (sortedIntentions.length === 0 && filteredConversations.length === 0) {
+  if (sortedIntentions.length === 0 && conversations.length === 0) {
     return (
       <div style={{ color: '#8B7355', fontSize: 14, opacity: 0.6 }}>
         No intentions or conversations yet
@@ -370,44 +365,41 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
     <>
       {/* Intentions */}
       {sortedIntentions.map((intention, idx) => {
-          const relatedConversations = conversationsByIntention[intention.$jazz.id] || []
-          return (
-            <div
-              key={idx}
+        const relatedConversations = conversationsByIntention[intention.$jazz.id] || []
+        return (
+          <div
+            key={idx}
+            style={{
+              padding: '12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.4)',
+              borderRadius: 8,
+              border: '1px solid rgba(139, 115, 85, 0.15)',
+              marginBottom: relatedConversations.length > 0 ? '8px' : '0',
+            }}
+          >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 4 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#333', flex: 1 }}>
+              {intention.title}
+            </div>
+            <span
               style={{
-                padding: '12px',
-                backgroundColor: 'rgba(255, 255, 255, 0.4)',
-                borderRadius: 8,
-                border: '1px solid rgba(139, 115, 85, 0.15)',
-                marginBottom: relatedConversations.length > 0 ? '8px' : '0',
+                fontSize: 10,
+                padding: '2px 6px',
+                borderRadius: 4,
+                backgroundColor: getStatusColor(intention.status),
+                color: '#fff',
+                textTransform: 'uppercase',
+                fontWeight: 600,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 4 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#333', flex: 1 }}>
-                  {intention.title}
-                </div>
-                <span
-                  style={{
-                    fontSize: 10,
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    backgroundColor: getStatusColor(intention.status),
-                    color: '#fff',
-                    textTransform: 'uppercase',
-                    fontWeight: 600,
-                  }}
-                >
-                  {intention.status}
-                </span>
-              </div>
-              {intention.description && (
-                <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                  {intention.description}
-                </div>
-              )}
-              <div style={{ fontSize: 11, color: '#999', marginTop: 6 }}>
-                {formatDate(intention.updatedAt)}
-              </div>
+              {intention.status}
+            </span>
+          </div>
+          {intention.description && (
+            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              {intention.description}
+            </div>
+          )}
 
             {/* Related Conversations */}
             {relatedConversations.length > 0 && (
@@ -422,22 +414,18 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
                       key={convIdx}
                       style={{
                         padding: '8px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                        borderRadius: 6,
                         marginBottom: convIdx < relatedConversations.slice(0, 3).length - 1 ? '4px' : '0',
-                        border: '1px solid rgba(107, 142, 126, 0.1)',
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: 11, fontWeight: 500, color: '#333' }}>
-                          {formatDate(conv.startTime)}
-                        </div>
-                        <div style={{ fontSize: 10, color: '#666' }}>{duration}m</div>
-                      </div>
                       {conv.summary && (
-                        <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
-                          {conv.summary.slice(0, 60)}
-                          {conv.summary.length > 60 ? '...' : ''}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                          <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5, flex: 1 }}>
+                            {conv.summary.slice(0, 60)}
+                            {conv.summary.length > 60 ? '...' : ''}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#999', marginLeft: 12 }}>
+                            {formatDate(conv.startTime)}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -455,12 +443,12 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
       })}
 
       {/* Orphaned Conversations (not linked to any intention) */}
-      {filteredConversations.filter(conv => !conv.intentionRef).length > 0 && (
+      {conversations.filter(conv => !conv.intentionRef).length > 0 && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 8 }}>
             Other Conversations
           </div>
-          {filteredConversations
+          {conversations
             .filter(conv => !conv.intentionRef)
             .slice(0, 5)
             .map((conv, idx) => {
@@ -470,22 +458,18 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
                   key={idx}
                   style={{
                     padding: '10px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-                    borderRadius: 8,
-                    border: '1px solid rgba(107, 142, 126, 0.15)',
-                    marginBottom: idx < filteredConversations.filter(conv => !conv.intentionRef).slice(0, 5).length - 1 ? '6px' : '0',
+                    marginBottom: idx < conversations.filter(conv => !conv.intentionRef).slice(0, 5).length - 1 ? '6px' : '0',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: '#333' }}>
-                      {formatDate(conv.startTime)}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#666' }}>{duration}m</div>
-                  </div>
                   {conv.summary && (
-                    <div style={{ fontSize: 11, color: '#666' }}>
-                      {conv.summary.slice(0, 80)}
-                      {conv.summary.length > 80 ? '...' : ''}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5, flex: 1 }}>
+                        {conv.summary.slice(0, 80)}
+                        {conv.summary.length > 80 ? '...' : ''}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#999', marginLeft: 12 }}>
+                        {formatDate(conv.startTime)}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -498,9 +482,7 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
 }
 
 const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
-  const sorted = [...fieldNotes]
-    .filter(note => note !== null) // Filter out null field notes
-    .sort((a, b) => b.createdAt - a.createdAt)
+  const sorted = [...fieldNotes].sort((a, b) => b.createdAt - a.createdAt)
 
   if (sorted.length === 0) {
     return (
@@ -517,16 +499,33 @@ const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
           key={idx}
           style={{
             padding: '12px',
-            backgroundColor: 'rgba(255, 255, 255, 0.4)',
-            borderRadius: 8,
-            border: '1px solid rgba(123, 107, 142, 0.15)',
           }}
         >
-          <div style={{ fontSize: 11, color: '#999', marginBottom: 6 }}>
-            {formatDate(note.createdAt)}
-          </div>
-          <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5 }}>
-            {note.content}
+          <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 4 }}>
+            <div
+              style={{
+                width: '18px',
+                height: '18px',
+                borderRadius: '9px',
+                backgroundColor: '#7B6B8E',
+                marginRight: '8px',
+                marginTop: '2px',
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#333' }}>
+                  Innio
+                </div>
+                <div style={{ fontSize: 11, color: '#999' }}>
+                  {formatDate(note.createdAt)}
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5, marginTop: 4 }}>
+                {note.content}
+              </div>
+            </div>
           </div>
         </div>
       ))}
