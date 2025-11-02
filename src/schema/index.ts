@@ -33,24 +33,22 @@ export type ConversationMessage = co.loaded<typeof ConversationMessage>;
 
 /**
  * Conversation - A voice interaction with Innio via ElevenLabs
- * Structure based on ElevenLabs conversation API response
+ * Stores the complete transcript and timing of voice conversations
  */
 export const Conversation = co.map({
-  // ElevenLabs conversation metadata
-  elevenLabsId: z.string(), // conversation_id from ElevenLabs
+  // Core conversation data
   agentId: z.string(),
-  startTime: z.number(), // Unix timestamp
-  endTime: z.number().optional(), // Unix timestamp
-  callSuccessful: z.boolean().optional(),
-  summary: z.string().optional(), // AI-generated summary from ElevenLabs
+  startTime: z.number(), // Unix timestamp when call started
+  endTime: z.number(), // Unix timestamp when call ended
+  messages: co.list(ConversationMessage), // Full transcript
 
-  // Pond-specific data
-  intentionRef: co.optional(Intention), // Reference to associated intention (if any)
-  messages: co.list(ConversationMessage), // Transcript
+  // Optional user-added data
+  summary: z.string().optional(), // User-written summary
+  intentionRef: co.optional(Intention), // Link to related intention
   userReflection: z.string().optional(), // User's post-conversation notes
 
   // Metadata
-  createdAt: z.number(), // Unix timestamp
+  createdAt: z.number(), // Unix timestamp when covalue was created
 });
 
 export type Conversation = co.loaded<typeof Conversation>;
@@ -107,7 +105,11 @@ export const PondAccount = co
     profile: PondProfile,
   })
   .withMigration((account, creationProps?: { name?: string }) => {
+    console.log(`🔄 Running PondAccount migration for account: ${account.$jazz.id || 'new account'}`);
+    let didMigrate = false;
+
     if (account.root === undefined) {
+      console.log('📝 Creating PondAccountRoot...');
       (account as any).root = PondAccountRoot.create({
         intentions: co.list(Intention).create([]),
         conversations: co.list(Conversation).create([]),
@@ -125,9 +127,12 @@ export const PondAccount = co
           })
         )
       });
+      console.log('✅ PondAccountRoot created');
+      didMigrate = true;
     }
 
     if (account.profile === undefined) {
+      console.log('👤 Creating PondProfile...');
       const profileGroup = Group.create();
       profileGroup.makePublic();
 
@@ -137,6 +142,14 @@ export const PondAccount = co
         },
         profileGroup
       );
+      console.log(`✅ PondProfile created for: ${creationProps?.name || "New User"}`);
+      didMigrate = true;
+    }
+
+    if (didMigrate) {
+      console.log('🎉 PondAccount migration completed (changes made)');
+    } else {
+      console.log('ℹ️ PondAccount migration completed (no changes needed)');
     }
   });
 

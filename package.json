@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@elevenlabs/react": "^0.9.1",
     "@pmndrs/assets": "^1.7.0",
     "@preact/signals-core": "^1.12.1",
     "@react-spring/three": "^10.0.1",

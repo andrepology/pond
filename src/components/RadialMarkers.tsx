@@ -114,8 +114,8 @@ export function RadialMarkers({
     })
     markerMaterials.current.forEach((material) => {
       if (material) {
-        material.opacity = 1
-        material.transmission = 1
+        material.opacity = 0
+        material.transmission = 0
         material.depthWrite = false // Start with depth writing disabled
         material.depthTest = false // Start with depth testing disabled
       }
@@ -299,23 +299,29 @@ export function RadialMarkers({
     // Read visibility from ref (bypasses React entirely)
     const isVisible = isVisibleRef?.current ?? false
 
-    // Handle visibility changes with debounce
+    // Handle visibility changes with debounce (only when hiding, not when showing)
     if (isVisible !== prevIsVisible.current) {
       // Clear existing timeout
       if (visibilityTimeoutRef.current !== null) {
         clearTimeout(visibilityTimeoutRef.current)
       }
 
-      // Set pending visibility and debounce timer
-      pendingVisibilityRef.current = isVisible
-      visibilityTimeoutRef.current = window.setTimeout(() => {
-        if (pendingVisibilityRef.current !== null) {
-          handleVisibilityChange(pendingVisibilityRef.current)
-          prevIsVisible.current = pendingVisibilityRef.current
-          pendingVisibilityRef.current = null
-        }
-        visibilityTimeoutRef.current = null
-      }, 800) // 800ms debounce delay
+      if (isVisible) {
+        // Show immediately when becoming visible
+        handleVisibilityChange(isVisible)
+        prevIsVisible.current = isVisible
+      } else {
+        // Debounce when becoming invisible
+        pendingVisibilityRef.current = isVisible
+        visibilityTimeoutRef.current = window.setTimeout(() => {
+          if (pendingVisibilityRef.current !== null) {
+            handleVisibilityChange(pendingVisibilityRef.current)
+            prevIsVisible.current = pendingVisibilityRef.current
+            pendingVisibilityRef.current = null
+          }
+          visibilityTimeoutRef.current = null
+        }, 800) // 800ms debounce delay
+      }
     }
 
     // Update animations if animating
@@ -348,7 +354,7 @@ export function RadialMarkers({
               ref={(mat) => {
                 markerMaterials.current[i] = mat as THREE.MeshPhysicalMaterial
               }}
-              transmission={1}
+              transmission={0}
               roughness={0}
               ior={2.5}
               thickness={0.02}
@@ -356,8 +362,9 @@ export function RadialMarkers({
               clearcoat={0.0}
               color="#ffffff"
               transparent
-              opacity={1.0}
+              opacity={0}
               depthTest={false}
+              depthWrite={false}
             />
           </mesh>
         </group>

@@ -13,6 +13,7 @@ import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
 import { AuthFlow } from './components/AuthFlow'
+import { VoiceProvider, CallButton } from './VoiceChat'
 
 
 //useGLTF.preload('/models/mindbody.glb')
@@ -40,9 +41,9 @@ export default function App() {
   })
 
   return (
-    <>
+    <VoiceProvider config={{ agentId: import.meta.env.VITE_ELEVENLABS_AGENT_ID }}>
       <Leva collapsed />
-      
+
       {/* Authentication Flow - shows sign in/sign up forms */}
       <AuthFlow />
 
@@ -125,15 +126,25 @@ export default function App() {
 
       </Canvas>
 
-      
-        <DateTimeDisplay />
-      
+
+      <DateTimeDisplay />
+
+      {/* Voice Call Button */}
+      <div style={{
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000
+      }}>
+        <CallButton />
+      </div>
 
       {/* <MeditationContainer markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} /> */}
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
        <Controls onPercentageChange={setSheetPercentage} /> */}
-    </>
+    </VoiceProvider>
   )
 }
 
