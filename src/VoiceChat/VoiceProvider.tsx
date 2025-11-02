@@ -4,6 +4,7 @@ import { useAccount } from 'jazz-tools/react'
 import { co } from 'jazz-tools'
 import type { VoiceStatus, VoiceError, VoiceMessage, ConversationConfig } from './types'
 import { PondAccount, Conversation, ConversationMessage } from '../schema'
+import { processConversationAI } from '../services/conversationAIProcessing'
 
 // Global refs that persist across component re-mounts
 const globalMessagesRef = { current: [] as VoiceMessage[] }
@@ -45,6 +46,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
       root: {
         conversations: { $each: true }, // Load all conversations
         intentions: { $each: true },    // Load all intentions
+        fieldNotes: { $each: true },     // Load all field notes for AI processing
         worldModel: true                // Load world model
       }
     }
@@ -76,7 +78,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
 
     // User name
     if (me?.profile?.name) {
-      variables.user_name = me.profile.name
+      variables.first_name = me.profile.name
     }
 
     // User bio (not in current schema, but could be added later)
@@ -98,9 +100,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
     }
 
     // Active intentions
-    const activeIntentions = me?.root?.intentions?.filter(i => i?.status === 'active') || []
+    const activeIntentions = me?.root?.intentions?.filter(i => i?.status === 'active' || i?.status === 'todo') || []
     if (activeIntentions.length > 0) {
-      variables.active_intentions = activeIntentions
+      variables.current_intention = activeIntentions
         .filter(i => i != null)
         .map(i => i.title)
         .join(', ')
@@ -154,6 +156,12 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
       // Add to user's conversations list
       me.root.conversations.$jazz.push(conversation)
 
+      // Trigger AI processing after successful save (fire and forget)
+      processConversationAI(conversation.$jazz.id, me).catch(error => {
+        console.warn('AI processing failed:', error)
+        // Don't break the UI - conversation still worked
+      })
+
     } catch (error) {
       console.error('Failed to persist conversation:', error)
       // Don't break the UI - conversation still worked
@@ -186,6 +194,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
       config.onDisconnect?.()
     },
     onVolumeUpdate: (volumeLevel: number) => {
+      console.log('Volume update:', volumeLevel)
       setVolume(volumeLevel)
     },
     onMessage: (message: any) => {
@@ -330,3 +339,4 @@ export const useVoice = () => {
   }
   return context
 } 
+

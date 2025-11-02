@@ -1,14 +1,16 @@
 # Jazz Integration Specification for Pond
 
-**Version:** 1.0  
-**Date:** 2025-11-01  
-**Status:** Planning
+**Version:** 2.0
+**Date:** 2025-11-02
+**Status:** Implementation Complete (Phases 1-4)
 
 ---
 
 ## Overview
 
 This specification details the integration of Jazz Tools into Pond, establishing a local-first, privacy-preserving data architecture for user intentions, AI-powered conversations with Innio, and contemplative multiplayer features.
+
+**✅ Implementation Status**: Phases 1-4 are complete! Pond now has full Jazz integration with voice conversations that automatically trigger AI processing to update world models, generate field notes, and summarize conversations.
 
 ### Core Principles
 
@@ -67,12 +69,17 @@ export const Conversation = co.map({
   endTime: z.number().optional(), // Unix timestamp
   callSuccessful: z.boolean().optional(),
   summary: z.string().optional(), // AI-generated summary from ElevenLabs
-  
+
   // Pond-specific data
   intentionRef: co.optional(Intention), // Reference to associated intention (if any)
   messages: co.list(ConversationMessage), // Transcript
   userReflection: z.string().optional(), // User's post-conversation notes
-  
+
+  // AI processing status (added for fault-tolerant processing)
+  aiProcessingStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(),
+  aiProcessingAttemptedAt: z.number().optional(), // Unix timestamp of last attempt
+  aiProcessingError: z.string().optional(), // Error message if failed
+
   // Metadata
   createdAt: z.number(), // Unix timestamp
 });
@@ -112,10 +119,13 @@ export const PondAccountRoot = co.map({
   intentions: co.list(Intention),
   conversations: co.list(Conversation),
   fieldNotes: co.list(FieldNote), // Innio's private notes about this user
-  
+
   // AI-generated state (stored as JSON strings, updated atomically)
   worldModel: co.plainText(), // JSON: user's inferred values, beliefs, fears, memories, relationships
-  
+
+  // User preferences
+  useAiProcessing: z.boolean(), // Enable/disable AI processing of conversations
+
   // Settings
   profile: UserProfile,
 });
@@ -147,6 +157,7 @@ export const PondAccount = co.account({
         memories: [],
         relationships: [],
       })),
+      useAiProcessing: true, // Default to enabled
       profile: UserProfile.create({
         name: "",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -272,9 +283,11 @@ Jazz automatically ensures the Conversation's owner group can access the referen
 
 ### Pragmatic Pattern (Non-Idiomatic but Simple)
 
-**Flow**: Client loads CoValues → Serializes to JSON → Sends to REST API → Backend calls AI → Returns JSON → Client updates CoValues
+**Original Spec**: Client loads CoValues → Serializes to JSON → Sends to REST API → Backend calls AI → Returns JSON → Client updates CoValues
 
-This breaks Jazz's recommended patterns (Server Worker should load CoValues directly), but provides simpler initial implementation.
+**Actual Implementation**: Client loads CoValues → Calls INNIOS MIND v2 API directly → Updates CoValues immediately
+
+**Why Changed**: For Phase 4 AI processing, we implemented direct API calls from client to INNIOS MIND v2 for simplicity and speed. This breaks Jazz's recommended patterns (Server Worker should load CoValues directly), but provides simpler initial implementation that works well for this use case.
 
 ```mermaid
 sequenceDiagram
@@ -559,19 +572,19 @@ export function createIntention(me: PondAccount, title: string) {
 
 ### Phase 1: Authentication & Setup (Week 1)
 
-- [ ] Install Jazz dependencies (`jazz-tools`)
-- [ ] Set up Jazz provider with sync peer
-- [ ] Implement authentication (passkey or passphrase)
-- [ ] Create PondAccount schema with root initialization
-- [ ] Test authentication flow
+- [x] Install Jazz dependencies (`jazz-tools`)
+- [x] Set up Jazz provider with sync peer
+- [x] Implement authentication (passkey or passphrase)
+- [x] Create PondAccount schema with root initialization
+- [x] Test authentication flow
 
 ### Phase 2: Core Data Model (Week 2-3)
 
-- [ ] Implement Intention schema and CRUD operations
-- [ ] Implement Conversation schema (basic structure)
-- [ ] Implement World Model (co.plainText with JSON)
-- [ ] Implement Private Field Notes schema
-- [ ] Test data creation, updating, syncing
+- [x] Implement Intention schema and CRUD operations
+- [x] Implement Conversation schema (basic structure)
+- [x] Implement World Model (co.plainText with JSON)
+- [x] Implement Private Field Notes schema
+- [x] Test data creation, updating, syncing
 
 ### Phase 3: ElevenLabs Integration (Week 4-5)
 
@@ -580,12 +593,20 @@ export function createIntention(me: PondAccount, title: string) {
 - [x] Client: Create Conversation CoValue from call data
 - [x] Test voice call flow (completed - voice conversations now persist to Jazz)
 
-### Phase 4: AI Processing (Week 6-7)
+### Phase 4: AI Processing (Week 6-7) ✅ COMPLETED
 
-- [ ] Backend API: `/api/ai/update-world-model`
-- [ ] Backend API: `/api/ai/generate-field-note`
-- [ ] Client: Trigger AI processing after conversations
-- [ ] Client: Update world model and field notes CoValues
+- [x] Client: Trigger AI processing after conversations (using INNIOS MIND v2 API)
+- [x] Client: Update world model, field notes, and conversation summaries
+- [x] Implement fault-tolerant processing with retry logic
+- [x] Add user preference for enabling/disabling AI processing
+- [x] Test end-to-end AI processing flow
+
+**Implementation Details:**
+- **Direct API Integration**: Client calls INNIOS MIND v2 API directly after conversation save
+- **Fault-Tolerant**: Retry logic (3 attempts), graceful error handling, conversation reload safety
+- **Real-time Processing**: Triggers immediately after voice conversations end
+- **Status Tracking**: Added `aiProcessingStatus`, `aiProcessingAttemptedAt`, `aiProcessingError` fields
+- **User Control**: `useAiProcessing` boolean preference with migration support
 
 ### Phase 5: Multiplayer Features (Future)
 

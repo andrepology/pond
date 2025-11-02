@@ -47,6 +47,11 @@ export const Conversation = co.map({
   intentionRef: co.optional(Intention), // Link to related intention
   userReflection: z.string().optional(), // User's post-conversation notes
 
+  // AI processing status (for fault-tolerant background processing)
+  aiProcessingStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(),
+  aiProcessingAttemptedAt: z.number().optional(), // Unix timestamp of last attempt
+  aiProcessingError: z.string().optional(), // Error message if failed
+
   // Metadata
   createdAt: z.number(), // Unix timestamp when covalue was created
 });
@@ -61,7 +66,6 @@ export const FieldNote = co.map({
   content: z.string(), // Innio's reflection/observation
   conversationRef: co.optional(Conversation), // Optional link to conversation that inspired it
   createdAt: z.number(), // Unix timestamp
-  tags: co.list(z.string()), // Categories: e.g., ["insight", "pattern", "question"]
 });
 
 export type FieldNote = co.loaded<typeof FieldNote>;
@@ -81,7 +85,8 @@ export const PondAccountRoot = co.map({
   // AI-generated state (stored as JSON strings, updated atomically)
   worldModel: co.plainText(), // JSON: user's inferred values, beliefs, fears, memories, relationships
 
-
+  // User preferences
+  useAiProcessing: z.boolean(), // Enable/disable AI processing of conversations
 });
 
 export type PondAccountRoot = co.loaded<typeof PondAccountRoot>;
@@ -104,13 +109,14 @@ export const PondAccount = co
     root: PondAccountRoot,
     profile: PondProfile,
   })
-  .withMigration((account, creationProps?: { name?: string }) => {
+  .withMigration(async (account, creationProps?: { name?: string }) => {
     console.log(`🔄 Running PondAccount migration for account: ${account.$jazz.id || 'new account'}`);
     let didMigrate = false;
 
-    if (account.root === undefined) {
+    // Check if root exists, create if not
+    if (!account.$jazz.has("root")) {
       console.log('📝 Creating PondAccountRoot...');
-      (account as any).root = PondAccountRoot.create({
+      account.$jazz.set("root", PondAccountRoot.create({
         intentions: co.list(Intention).create([]),
         conversations: co.list(Conversation).create([]),
         fieldNotes: co.list(FieldNote).create([]),
@@ -125,23 +131,38 @@ export const PondAccount = co
             memories: [],
             relationships: [],
           })
-        )
-      });
+        ),
+        useAiProcessing: true // Default to enabled
+      }));
       console.log('✅ PondAccountRoot created');
       didMigrate = true;
     }
 
-    if (account.profile === undefined) {
+    // Load root to check for and add missing fields
+    const { root } = await account.$jazz.ensureLoaded({
+      resolve: { root: true }
+    });
+
+    // Add useAiProcessing if missing from existing root
+    if (!root.$jazz.has('useAiProcessing')) {
+      console.log('🔄 Adding useAiProcessing preference to existing account...');
+      root.$jazz.set("useAiProcessing", true);
+      console.log('✅ useAiProcessing preference added');
+      didMigrate = true;
+    }
+
+    // Check if profile exists, create if not
+    if (!account.$jazz.has("profile")) {
       console.log('👤 Creating PondProfile...');
       const profileGroup = Group.create();
       profileGroup.makePublic();
 
-      (account as any).profile = PondProfile.create(
+      account.$jazz.set("profile", PondProfile.create(
         {
           name: creationProps?.name || "New User",
         },
         profileGroup
-      );
+      ));
       console.log(`✅ PondProfile created for: ${creationProps?.name || "New User"}`);
       didMigrate = true;
     }
@@ -154,4 +175,5 @@ export const PondAccount = co
   });
 
 export type PondAccount = co.loaded<typeof PondAccount>;
+
 

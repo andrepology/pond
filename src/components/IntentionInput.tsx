@@ -81,7 +81,7 @@ export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }
         // @ts-ignore
         multiline={true}
         opacity={0.4}
-        letterSpacing={-0.01}
+        letterSpacing={"-0.125rem"}
         borderRadius={12}
         padding={12}
         alignItems="center"
@@ -89,8 +89,8 @@ export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }
         flexDirection="column"
         textAlign="center"
         zIndex={1000}
-        caretBorderRadius={4}
-        selectionColor="rgba(255,255,255,0.3)"
+        caretBorderRadius={0.5}
+        selectionColor="rgba(255,255,255,0.8)"
       />
     </group>
   )

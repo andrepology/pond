@@ -8,7 +8,7 @@ interface CallButtonProps {
 }
 
 export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
-  const { status, error, isConnected, volume, startConversation, stopConversation } = useVoice()
+  const { status, error, isConnected, isSpeaking, startConversation, stopConversation } = useVoice()
 
   const OUTER_RADIUS = 18
   const INNER_RADIUS = 15
@@ -37,7 +37,7 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
         return {
           innerScale: 0.90,
           innerColor: 'var(--default-accent)',
-          showRipples: true,
+          showRipples: isSpeaking, // Use real-time speaking detection
           disabled: false
         }
       case 'disconnecting':
@@ -66,15 +66,8 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
 
   const buttonState = getButtonState()
 
-  // Ripple component for call state (CSS ring that scales out from inner)
+  // Ripple component for speaking state
   const Ripple = ({ delay = 0 }: { delay?: number }) => {
-    // Volume-driven animation parameters
-    const baseScale = 1.02
-    const maxScale = Math.max(1.05, baseScale + volume * 0.3) // 1.05 to 1.32 based on volume
-    const baseOpacity = Math.max(0.1, volume * 0.3) // 0.1 to 0.3 based on volume
-    const peakOpacity = Math.max(0.2, volume * 0.5) // 0.2 to 0.7 based on volume
-    const duration = Math.max(1.2, 3.0 - volume * 1.5) // 3.0s to 1.5s based on volume
-
     return (
       <motion.div
         className="absolute inset-1 pointer-events-none z-10"
@@ -82,13 +75,13 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
           borderRadius: `${INNER_RADIUS}px`,
           border: '1px solid rgba(255, 255, 255, 0.35)'
         }}
-        initial={{ scale: baseScale, opacity: 0 }}
+        initial={{ scale: 1.02, opacity: 0 }}
         animate={{
-          scale: [baseScale, maxScale],
-          opacity: [baseOpacity, peakOpacity, 0]
+          scale: [1.02, 1.16],
+          opacity: [0.35, 0.6, 0]
         }}
         transition={{
-          duration,
+          duration: 2.0,
           repeat: Infinity,
           ease: 'easeOut',
           delay,
