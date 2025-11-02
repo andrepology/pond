@@ -24,13 +24,22 @@ curl -L https://fly.io/install.sh | sh
 fly auth login
 
 # Create Postgres database
-fly postgres create --name pond-auth-db
+fly postgres create --name pond-auth-db --region ams --vm-size shared-cpu-1x --initial-cluster-size 1 --volume-size 1
 
 # Choose: Development configuration (1x shared CPU, 256MB RAM)
-# Select region closest to you
+# Select region closest to you (e.g., ams)
+
+# IMPORTANT: Configure to prevent suspension
+# After creation, get the machine ID and disable auto-stop:
+fly machines list -a pond-auth-db
+fly machines update <MACHINE_ID> -a pond-auth-db --autostop=off --yes
 ```
 
 **Save the connection details!** You'll need them in the next step.
+
+**Current database credentials:**
+- Password: `aN1V85HyT38EEt6`
+- Connection string: `postgres://postgres:aN1V85HyT38EEt6@pond-auth-db.internal:5432/postgres`
 
 Get your connection string:
 ```bash
@@ -40,7 +49,23 @@ fly postgres connect -a pond-auth-db
 
 ### 2️⃣ Backend Configuration
 
-Create `backend/.env`:
+**IMPORTANT: Start Fly.io Database Proxy**
+
+Before starting the backend, you need to proxy the database connection:
+
+```bash
+# In a separate terminal, keep this running:
+fly proxy 5432 -a pond-auth-db
+```
+
+You should see:
+```
+Proxying localhost:5432 to remote [pond-auth-db.internal]:5432
+```
+
+**Keep this terminal open!** The backend needs this proxy to connect.
+
+**Create `backend/.env`:**
 
 ```bash
 cd backend
@@ -53,6 +78,8 @@ NODE_ENV=development
 PORT=3000
 EOF
 ```
+
+**Note:** The code automatically converts `.internal` to `localhost:5432` in local development. In production on Fly.io, it uses `.internal` directly.
 
 **Generate `BETTER_AUTH_SECRET`:**
 ```bash
@@ -73,13 +100,16 @@ This creates the Better Auth tables with Jazz's `accountID` field.
 
 **Start the backend server:**
 ```bash
+# Make sure fly proxy is running in another terminal first!
 pnpm dev
 ```
 
 You should see:
 ```
+🔄 Local dev: Using proxy connection (localhost:5432)
+📊 Database configured: localhost:5432
+🌍 Environment: local development
 🚀 Pond Auth Server running on http://localhost:3000
-✅ Database connected at: <timestamp>
 ```
 
 **Test the server:**

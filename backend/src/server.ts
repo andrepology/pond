@@ -54,15 +54,17 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 // Start server
-app.listen(PORT, () => {
+// Listen on 0.0.0.0 for Fly.io (required for external connections)
+const hostname = process.env.FLY_APP_NAME ? "0.0.0.0" : "localhost";
+app.listen(PORT, hostname, () => {
   console.log(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚀 Pond Auth Server Running
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📍 Server:      http://localhost:${PORT}
-🔐 Auth API:    http://localhost:${PORT}/api/auth/*
-🏥 Health:      http://localhost:${PORT}/health
+📍 Server:      http://${hostname}:${PORT}
+🔐 Auth API:    http://${hostname}:${PORT}/api/auth/*
+🏥 Health:      http://${hostname}:${PORT}/health
 🌍 Environment: ${process.env.NODE_ENV || "development"}
 🔓 CORS:        ${process.env.TRUSTED_ORIGINS}
 

@@ -2,13 +2,57 @@ import { betterAuth } from "better-auth";
 import { jazzPlugin } from "jazz-tools/better-auth/auth/server";
 import { Pool } from "pg";
 
+/**
+ * Detects if running on Fly.io (production)
+ * Fly.io sets FLY_APP_NAME in deployed apps
+ */
+function isFlyIoProduction(): boolean {
+  return !!process.env.FLY_APP_NAME;
+}
+
+/**
+ * Normalizes DATABASE_URL based on environment
+ * - Production (Fly.io): Uses .internal hostname directly
+ * - Local dev with proxy: Converts .internal to localhost:5432
+ * - Local dev without proxy: Falls back to provided URL
+ */
+function getDatabaseUrl(): string {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
+  // In production (Fly.io), use DATABASE_URL as-is (contains .internal)
+  if (isFlyIoProduction()) {
+    return dbUrl;
+  }
+
+  // In local development, if URL contains .internal, replace with localhost
+  // This assumes fly proxy is running: fly proxy 5432 -a pond-auth-db
+  if (dbUrl.includes(".internal")) {
+    const url = new URL(dbUrl);
+    url.hostname = "localhost";
+    url.port = "5432";
+    const normalizedUrl = url.toString();
+    console.log("🔄 Local dev: Using proxy connection (localhost:5432)");
+    return normalizedUrl;
+  }
+
+  // Already configured for local development or other setup
+  return dbUrl;
+}
+
+const databaseUrl = getDatabaseUrl();
+
 // Create PostgreSQL connection pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
 });
 
 // Log database connection info (actual connection tested on first query)
-console.log('📊 Database configured:', process.env.DATABASE_URL?.split('@')[1]);
+const connectionHost = databaseUrl.split('@')[1]?.split('/')[0] || 'unknown';
+console.log('📊 Database configured:', connectionHost);
+console.log('🌍 Environment:', isFlyIoProduction() ? 'production (Fly.io)' : 'local development');
 
 /**
  * Better Auth instance with Jazz plugin

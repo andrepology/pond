@@ -5,12 +5,23 @@
 ### Step 1: Database (3 min)
 ```bash
 fly auth login
-fly postgres create --name pond-auth-db
-# Choose: Development config, select your region
+fly postgres create --name pond-auth-db --region ams --vm-size shared-cpu-1x --initial-cluster-size 1 --volume-size 1
+# Choose: Development config, select your region (e.g., ams)
 # Copy the password shown!
+
+# IMPORTANT: Prevent suspension
+fly machines list -a pond-auth-db
+fly machines update <MACHINE_ID> -a pond-auth-db --autostop=off --yes
 ```
 
 ### Step 2: Backend Setup (2 min)
+
+**Start database proxy (keep running in separate terminal):**
+```bash
+fly proxy 5432 -a pond-auth-db
+```
+
+**Backend setup:**
 ```bash
 cd backend
 
@@ -28,11 +39,11 @@ EOF
 pnpm install
 pnpm migrate
 
-# Start server
+# Start server (in a NEW terminal - keep proxy running!)
 pnpm dev
 ```
 
-**Verify:** Server shows "✅ Database connected"
+**Verify:** Server shows "🔄 Local dev: Using proxy connection" and "📊 Database configured: localhost:5432"
 
 ### Step 3: Frontend Setup (2 min)
 ```bash
@@ -66,9 +77,16 @@ pnpm dev
 
 ## 🆘 Quick Fixes
 
-**Database connection error?**
+**Database connection error (`ENOTFOUND pond-auth-db.internal`)?**
 ```bash
-fly postgres list  # Check it's running
+# 1. Make sure fly proxy is running:
+fly proxy 5432 -a pond-auth-db
+
+# 2. Check database is running:
+fly postgres list
+
+# 3. The code auto-converts .internal to localhost in dev mode
+#    If errors persist, verify proxy is active
 ```
 
 **Jazz not loading?**
