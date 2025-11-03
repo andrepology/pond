@@ -22,4 +22,16 @@ canvas {
   --color-brand-600: oklch(0.58 0.20 247.84);
   --color-brand-700: oklch(0.51 0.22 247.84);
   --color-brand-900: oklch(0.35 0.15 247.84);
+}
+
+.scroller {
+  animation: mask-up;
+  animation-timeline: scroll(self);
+  animation-range: 0 1rem;
+  mask: linear-gradient(to bottom, black 0%, black calc(100% - 2rem), transparent 100%);
+  mask-composite: exclude;
+}
+
+@keyframes mask-up {
+  to { mask-size: 100% 120px, 100% 100%; }
 } 

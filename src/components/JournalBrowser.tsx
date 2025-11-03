@@ -70,10 +70,12 @@ export function JournalBrowser() {
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
+        pointerEvents: 'auto',
       }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerMove={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
     >
       <motion.div
         animate={{
@@ -102,7 +104,9 @@ export function JournalBrowser() {
             backdropFilter: 'blur(10px)',
             borderRadius: 12,
             border: '1px solid rgba(139, 115, 85, 0.2)',
+            pointerEvents: 'auto',
           }}
+          onWheel={(e) => e.stopPropagation()}
         >
           {isMounted && !isDocked &&
             tabs.map((tab, idx) => (
@@ -175,6 +179,7 @@ const View = ({
       }}
     >
       <div
+        className="scroller"
         style={{
           width: '100%',
           height: '100%',
@@ -184,7 +189,9 @@ const View = ({
           flexDirection: 'column',
           gap: 12,
           overflowY: 'auto',
+          pointerEvents: 'auto',
         }}
+        onWheel={(e) => e.stopPropagation()}
       >
         {children}
       </div>

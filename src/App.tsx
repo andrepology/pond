@@ -35,6 +35,28 @@ export default function App() {
     return unsubscribe
   }, [hasInputSignal])
 
+  // Prevent wheel events from UI elements reaching the Canvas
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement
+      // Check if event is from a [data-ui] element
+      if (target?.closest('[data-ui]')) {
+        // In bubble phase, the target has already handled the event for scrolling
+        // Now stop it from reaching Canvas handlers
+        e.stopPropagation()
+        e.stopImmediatePropagation()
+      }
+    }
+    // Listen in bubble phase so the target (scrollable UI element) handles scrolling first
+    // Then we stop propagation before it reaches React Three Fiber's Canvas handlers
+    const root = document.getElementById('root')
+    if (root) {
+      // Use a wrapper function to ensure proper cleanup
+      root.addEventListener('wheel', handleWheel, false)
+      return () => root.removeEventListener('wheel', handleWheel, false)
+    }
+  }, [])
+
   const { mapping, exposure } = useControls({
     exposure: { value: 0.85, min: 0, max: 4 },
     mapping: { value: 'ACESFilmic', options: ['No', 'Linear', 'AgX', 'ACESFilmic', 'Reinhard', 'Cineon', 'Custom'] },
