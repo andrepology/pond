@@ -68,7 +68,7 @@ export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }
   }, [currentTodoIntention?.title, hasInputSignal])
 
   return (
-    <group ref={inputGroupRef} renderOrder={2}>
+    <group ref={inputGroupRef} renderOrder={-2}>
       <Input
         value={currentTodoIntention?.title || ''}
         onValueChange={handleInputChange}

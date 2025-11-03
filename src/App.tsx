@@ -40,6 +40,14 @@ export default function App() {
     mapping: { value: 'ACESFilmic', options: ['No', 'Linear', 'AgX', 'ACESFilmic', 'Reinhard', 'Cineon', 'Custom'] },
   })
 
+  const { lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls('Light Settings', {
+    lightRadius: { value: 8, min: 1, max: 20, step: 0.1 },
+    lightAmbient: { value: 0.2, min: 0, max: 1, step: 0.01 },
+    lightIntensity: { value: Math.PI, min: 0, max: Math.PI * 2, step: 0.01 },
+    lightPosition: { value: [0, 24, -1.5], step: 0.1 },
+    lightBias: { value: 0.001, min: 0, max: 0.01, step: 0.0001 },
+  })
+
   return (
     <>
       <Leva collapsed />
@@ -110,10 +118,16 @@ export default function App() {
              alphaTest={0.62}
              color="#E6E4D9" // very light gray-blue (lighter than slate-400)
              colorBlend={1.0}
-             opacity={0.4}
+             opacity={0.2}
              scale={20}
            >
-            <RandomizedLight radius={8} ambient={0.2} intensity={Math.PI } position={[0, 11, -25]} bias={0.001} />
+            <RandomizedLight
+              radius={lightRadius}
+              ambient={lightAmbient}
+              intensity={lightIntensity}
+              position={lightPosition}
+              bias={lightBias}
+            />
           </AccumulativeShadows>
         </Center>
 

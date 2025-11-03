@@ -1,4 +1,4 @@
-import { motion, useMotionTemplate, useSpring, useTransform, useVelocity } from 'motion/react'
+import { motion, useMotionTemplate, useSpring, useTransform, useVelocity, AnimatePresence } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useAccount } from 'jazz-tools/react'
 import { PondAccount, Intention, Conversation, FieldNote } from '../schema'
@@ -20,8 +20,8 @@ const tabs: Tab[] = [
 type TabId = Tab['id']
 
 export function JournalBrowser() {
-  const [activeTab, setActiveTab] = useState<TabId>('intentions')
-  const [isDocked, setIsDocked] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabId | null>(null)
+  const [isDocked, setIsDocked] = useState(true)
   const isMounted = useMounted()
   const viewsContainerRef = useRef<HTMLDivElement>(null)
   const [viewsContainerWidth, setViewsContainerWidth] = useState(0)
@@ -53,6 +53,7 @@ export function JournalBrowser() {
     if (activeTab === tabId && !isDocked) {
       // Clicking active tab while expanded -> dock
       setIsDocked(true)
+      setActiveTab(null)
     } else {
       // Switching tabs or expanding from docked
       setActiveTab(tabId)
@@ -109,7 +110,7 @@ export function JournalBrowser() {
                 key={tab.id}
                 containerWidth={viewsContainerWidth}
                 viewIndex={idx}
-                activeIndex={tabs.findIndex((t) => t.id === activeTab)}
+                activeIndex={activeTab ? tabs.findIndex((t) => t.id === activeTab) : -1}
               >
                 <TabContent tabId={tab.id} root={root} />
               </View>
@@ -117,7 +118,7 @@ export function JournalBrowser() {
         </motion.div>
 
         {/* Tabs */}
-        <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
+        <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} isDocked={isDocked} />
       </motion.div>
     </div>
   )
@@ -195,10 +196,12 @@ const Tabs = ({
   tabs,
   activeTab,
   onTabChange,
+  isDocked,
 }: {
   tabs: Tab[]
-  activeTab: TabId
+  activeTab: TabId | null
   onTabChange: (tab: TabId) => void
+  isDocked: boolean
 }) => {
   return (
     <ul
@@ -253,22 +256,27 @@ const Tabs = ({
               onClick={() => onTabChange(tab.id)}
             >
               <span style={{ zIndex: 1, position: 'relative' }}>{tab.label}</span>
-              {tab.id === activeTab ? (
-                <motion.span
-                  layoutId="activeTab"
-                  transition={{
-                    type: 'spring',
-                    stiffness: 600,
-                    damping: 40,
-                  }}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: 8,
-                    backgroundColor: tab.color,
-                  }}
-                />
-              ) : null}
+              <AnimatePresence>
+                {tab.id === activeTab && !isDocked ? (
+                  <motion.span
+                    layoutId="activeTab"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 600,
+                      damping: 40,
+                    }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 8,
+                      backgroundColor: tab.color,
+                    }}
+                  />
+                ) : null}
+              </AnimatePresence>
             </motion.button>
           ) : (
             <motion.button
@@ -294,22 +302,27 @@ const Tabs = ({
               onClick={() => onTabChange(tab.id)}
             >
               <span style={{ zIndex: 1, position: 'relative' }}>{tab.label}</span>
-              {tab.id === activeTab ? (
-                <motion.span
-                  layoutId="activeTab"
-                  transition={{
-                    type: 'spring',
-                    stiffness: 600,
-                    damping: 40,
-                  }}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: 8,
-                    backgroundColor: tab.color,
-                  }}
-                />
-              ) : null}
+              <AnimatePresence>
+                {tab.id === activeTab && !isDocked ? (
+                  <motion.span
+                    layoutId="activeTab"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 600,
+                      damping: 40,
+                    }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 8,
+                      backgroundColor: tab.color,
+                    }}
+                  />
+                ) : null}
+              </AnimatePresence>
             </motion.button>
           )}
         </motion.li>
