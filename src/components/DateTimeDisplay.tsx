@@ -152,35 +152,22 @@ export function DateTimeDisplay() {
     return (
       <>
         <span
-          className="transition-colors duration-200 cursor-default hover:text-gray-600"
-          style={{
-            color: 'rgba(206, 205, 195, 0.80)'
-          }}
+          className="transition-colors duration-200 cursor-default text-[rgba(206,205,195,0.80)] hover:text-gray-600"
         >
           {text}
         </span>
-        {icons.map((icon, index) => (
-          <span
-            key={index}
-            className="transition-colors duration-200 cursor-default ml-4 hover:text-gray-600"
-            style={{
-              color: 'rgba(206, 205, 195, 0.80)'
-            }}
-          >
-            {icon}
-          </span>
-        ))}
       </>
     )
   }
 
   return (
-    <div className={`fixed bottom-0 left-0 z-50 pointer-events-none p-10 transition-opacity duration-1000 ${state.displayOpacity}`}>
+    <div className={`fixed top-0 left-0 z-50 pointer-events-none p-10 transition-opacity duration-1000 ${state.displayOpacity}`}>
       <div
         className="text-4xl md:text-3xl tracking-tight"
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          color: 'rgba(144, 144, 144, 0.40)'
+          color: 'rgba(144, 144, 144, 0.40)',
+          lineHeight: '1.025',
         }}
       >
         {renderTextWithHoverIcons()}
@@ -190,15 +177,17 @@ export function DateTimeDisplay() {
               await betterAuthClient.signOut();
               window.location.reload();
             }}
-            className="inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto transition-colors hover:bg-gray-600"
+            className="inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto transition-colors hover:bg-gray-600 transition-transform duration-200 hover:scale-110 active:scale-95 cursor-pointer"
             style={{
               backgroundColor: 'rgba(206, 205, 195, 0.80)',
               color: 'rgba(255, 255, 255, 0.9)',
               fontFamily: 'AlteHaasGroteskBold, sans-serif',
               fontSize: '0.75rem',
-              lineHeight: '1.2',
+              lineHeight: '1.125',
               verticalAlign: 'middle',
-              padding: '0.25rem 0.5rem'
+              padding: '0.25rem 0.5rem',
+              letterSpacing: '0.0295rem',
+              marginTop: '-0.45rem'
             }}
           >
             logout
@@ -206,10 +195,10 @@ export function DateTimeDisplay() {
         )}
       </div>
       <div
-        className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass} transition-colors duration-200 cursor-default hover:text-gray-600`}
+        className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass} transition-colors duration-200 cursor-default text-[rgba(206,205,195,0.80)] hover:text-gray-600`}
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          color: 'rgba(206, 205, 195, 0.80)'
+          letterSpacing: '0.0295rem'
         }}
       >
         {PROMPTS[state.promptIndex]}

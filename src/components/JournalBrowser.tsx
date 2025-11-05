@@ -12,9 +12,9 @@ type Tab = {
 }
 
 const tabs: Tab[] = [
-  { id: 'call', label: '📞', color: '#4A90E2', isCallButton: true },
-  { id: 'intentions', label: 'Intentions', color: '#8B7355', isCallButton: false },
-  { id: 'fieldNotes', label: 'Field Notes', color: '#7B6B8E', isCallButton: false },
+  { id: 'call', label: '◎', color: '#7B9089', isCallButton: true },
+  { id: 'intentions', label: '⚘', color: '#8B7355', isCallButton: false },
+  { id: 'fieldNotes', label: '✎', color: '#8B7B7A', isCallButton: false },
 ]
 
 type TabId = Tab['id']
@@ -294,7 +294,7 @@ const Tabs = ({
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                fontSize: 12,
+                fontSize: 22,
                 fontWeight: 500,
                 borderRadius: 8,
                 border: 'none',
@@ -338,6 +338,331 @@ const Tabs = ({
   )
 }
 
+const DYNAMIC_PROMPTS = [
+  '"what do you want to focus on today?"',
+  '"how are you feeling right now?"',
+  '"what\'s been on your mind lately?"',
+  '"what would you like to explore?"',
+  '"what\'s your current challenge?"',
+  '"what do you need support with?"'
+]
+
+const CallView = ({ conversations }: { conversations: Conversation[] }) => {
+  const [isHelpExpanded, setIsHelpExpanded] = useState(false)
+  const [promptState, setPromptState] = useState({
+    index: 0,
+    fadeClass: 'opacity-100'
+  })
+
+  // Get orphaned conversations (not linked to any intention)
+  const orphanedConversations = conversations.filter(conv => !conv.intentionRef)
+
+  // Cycle through dynamic prompts
+  useEffect(() => {
+    const PROMPT_PERIOD_MS = 4000
+    const PROMPT_FADE_MS = 800
+
+    let promptFadeTimeout: number | undefined
+
+    const runPromptPhase = () => {
+      setPromptState(prev => ({
+        ...prev,
+        index: (prev.index + 1) % DYNAMIC_PROMPTS.length,
+        fadeClass: 'opacity-100'
+      }))
+
+      if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
+      promptFadeTimeout = window.setTimeout(() => {
+        setPromptState(prev => ({ ...prev, fadeClass: 'opacity-0' }))
+      }, Math.max(0, PROMPT_PERIOD_MS - PROMPT_FADE_MS))
+    }
+
+    // Kick off immediately to avoid initial delay
+    runPromptPhase()
+
+    const promptInterval = window.setInterval(runPromptPhase, PROMPT_PERIOD_MS)
+
+    return () => {
+      clearInterval(promptInterval)
+      if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
+    }
+  }, [])
+
+  if (orphanedConversations.length === 0) {
+    return (
+      <div style={{ position: 'relative', padding: '24px 8px' }}>
+        {/* Large prompt text behind the call button */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            fontSize: 28,
+            fontWeight: 600,
+            textAlign: 'left',
+            pointerEvents: 'none',
+            zIndex: 0,
+            lineHeight: '1.2'
+          }}
+        >
+        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
+          ask innio
+        </span>
+        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
+          {' '}
+        </span>
+        <span
+          className={`transition-opacity duration-1000 ${promptState.fadeClass}`}
+          style={{ color: 'rgba(123, 144, 137, 0.6)' }}
+        >
+          {DYNAMIC_PROMPTS[promptState.index]}
+        </span>
+        </div>
+
+        {/* Call button on top */}
+        <div style={{ position: 'relative', zIndex: 1, marginBottom: 36 }}>
+          <CallButton />
+        </div>
+
+        {/* Help Section */}
+        <div
+          onClick={() => setIsHelpExpanded(!isHelpExpanded)}
+          style={{
+            cursor: 'pointer',
+            borderRadius: 6,
+            overflow: 'hidden'
+          }}
+        >
+          <motion.div
+            style={{
+              width: '100%',
+              padding: '8px 16px',
+              borderRadius: 6,
+              display: 'flex',
+              justifyContent: 'flex-start',
+              alignItems: 'center',
+              minHeight: '40px',
+              boxSizing: 'border-box',
+              gap: '8px'
+            }}
+          >
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: '#888'
+              }}
+            >
+              what to talk about
+            </span>
+            <motion.span
+              animate={{ rotate: isHelpExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ fontSize: 8, opacity: 0.6 }}
+            >
+              ▼
+            </motion.span>
+          </motion.div>
+
+          <AnimatePresence>
+            {isHelpExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: 10,
+                    color: '#666',
+                    lineHeight: 1.6,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '0 0 6px 6px',
+                    marginTop: 2,
+                  }}
+                >
+                  <ul style={{ margin: 0, paddingLeft: 16, listStyleType: 'disc' }}>
+                    <li style={{ marginBottom: 6 }}>Setting intentions (they'll hold you accountable)</li>
+                    <li style={{ marginBottom: 6 }}>Getting unstuck on tasks</li>
+                    <li style={{ marginBottom: 6 }}>Daily reflection & integration</li>
+                    <li style={{ marginBottom: 6 }}>Inner parts that need listening (IFS)</li>
+                    <li style={{ marginBottom: 6 }}>Nervous system regulation</li>
+                    <li>What you're avoiding or ready to let go</li>
+                  </ul>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div style={{ color: '#8B7355', fontSize: 12, opacity: 0.5, textAlign: 'center', marginTop: 12 }}>
+          No conversations yet
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position: 'relative', padding: '24px 8px' }}>
+      {/* Large prompt text behind the call button */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          fontSize: 28,
+          fontWeight: 600,
+          textAlign: 'left',
+          pointerEvents: 'none',
+          zIndex: 0,
+          lineHeight: '1.2'
+        }}
+      >
+        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
+          ask innio
+        </span>
+        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
+          {' '}
+        </span>
+        <span
+          className={`transition-opacity duration-1000 ${promptState.fadeClass}`}
+          style={{ color: 'rgba(123, 144, 137, 0.6)' }}
+        >
+          {DYNAMIC_PROMPTS[promptState.index]}
+        </span>
+      </div>
+
+      {/* Call button on top */}
+      <div style={{ position: 'relative', zIndex: 1, marginBottom: 32 }}>
+        <CallButton />
+      </div>
+
+        {/* Help Section */}
+        <div style={{ marginBottom: 40 }}>
+          <div
+            onClick={() => setIsHelpExpanded(!isHelpExpanded)}
+            style={{
+              cursor: 'pointer',
+              borderRadius: 6,
+              overflow: 'hidden'
+            }}
+          >
+            <motion.div
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                borderRadius: 6,
+                display: 'flex',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                minHeight: '40px',
+                boxSizing: 'border-box',
+                gap: '8px'
+              }}
+            >
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: '#888'
+              }}
+            >
+              what to talk about
+            </span>
+            <motion.span
+              animate={{ rotate: isHelpExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ fontSize: 8, opacity: 0.6 }}
+            >
+              ▼
+            </motion.span>
+          </motion.div>
+
+          <AnimatePresence>
+            {isHelpExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: 10,
+                    color: '#666',
+                    lineHeight: 1.6,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '0 0 6px 6px',
+                    marginTop: 2,
+                  }}
+                >
+                  <ul style={{ margin: 0, paddingLeft: 16, listStyleType: 'disc' }}>
+                    <li style={{ marginBottom: 6 }}>Setting intentions (they'll hold you accountable)</li>
+                    <li style={{ marginBottom: 6 }}>Getting unstuck on tasks</li>
+                    <li style={{ marginBottom: 6 }}>Daily reflection & integration</li>
+                    <li style={{ marginBottom: 6 }}>Inner parts that need listening (IFS)</li>
+                    <li style={{ marginBottom: 6 }}>Nervous system regulation</li>
+                    <li>What you're avoiding or ready to let go</li>
+                  </ul>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 12 }}>
+        Recent Conversations
+      </div>
+
+      {orphanedConversations
+        .sort((a, b) => b.startTime - a.startTime)
+        .slice(0, 10)
+        .map((conv, idx) => {
+          const duration = Math.round((conv.endTime - conv.startTime) / 1000 / 60)
+          return (
+            <div
+              key={idx}
+              style={{
+                padding: '12px',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: 8,
+                border: '1px solid rgba(139, 115, 85, 0.08)',
+                marginBottom: idx < orphanedConversations.slice(0, 10).length - 1 ? '8px' : '0',
+              }}
+            >
+              {conv.summary && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5, flex: 1 }}>
+                    {conv.summary.slice(0, 100)}
+                    {conv.summary.length > 100 ? '...' : ''}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#999', marginLeft: 12 }}>
+                    {formatDate(conv.startTime)}
+                  </div>
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: '#999' }}>
+                Duration: {duration}min
+              </div>
+            </div>
+          )
+        })}
+
+      {orphanedConversations.length > 10 && (
+        <div style={{ fontSize: 10, color: '#999', marginTop: 8, textAlign: 'center' }}>
+          +{orphanedConversations.length - 10} more conversations
+        </div>
+      )}
+    </div>
+  )
+}
+
 const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
   if (!root) {
     return <div style={{ color: '#8B7355', fontSize: 14 }}>Loading...</div>
@@ -345,38 +670,24 @@ const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
 
   switch (tabId) {
     case 'call':
-      return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-          <CallButton />
-        </div>
-      )
+      return <CallView conversations={root.conversations || []} />
     case 'intentions':
-      return <IntentionsView intentions={root.intentions || []} conversations={root.conversations || []} />
+      return <IntentionsView intentions={root.intentions || []} />
     case 'fieldNotes':
       return <FieldNotesView fieldNotes={root.fieldNotes || []} />
   }
 }
 
-const IntentionsView = ({ intentions, conversations }: { intentions: Intention[], conversations: Conversation[] }) => {
+const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
   const sortedIntentions = [...intentions].sort((a, b) => {
     const statusOrder = { active: 0, todo: 1, completed: 2, archived: 3 }
     return statusOrder[a.status] - statusOrder[b.status] || b.updatedAt - a.updatedAt
   })
 
-  // Group conversations by intention
-  const conversationsByIntention = conversations.reduce((acc, conv) => {
-    if (conv.intentionRef) {
-      const intentionId = conv.intentionRef.$jazz.id
-      if (!acc[intentionId]) acc[intentionId] = []
-      acc[intentionId].push(conv)
-    }
-    return acc
-  }, {} as Record<string, Conversation[]>)
-
-  if (sortedIntentions.length === 0 && conversations.length === 0) {
+  if (sortedIntentions.length === 0) {
     return (
       <div style={{ color: '#8B7355', fontSize: 14, opacity: 0.6 }}>
-        No intentions or conversations yet
+        No intentions yet
       </div>
     )
   }
@@ -384,9 +695,7 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
   return (
     <>
       {/* Intentions */}
-      {sortedIntentions.map((intention, idx) => {
-        const relatedConversations = conversationsByIntention[intention.$jazz.id] || []
-        return (
+      {sortedIntentions.map((intention, idx) => (
           <div
             key={idx}
             style={{
@@ -394,7 +703,7 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
               backgroundColor: 'rgba(255, 255, 255, 0.4)',
               borderRadius: 8,
               border: '1px solid rgba(139, 115, 85, 0.15)',
-              marginBottom: relatedConversations.length > 0 ? '8px' : '0',
+              marginBottom: idx < sortedIntentions.length - 1 ? '8px' : '0',
             }}
           >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 4 }}>
@@ -420,83 +729,9 @@ const IntentionsView = ({ intentions, conversations }: { intentions: Intention[]
               {intention.description}
             </div>
           )}
-
-            {/* Related Conversations */}
-            {relatedConversations.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 6 }}>
-                  Conversations ({relatedConversations.length})
-                </div>
-                {relatedConversations.slice(0, 3).map((conv, convIdx) => {
-                  const duration = Math.round((conv.endTime - conv.startTime) / 1000 / 60)
-                  return (
-                    <div
-                      key={convIdx}
-                      style={{
-                        padding: '8px',
-                        marginBottom: convIdx < relatedConversations.slice(0, 3).length - 1 ? '4px' : '0',
-                      }}
-                    >
-                      {conv.summary && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5, flex: 1 }}>
-                            {conv.summary.slice(0, 60)}
-                            {conv.summary.length > 60 ? '...' : ''}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#999', marginLeft: 12 }}>
-                            {formatDate(conv.startTime)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-                {relatedConversations.length > 3 && (
-                  <div style={{ fontSize: 10, color: '#999', marginTop: 4 }}>
-                    +{relatedConversations.length - 3} more conversations
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        )
-      })}
+      ))}
 
-      {/* Orphaned Conversations (not linked to any intention) */}
-      {conversations.filter(conv => !conv.intentionRef).length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 8 }}>
-            Other Conversations
-          </div>
-          {conversations
-            .filter(conv => !conv.intentionRef)
-            .slice(0, 5)
-            .map((conv, idx) => {
-              const duration = Math.round((conv.endTime - conv.startTime) / 1000 / 60)
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    padding: '10px',
-                    marginBottom: idx < conversations.filter(conv => !conv.intentionRef).slice(0, 5).length - 1 ? '6px' : '0',
-                  }}
-                >
-                  {conv.summary && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
-                      <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5, flex: 1 }}>
-                        {conv.summary.slice(0, 80)}
-                        {conv.summary.length > 80 ? '...' : ''}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#999', marginLeft: 12 }}>
-                        {formatDate(conv.startTime)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-        </div>
-      )}
     </>
   )
 }
@@ -527,7 +762,7 @@ const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
                 width: '18px',
                 height: '18px',
                 borderRadius: '9px',
-                backgroundColor: '#7B6B8E',
+                backgroundColor: '#8B7B7A',
                 marginRight: '8px',
                 marginTop: '2px',
                 flexShrink: 0,

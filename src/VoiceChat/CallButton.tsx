@@ -1,7 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useVoice } from './VoiceProvider'
-import { Squircle } from '../components/Squircle'
 
 interface CallButtonProps {
   className?: string
@@ -9,9 +8,6 @@ interface CallButtonProps {
 
 export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
   const { status, error, isConnected, isSpeaking, startConversation, stopConversation } = useVoice()
-
-  const OUTER_RADIUS = 18
-  const INNER_RADIUS = 15
 
   const handleClick = async () => {
     if (isConnected || status === 'connecting' || status === 'disconnecting') {
@@ -27,7 +23,7 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
       case 'connecting':
         return {
           innerScale: 0.89,
-          innerColor: 'var(--timestamp-color)',
+          innerColor: 'rgba(123, 144, 137, 0.6)',
           showRipples: false,
           disabled: true
         }
@@ -36,14 +32,14 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
       case 'listening':
         return {
           innerScale: 0.90,
-          innerColor: 'var(--default-accent)',
-          showRipples: isSpeaking, // Use real-time speaking detection
+          innerColor: '#7B9089',
+          showRipples: isSpeaking,
           disabled: false
         }
       case 'disconnecting':
         return {
           innerScale: 0.95,
-          innerColor: 'var(--timestamp-color)',
+          innerColor: 'rgba(123, 144, 137, 0.6)',
           showRipples: false,
           disabled: true
         }
@@ -57,7 +53,7 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
       default:
         return {
           innerScale: 0.99,
-          innerColor: 'var(--default-accent)',
+          innerColor: '#7B9089',
           showRipples: false,
           disabled: false
         }
@@ -66,30 +62,20 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
 
   const buttonState = getButtonState()
 
-  // Ripple component for speaking state
-  const Ripple = ({ delay = 0 }: { delay?: number }) => {
-    return (
-      <motion.div
-        className="absolute inset-1 pointer-events-none z-10"
-        style={{
-          borderRadius: `${INNER_RADIUS}px`,
-          border: '1px solid rgba(255, 255, 255, 0.35)'
-        }}
-        initial={{ scale: 1.02, opacity: 0 }}
-        animate={{
-          scale: [1.02, 1.16],
-          opacity: [0.35, 0.6, 0]
-        }}
-        transition={{
-          duration: 2.0,
-          repeat: Infinity,
-          ease: 'easeOut',
-          delay,
-          times: [0, 0.4, 1]
-        }}
-      />
-    )
-  }
+  // Ripple component for call state
+  const Ripple = ({ delay = 0 }: { delay?: number }) => (
+    <motion.div
+      className="absolute pointer-events-none z-10"
+      style={{
+        inset: 4,
+        borderRadius: '50%',
+        border: '1px solid rgba(255, 255, 255, 0.35)'
+      }}
+      initial={{ scale: 1.02, opacity: 0 }}
+      animate={{ scale: [1.02, 1.16], opacity: [0.35, 0.6, 0] }}
+      transition={{ duration: 2.0, repeat: Infinity, ease: 'easeOut', delay, times: [0, 0.4, 1] }}
+    />
+  )
 
   return (
     <AnimatePresence mode="wait">
@@ -105,26 +91,27 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
           duration: 0.3
         }}
       >
-        {/* Main button container */}
+        {/* Main button container - circular */}
         <motion.button
           onClick={handleClick}
           disabled={buttonState.disabled}
-          className="relative mx-auto w-60 h-14 focus:outline-none"
+          className="relative focus:outline-none"
+          style={{
+            width: 80,
+            height: 80,
+          }}
         >
-          {/* Outer shape - Squircle with subtle backdrop + inset outline to avoid clipping */}
-          <div className="absolute inset-0">
-            <Squircle radius={OUTER_RADIUS} className="w-full h-full" >
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.10)'
-                }}
-              />
-            </Squircle>
-          </div>
+          {/* Outer circle - subtle backdrop */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.10)'
+            }}
+          />
 
-          {/* Ripples during call (emanate from inner, beneath label) */}
+          {/* Ripples during call */}
           <AnimatePresence>
             {buttonState.showRipples && (
               <>
@@ -135,36 +122,36 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
             )}
           </AnimatePresence>
 
-          {/* Inner shape - solid color with label (only inner scales) */}
+          {/* Inner circle - solid color with label */}
           <motion.div
-            className="absolute inset-1 cursor-pointer flex items-center justify-center z-20"
+            className="absolute cursor-pointer flex items-center justify-center z-20"
+            style={{
+              inset: 4,
+              borderRadius: '50%',
+              backgroundColor: buttonState.innerColor
+            }}
             animate={{ scale: buttonState.innerScale }}
             whileHover={!buttonState.disabled ? { scale: buttonState.innerScale * 1.05 } : {}}
             whileTap={!buttonState.disabled ? { scale: buttonState.innerScale * 0.90 } : {}}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             initial={{ scale: 0.95 }}
           >
-            <Squircle radius={INNER_RADIUS} className="w-full h-full flex items-center justify-center" >
-              <div className="absolute inset-0" style={{ backgroundColor: buttonState.innerColor }} />
-              <span className={`font-semibold tracking-wide text-white ${
-                (status === 'connected' || status === 'speaking' || status === 'listening') ? 'text-lg md:text-xl' : 'text-base'
-              }`}>
-                {(status === 'connected' || status === 'speaking' || status === 'listening') ? 'end call' : 'call innio'}
-              </span>
-            </Squircle>
+            <span className="font-semibold tracking-wide text-white text-xs z-10 relative">
+              {(status === 'connected' || status === 'speaking' || status === 'listening') ? 'end' : 'call'}
+            </span>
           </motion.div>
 
-          {/* Connecting pulse animation - use inset outline instead of border to prevent clipping */}
+          {/* Connecting pulse animation */}
           {status === 'connecting' && (
             <motion.div
               className="absolute inset-0"
+              style={{
+                borderRadius: '50%',
+                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)'
+              }}
               animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <Squircle radius={OUTER_RADIUS} className="w-full h-full">
-                <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)' }} />
-              </Squircle>
-            </motion.div>
+            />
           )}
         </motion.button>
 

@@ -165,3 +165,4 @@ export const Conversation = co.map({
 - Voice activity detection
 - Conversation branching/analysis
 - Integration with intention tracking
+

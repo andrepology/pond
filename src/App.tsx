@@ -103,9 +103,9 @@ export default function App() {
         <CameraRig sheetPercentage={sheetPercentage} />
 
 
-        <color attach="background" args={['#F3F0EB']} />
+        <color attach="background" args={['#F6F5F3']} />
         <AdaptiveFog
-          color="#F3F0EB"
+          color="#F6F5F3"
           defaultFog={{ near: 4, far: 18 }}
           focusedFog={{ near: 4, far: 12 }}
           animationDuration={1.2}
@@ -137,11 +137,11 @@ export default function App() {
              temporal={false}
              frames={200}
              blend={1.0}
-             alphaTest={0.62}
-             color="#E6E4D9" // very light gray-blue (lighter than slate-400)
+             alphaTest={0.42}
+             color="#FFF9EA" // cream
              colorBlend={1.0}
-             opacity={0.2}
-             scale={20}
+             opacity={0.10}
+             scale={30}
            >
             <RandomizedLight
               radius={lightRadius}

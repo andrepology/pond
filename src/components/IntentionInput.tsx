@@ -80,7 +80,8 @@ export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }
         fontWeight="bold"
         // @ts-ignore
         multiline={true}
-        opacity={0.4}
+        opacity={0.40}
+        color="#F6F5F3"
         letterSpacing={"-0.125rem"}
         borderRadius={12}
         padding={12}
