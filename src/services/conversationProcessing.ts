@@ -104,7 +104,7 @@ export async function processConversationBatch(
 export function handleAiProcessingEnabled(account: PondAccount) {
   // STUB: This function should be called when useAiProcessing changes from false to true
 
-  const conversationsToProcess = getConversationsNeedingProcessing(account.root.conversations);
+  const conversationsToProcess = getConversationsNeedingProcessing(Array.from(account.root.conversations));
 
   if (conversationsToProcess.length === 0) {
     console.log('No conversations need AI processing');
@@ -136,7 +136,7 @@ export function handleAiProcessingEnabled(account: PondAccount) {
 export function retryFailedConversations(account: PondAccount) {
   // STUB: This function should be called when user clicks retry button
 
-  const failedConversations = account.root.conversations
+  const failedConversations = Array.from(account.root.conversations)
     .filter(conv => conv?.aiProcessingStatus === "failed");
 
   if (failedConversations.length === 0) {

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
-import type { InnioClient } from '../../config/Types'
-import { createDefaultInnioClient } from '../../ai/invokeInnio'
+import type { InnioClient } from '../config/Types'
+import { createDefaultInnioClient } from '../../../ai/invokeInnio'
 
 export interface FishInteractionApi {
   onFishClick: (point?: THREE.Vector3) => Promise<void>

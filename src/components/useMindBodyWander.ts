@@ -2,6 +2,13 @@ import * as THREE from 'three'
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 
+// Helper function to interpolate angles properly (handles wraparound)
+function lerpAngle(start: number, end: number, t: number): number {
+  const diff = end - start
+  const wrapped = ((diff + Math.PI) % (Math.PI * 2)) - Math.PI
+  return start + wrapped * t
+}
+
 interface WanderParams {
   center: THREE.Vector3
   minRadius: number
@@ -67,7 +74,7 @@ export function useMindBodyWander(params: WanderParams, groupRef: React.RefObjec
     // Interpolate polar coordinates
     const lerpedPolar = {
       radius: THREE.MathUtils.lerp(currentPolar.current.radius, targetPolar.current.radius, t),
-      theta: THREE.MathUtils.lerpAngle(currentPolar.current.theta, targetPolar.current.theta, t),
+      theta: lerpAngle(currentPolar.current.theta, targetPolar.current.theta, t),
       phi: THREE.MathUtils.lerp(currentPolar.current.phi, targetPolar.current.phi, t)
     }
     
