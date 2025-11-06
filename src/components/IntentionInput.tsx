@@ -20,10 +20,10 @@ export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }
     }
   })
 
-  // Find current todo intention (only one exists at a time)
-  const currentTodoIntention = useMemo(() => {
+  // Find current active intention (only one at a time)
+  const activeIntention = useMemo(() => {
     if (!me?.root.intentions) return null
-    return me.root.intentions.find(intention => intention && intention.status === "todo") || null
+    return me.root.intentions.find(intention => intention && intention.status === "active") || null
   }, [me?.root.intentions])
 
   // Billboard the input to face the camera (more weighty than markers)
@@ -33,44 +33,26 @@ export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }
     noiseScale: 0.05      // Reduced noise amplitude
   })
 
-  // Handle input changes - create todo intention if needed, then update title
+  // Handle input changes - update active intention title
   const handleInputChange = (newValue: string) => {
-    if (!me) return
-
-    let intention = currentTodoIntention
-
-    // Create new todo intention if none exists and user is typing
-    if (!intention && newValue.trim().length > 0) {
-
-      intention = Intention.create({
-        title: newValue,
-        status: "todo",
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }, { owner: me.$jazz.owner })
-
-      // Add to user's intentions list
-      me.root.intentions.$jazz.push(intention)
-    }
-    // Update existing intention's title
-    else if (intention) {
-      intention.$jazz.set("title", newValue)
-      intention.$jazz.set("updatedAt", Date.now())
-    }
+    if (!activeIntention) return
+    
+    activeIntention.$jazz.set("title", newValue)
+    activeIntention.$jazz.set("updatedAt", Date.now())
   }
 
-  // Update signal when input changes (now based on intention title)
+  // Update signal when input changes (based on active intention)
   useEffect(() => {
     if (hasInputSignal) {
-      const hasInput = currentTodoIntention?.title?.trim().length > 0
+      const hasInput = activeIntention?.title?.trim().length > 0
       hasInputSignal.value = Boolean(hasInput)
     }
-  }, [currentTodoIntention?.title, hasInputSignal])
+  }, [activeIntention?.title, hasInputSignal])
 
   return (
     <group ref={inputGroupRef} renderOrder={-2}>
       <Input
-        value={currentTodoIntention?.title || ''}
+        value={activeIntention?.title || ''}
         onValueChange={handleInputChange}
         placeholder="what is your intention?"
         width={200}
