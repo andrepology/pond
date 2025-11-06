@@ -14,16 +14,34 @@ console.log('🔧 Configuring server...');
 
 // CRITICAL: CORS must be configured BEFORE Better Auth handler
 // Allow credentials (cookies) from frontend
+const allowedOrigins = process.env.TRUSTED_ORIGINS?.split(",") || ["http://localhost:5173"];
+
 app.use(
   cors({
-    origin: process.env.TRUSTED_ORIGINS?.split(",") || ["http://localhost:5173"],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in the static list
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Allow all Vercel deployments (*.vercel.app)
+      if (origin.endsWith('.vercel.app')) {
+        return callback(null, true);
+      }
+      
+      // Reject other origins
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     // Allow the x-jazz-auth header that Jazz plugin uses
     allowedHeaders: ["Content-Type", "Authorization", "x-jazz-auth"],
   })
 );
 
-console.log('✅ CORS configured for:', process.env.TRUSTED_ORIGINS);
+console.log('✅ CORS configured for:', allowedOrigins.join(', '), '+ *.vercel.app');
 
 // CRITICAL: Mount Better Auth handler BEFORE express.json()
 // Better Auth needs to handle raw request body for certain operations
