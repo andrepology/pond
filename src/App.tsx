@@ -130,7 +130,7 @@ export default function App() {
           centers={[[ 0.4, -3 ]]}
           position={[-1.2, -1, -1.5]}
         /> */}
-        <Center position={[0, 1.5, 1.5]}>
+        <Center position={[0, 0.5, 1.5]}>
           <Focusable id="01" name="" position={[-1.2, 2.5, -3]} inspectable>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </Focusable>
