@@ -190,15 +190,17 @@ export function DateTimeDisplay() {
           </button>
         )}
       </div>
-      <div
-        className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass} transition-colors duration-200 cursor-default text-[rgba(206,205,195,0.80)] hover:text-gray-600`}
-        style={{
-          fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          letterSpacing: '0.0295rem'
-        }}
-      >
-        {PROMPTS[state.promptIndex]}
-      </div>
+      {false && (
+        <div
+          className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass} transition-colors duration-200 cursor-default text-[rgba(206,205,195,0.80)] hover:text-gray-600`}
+          style={{
+            fontFamily: 'AlteHaasGroteskBold, sans-serif',
+            letterSpacing: '0.0295rem'
+          }}
+        >
+          {PROMPTS[state.promptIndex]}
+        </div>
+      )}
     </div>
   )
 } 

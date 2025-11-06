@@ -3,7 +3,7 @@ import type { SpineState } from '../core/Spine'
 import { TubeBody } from './TubeBody'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { createFoodMarkerMaterial } from '../components/FoodVisuals'
+import { createFoodMarkerMaterial } from '../../../fish/components/FoodVisuals'
 import { useControls, folder } from 'leva'
 
 interface FinAttachmentData {

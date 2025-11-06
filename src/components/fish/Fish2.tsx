@@ -1,12 +1,12 @@
 import React from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
-import { MOVEMENT_DEFAULTS } from '../config/constants'
+import { MOVEMENT_DEFAULTS } from './config/Constants'
 import { useFishMovement } from './movement/useFishMovement'
 import { FishBody } from './render/FishBody'
 import { usePointerGestures } from './interaction/usePointerGestures'
-import { useFoodSystem } from './hooks/useFoodSystem'
-import { FoodVisuals } from './components/FoodVisuals'
+import { useFoodSystem } from '../../fish/hooks/useFoodSystem'
+import { FoodVisuals } from '../../fish/components/FoodVisuals'
 import { useMemo, useRef, useState } from 'react'
 
 

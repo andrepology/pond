@@ -122,23 +122,9 @@ export default function App() {
 
           />
 
-        {/* Lights */}
-        <ambientLight intensity={Math.PI / 4} />
-        <directionalLight
-          castShadow
-          intensity={ 1.5 * Math.PI }
-          position={[5, 18, 48]}
-          shadow-mapSize={[2048, 2048]}
-          shadow-bias={-0.00015}
-          shadow-radius={10}
-          shadow-blurSamples={20}
-        />
-
-        
-
 
         {/* Main Scene Content */}
-        <ZenSand
+        {/* <ZenSand
           size={40}
           segments={512}
           color="#ffffff"
@@ -147,18 +133,18 @@ export default function App() {
           driftSpeed={1.1}
           centers={[[ 0.4, -3 ]]}
           position={[-1.2, -1, -1.5]}
-        />
+        /> */}
         <Center position={[0, 0.5, 1.5]}>
           <Focusable id="01" name="" position={[-1.2, 2.5, -3]} inspectable>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </Focusable>
-          <Focusable id="02" name="mindbody" position={[1.0, 0.2, -3]}>
+          {/* <Focusable id="02" name="mindbody" position={[1.0, 0.2, -3]}>
             <MindBody
               color="indianred"
               wandering={true}
               wanderCenter={new THREE.Vector3(-1.2, 1.8, -3)}
             />
-          </Focusable>
+          </Focusable> */}
 
            {/* Shadows and Ground */}
            <AccumulativeShadows
