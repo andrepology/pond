@@ -4,12 +4,17 @@ import { useVoice } from './VoiceProvider'
 
 interface CallButtonProps {
   className?: string
+  color?: string
 }
 
-export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
-  const { status, error, isConnected, isSpeaking, startConversation, stopConversation } = useVoice()
+export const CallButton: React.FC<CallButtonProps> = ({ className = '', color = '#7B9089' }) => {
+  const { status, error, isConnected, startConversation, stopConversation } = useVoice()
+  const isSpeaking = status === 'speaking'
 
-  const handleClick = async () => {
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('CallButton clicked, status:', status)
     if (isConnected || status === 'connecting' || status === 'disconnecting') {
       await stopConversation()
     } else {
@@ -17,13 +22,25 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
     }
   }
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation()
+  }
+
+  // Helper to convert hex to rgba
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
   // Get colors and states based on status
   const getButtonState = () => {
     switch (status) {
       case 'connecting':
         return {
-          innerScale: 0.89,
-          innerColor: 'rgba(123, 144, 137, 0.6)',
+          innerScale: 1.25,
+          ringColor: hexToRgba(color, 0.6),
           showRipples: false,
           disabled: true
         }
@@ -31,29 +48,29 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
       case 'speaking':
       case 'listening':
         return {
-          innerScale: 0.90,
-          innerColor: '#7B9089',
+          innerScale: 1.40,
+          ringColor: color,
           showRipples: isSpeaking,
           disabled: false
         }
       case 'disconnecting':
         return {
-          innerScale: 0.95,
-          innerColor: 'rgba(123, 144, 137, 0.6)',
+          innerScale: 1.2,
+          ringColor: hexToRgba(color, 0.6),
           showRipples: false,
           disabled: true
         }
       case 'error':
         return {
-          innerScale: 0.95,
-          innerColor: '#ef4444',
+          innerScale: 1.02,
+          ringColor: '#ef4444',
           showRipples: false,
           disabled: false
         }
       default:
         return {
-          innerScale: 0.99,
-          innerColor: '#7B9089',
+          innerScale: 1.2,
+          ringColor: color,
           showRipples: false,
           disabled: false
         }
@@ -67,50 +84,49 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
     <motion.div
       className="absolute pointer-events-none z-10"
       style={{
-        inset: 4,
+        inset: 0,
         borderRadius: '50%',
-        border: '1px solid rgba(255, 255, 255, 0.35)'
+        border: `1px solid ${hexToRgba(color, 0.35)}`
       }}
-      initial={{ scale: 1.02, opacity: 0 }}
-      animate={{ scale: [1.02, 1.16], opacity: [0.35, 0.6, 0] }}
+      initial={{ scale: 1.0, opacity: 0 }}
+      animate={{ scale: [1.0, 1.3], opacity: [0.5, 0.7, 0] }}
       transition={{ duration: 2.0, repeat: Infinity, ease: 'easeOut', delay, times: [0, 0.4, 1] }}
     />
   )
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div 
-        className={`relative w-full pointer-events-auto flex items-center justify-center ${className}`}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{
-          type: 'spring',
-          stiffness: 300,
-          damping: 30,
-          duration: 0.3
+    <div 
+      className={`relative flex items-center justify-center ${className}`}
+      style={{ 
+        pointerEvents: 'auto',
+        position: 'relative',
+        zIndex: 50
+      }}
+    >
+      {/* Main button container - circular */}
+      <motion.button
+        onClick={handleClick}
+        onMouseDown={handleMouseDown}
+        disabled={buttonState.disabled}
+        type="button"
+        className="relative focus:outline-none"
+        style={{
+          width: 60,
+          height: 60,
+          cursor: buttonState.disabled ? 'not-allowed' : 'pointer',
+          border: 'none',
+          background: 'transparent',
+          padding: 0,
+          zIndex: 50,
+          pointerEvents: 'auto',
+          position: 'relative',
+          WebkitTapHighlightColor: 'transparent'
         }}
+        whileHover={!buttonState.disabled ? { scale: 1.1 } : {}}
+        whileTap={!buttonState.disabled ? { scale: 0.9 } : {}}
+        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        initial={{ opacity: 1, scale: 1 }}
       >
-        {/* Main button container - circular */}
-        <motion.button
-          onClick={handleClick}
-          disabled={buttonState.disabled}
-          className="relative focus:outline-none"
-          style={{
-            width: 80,
-            height: 80,
-          }}
-        >
-          {/* Outer circle - subtle backdrop */}
-          <div 
-            className="absolute inset-0"
-            style={{
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.10)'
-            }}
-          />
-
           {/* Ripples during call */}
           <AnimatePresence>
             {buttonState.showRipples && (
@@ -122,21 +138,28 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
             )}
           </AnimatePresence>
 
-          {/* Inner circle - solid color with label */}
+          {/* Inner circle - white background with label */}
           <motion.div
-            className="absolute cursor-pointer flex items-center justify-center z-20"
+            className="absolute flex items-center justify-center z-20"
             style={{
-              inset: 4,
+              inset: 0,
               borderRadius: '50%',
-              backgroundColor: buttonState.innerColor
+              backgroundColor: '#ffffff',
+              pointerEvents: 'none',
+              zIndex: 20
             }}
             animate={{ scale: buttonState.innerScale }}
-            whileHover={!buttonState.disabled ? { scale: buttonState.innerScale * 1.05 } : {}}
-            whileTap={!buttonState.disabled ? { scale: buttonState.innerScale * 0.90 } : {}}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             initial={{ scale: 0.95 }}
           >
-            <span className="font-semibold tracking-wide text-white text-xs z-10 relative">
+            <span 
+              className="font-semibold tracking-wide z-10 relative"
+              style={{ 
+                color: buttonState.ringColor,
+                fontSize: '13px',
+                pointerEvents: 'none'
+              }}
+            >
               {(status === 'connected' || status === 'speaking' || status === 'listening') ? 'end' : 'call'}
             </span>
           </motion.div>
@@ -144,10 +167,11 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
           {/* Connecting pulse animation */}
           {status === 'connecting' && (
             <motion.div
-              className="absolute inset-0"
+              className="absolute inset-0 pointer-events-none"
               style={{
                 borderRadius: '50%',
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)'
+                border: `2px solid ${hexToRgba(color, 0.3)}`,
+                zIndex: 10
               }}
               animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -156,19 +180,14 @@ export const CallButton: React.FC<CallButtonProps> = ({ className = '' }) => {
         </motion.button>
 
         {/* Error display */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 5 }}
-              className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 text-xs text-red-300 bg-black/20 px-3 py-1 rounded-full whitespace-nowrap"
-            >
-              {error.message}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </AnimatePresence>
+        {error && (
+          <div
+            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 text-xs text-red-300 bg-black/20 px-3 py-1 rounded-full whitespace-nowrap pointer-events-none"
+            style={{ zIndex: 100 }}
+          >
+            {error.message}
+          </div>
+        )}
+    </div>
   )
 } 

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAccount } from 'jazz-tools/react'
 import { PondAccount, Intention, Conversation, FieldNote } from '../schema'
 import { CallButton } from '../VoiceChat'
+import { useVoice } from '../VoiceChat/VoiceProvider'
 
 type Tab = {
   id: string
@@ -163,6 +164,8 @@ const View = ({
     x.set(newX)
   }, [activeIndex, containerWidth, viewIndex, x])
 
+  const isActive = difference === 0
+
   return (
     <motion.div
       style={{
@@ -176,6 +179,7 @@ const View = ({
         x,
         opacity,
         filter: useMotionTemplate`blur(${blur}px)`,
+        pointerEvents: isActive ? 'auto' : 'none',
       }}
     >
       <div
@@ -183,13 +187,12 @@ const View = ({
         style={{
           width: '100%',
           height: '100%',
-          padding: '16px',
+          padding: '6px',
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
           overflowY: 'auto',
-          pointerEvents: 'auto',
         }}
         onWheel={(e) => e.stopPropagation()}
       >
@@ -216,7 +219,7 @@ const Tabs = ({
         border: '1px solid rgba(139, 115, 85, 0.2)',
         backgroundColor: 'rgba(243, 240, 235, 0.8)',
         backdropFilter: 'blur(10px)',
-        borderRadius: 12,
+        borderRadius: 8,
         display: 'flex',
         padding: 0,
         width: '100%',
@@ -244,13 +247,13 @@ const Tabs = ({
               style={{
                 position: 'relative',
                 width: '100%',
-                padding: 8,
+                padding: 6,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: 500,
-                borderRadius: 8,
+                borderRadius: 6,
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -290,13 +293,13 @@ const Tabs = ({
               style={{
                 position: 'relative',
                 width: '100%',
-                padding: 8,
+                padding: 6,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 fontSize: 22,
                 fontWeight: 500,
-                borderRadius: 8,
+                borderRadius: 6,
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
@@ -339,26 +342,37 @@ const Tabs = ({
 }
 
 const DYNAMIC_PROMPTS = [
-  '"what do you want to focus on today?"',
-  '"how are you feeling right now?"',
-  '"what\'s been on your mind lately?"',
-  '"what would you like to explore?"',
-  '"what\'s your current challenge?"',
-  '"what do you need support with?"'
+  'setting an intention',
+  'getting unstuck on a task',
+  'today\'s reflection',
+  'a part that needs listening',
+  'grounding yourself',
+  'what you\'re ready to release'
 ]
 
-const CallView = ({ conversations }: { conversations: Conversation[] }) => {
+// Helper to convert hex to rgba
+const hexToRgba = (hex: string, alpha: number) => {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const PromptSection = ({ color }: { color: string }) => {
   const [isHelpExpanded, setIsHelpExpanded] = useState(false)
   const [promptState, setPromptState] = useState({
     index: 0,
     fadeClass: 'opacity-100'
   })
+  const { status } = useVoice()
 
-  // Get orphaned conversations (not linked to any intention)
-  const orphanedConversations = conversations.filter(conv => !conv.intentionRef)
+  const textColor = hexToRgba(color, 0.6)
+  const isCallInProgress = status === 'connected' || status === 'speaking' || status === 'listening' || status === 'connecting' || status === 'disconnecting'
 
   // Cycle through dynamic prompts
   useEffect(() => {
+    if (isCallInProgress) return // Don't cycle prompts during calls
+
     const PROMPT_PERIOD_MS = 4000
     const PROMPT_FADE_MS = 800
 
@@ -386,119 +400,162 @@ const CallView = ({ conversations }: { conversations: Conversation[] }) => {
       clearInterval(promptInterval)
       if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
     }
-  }, [])
+  }, [isCallInProgress])
+
+  return (
+    <div style={{ padding: '32px 4px 64px 12px' }}>
+      {/* Prompt text and call button side by side */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 24,
+          paddingTop: 0,
+          paddingLeft: 16
+        }}
+      >
+        {/* Left column: Prompt text and help section */}
+        <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+          {/* Prompt text */}
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              textAlign: 'left',
+              pointerEvents: 'none',
+              lineHeight: '1.2',
+              marginBottom: -0,
+              opacity: isCallInProgress ? 0 : 1,
+              transition: 'opacity 0.3s ease-out'
+            }}
+          >
+            <span style={{ color: textColor }}>
+              talk to innio about
+            </span>
+            <span style={{ color: textColor }}>
+              {' '}
+            </span>
+            <span
+              className={`transition-opacity duration-1000 ${promptState.fadeClass}`}
+              style={{ color: textColor }}
+            >
+              {DYNAMIC_PROMPTS[promptState.index]}
+            </span>
+          </div>
+
+          {/* Help Section */}
+          <div
+            style={{
+              opacity: isCallInProgress ? 0 : 1,
+              transition: 'opacity 0.3s ease-out',
+              pointerEvents: isCallInProgress ? 'none' : 'auto'
+            }}
+          >
+            <div
+              onClick={() => setIsHelpExpanded(!isHelpExpanded)}
+              style={{
+                cursor: 'pointer',
+                width: '100%',
+                position: 'relative',
+                zIndex: 1
+              }}
+            >
+              <motion.div
+                style={{
+                  width: '100%',
+                  padding: '8px 0',
+                  display: 'flex',
+                  justifyContent: 'flex-start',
+                  alignItems: 'center',
+                  minHeight: '40px',
+                  boxSizing: 'border-box',
+                  gap: '8px'
+                }}
+              >
+                <motion.span
+                  animate={{ opacity: isHelpExpanded ? 0.8 : 0.6 }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 550,
+                    color: '#888'
+                  }}
+                >
+                  what to talk about
+                </motion.span>
+                <motion.svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  animate={{ opacity: isHelpExpanded ? 0.8 : 0.6 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ flexShrink: 0, color: '#888' }}
+                >
+                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.0" fill="none" />
+                  <text x="6" y="8.5" textAnchor="middle" fontSize="7" fill="currentColor" fontFamily="system-ui, sans-serif">?</text>
+                </motion.svg>
+              </motion.div>
+
+              <AnimatePresence>
+                {isHelpExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    style={{ overflow: 'hidden', width: '100%' }}
+                  >
+                    <div
+                      style={{
+                        padding: '12px 0',
+                        fontSize: 10,
+                        color: '#666',
+                        lineHeight: 1.6,
+                        width: '100%'
+                      }}
+                    >
+                      <ul style={{ margin: 0, paddingLeft: 16, listStyleType: 'disc' }}>
+                        <li style={{ marginBottom: 6 }}>Setting intentions (they'll hold you accountable)</li>
+                        <li style={{ marginBottom: 6 }}>Getting unstuck on tasks</li>
+                        <li style={{ marginBottom: 6 }}>Daily reflection & integration</li>
+                        <li style={{ marginBottom: 6 }}>Inner parts that need listening (IFS)</li>
+                        <li style={{ marginBottom: 6 }}>Nervous system regulation</li>
+                        <li>What you're avoiding or ready to let go</li>
+                      </ul>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* Call button */}
+        <div style={{ 
+          flexShrink: 0, 
+          paddingRight: 32, 
+          position: 'relative', 
+          zIndex: 50,
+          pointerEvents: 'auto'
+        }}>
+          <CallButton color={color} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const CallView = ({ conversations, color }: { conversations: Conversation[]; color: string }) => {
+  // Get orphaned conversations (not linked to any intention)
+  const orphanedConversations = conversations.filter(conv => !conv.intentionRef)
 
   if (orphanedConversations.length === 0) {
     return (
-      <div style={{ position: 'relative', padding: '24px 8px' }}>
-        {/* Large prompt text behind the call button */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            fontSize: 28,
-            fontWeight: 600,
-            textAlign: 'left',
-            pointerEvents: 'none',
-            zIndex: 0,
-            lineHeight: '1.2'
-          }}
-        >
-        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
-          ask innio
-        </span>
-        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
-          {' '}
-        </span>
-        <span
-          className={`transition-opacity duration-1000 ${promptState.fadeClass}`}
-          style={{ color: 'rgba(123, 144, 137, 0.6)' }}
-        >
-          {DYNAMIC_PROMPTS[promptState.index]}
-        </span>
-        </div>
-
-        {/* Call button on top */}
-        <div style={{ position: 'relative', zIndex: 1, marginBottom: 36 }}>
-          <CallButton />
-        </div>
-
-        {/* Help Section */}
-        <div
-          onClick={() => setIsHelpExpanded(!isHelpExpanded)}
-          style={{
-            cursor: 'pointer',
-            borderRadius: 6,
-            overflow: 'hidden'
-          }}
-        >
-          <motion.div
-            style={{
-              width: '100%',
-              padding: '8px 16px',
-              borderRadius: 6,
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              minHeight: '40px',
-              boxSizing: 'border-box',
-              gap: '8px'
-            }}
-          >
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: '#888'
-              }}
-            >
-              what to talk about
-            </span>
-            <motion.span
-              animate={{ rotate: isHelpExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ fontSize: 8, opacity: 0.6 }}
-            >
-              ▼
-            </motion.span>
-          </motion.div>
-
-          <AnimatePresence>
-            {isHelpExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                style={{ overflow: 'hidden' }}
-              >
-                <div
-                  style={{
-                    padding: '12px',
-                    fontSize: 10,
-                    color: '#666',
-                    lineHeight: 1.6,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '0 0 6px 6px',
-                    marginTop: 2,
-                  }}
-                >
-                  <ul style={{ margin: 0, paddingLeft: 16, listStyleType: 'disc' }}>
-                    <li style={{ marginBottom: 6 }}>Setting intentions (they'll hold you accountable)</li>
-                    <li style={{ marginBottom: 6 }}>Getting unstuck on tasks</li>
-                    <li style={{ marginBottom: 6 }}>Daily reflection & integration</li>
-                    <li style={{ marginBottom: 6 }}>Inner parts that need listening (IFS)</li>
-                    <li style={{ marginBottom: 6 }}>Nervous system regulation</li>
-                    <li>What you're avoiding or ready to let go</li>
-                  </ul>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div style={{ color: '#8B7355', fontSize: 12, opacity: 0.5, textAlign: 'center', marginTop: 12 }}>
+      <div style={{ position: 'relative' }}>
+        <PromptSection color={color} />
+        <div style={{ color: '#8B7355', fontSize: 12, opacity: 0.5, textAlign: 'center', marginTop: 12, padding: '0 16px' }}>
           No conversations yet
         </div>
       </div>
@@ -506,115 +563,8 @@ const CallView = ({ conversations }: { conversations: Conversation[] }) => {
   }
 
   return (
-    <div style={{ position: 'relative', padding: '24px 8px' }}>
-      {/* Large prompt text behind the call button */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          fontSize: 28,
-          fontWeight: 600,
-          textAlign: 'left',
-          pointerEvents: 'none',
-          zIndex: 0,
-          lineHeight: '1.2'
-        }}
-      >
-        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
-          ask innio
-        </span>
-        <span style={{ color: 'rgba(123, 144, 137, 0.6)' }}>
-          {' '}
-        </span>
-        <span
-          className={`transition-opacity duration-1000 ${promptState.fadeClass}`}
-          style={{ color: 'rgba(123, 144, 137, 0.6)' }}
-        >
-          {DYNAMIC_PROMPTS[promptState.index]}
-        </span>
-      </div>
-
-      {/* Call button on top */}
-      <div style={{ position: 'relative', zIndex: 1, marginBottom: 32 }}>
-        <CallButton />
-      </div>
-
-        {/* Help Section */}
-        <div style={{ marginBottom: 40 }}>
-          <div
-            onClick={() => setIsHelpExpanded(!isHelpExpanded)}
-            style={{
-              cursor: 'pointer',
-              borderRadius: 6,
-              overflow: 'hidden'
-            }}
-          >
-            <motion.div
-              style={{
-                width: '100%',
-                padding: '8px 16px',
-                borderRadius: 6,
-                display: 'flex',
-                justifyContent: 'flex-start',
-                alignItems: 'center',
-                minHeight: '40px',
-                boxSizing: 'border-box',
-                gap: '8px'
-              }}
-            >
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: '#888'
-              }}
-            >
-              what to talk about
-            </span>
-            <motion.span
-              animate={{ rotate: isHelpExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              style={{ fontSize: 8, opacity: 0.6 }}
-            >
-              ▼
-            </motion.span>
-          </motion.div>
-
-          <AnimatePresence>
-            {isHelpExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                style={{ overflow: 'hidden' }}
-              >
-                <div
-                  style={{
-                    padding: '12px',
-                    fontSize: 10,
-                    color: '#666',
-                    lineHeight: 1.6,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '0 0 6px 6px',
-                    marginTop: 2,
-                  }}
-                >
-                  <ul style={{ margin: 0, paddingLeft: 16, listStyleType: 'disc' }}>
-                    <li style={{ marginBottom: 6 }}>Setting intentions (they'll hold you accountable)</li>
-                    <li style={{ marginBottom: 6 }}>Getting unstuck on tasks</li>
-                    <li style={{ marginBottom: 6 }}>Daily reflection & integration</li>
-                    <li style={{ marginBottom: 6 }}>Inner parts that need listening (IFS)</li>
-                    <li style={{ marginBottom: 6 }}>Nervous system regulation</li>
-                    <li>What you're avoiding or ready to let go</li>
-                  </ul>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+    <div style={{ position: 'relative' }}>
+      <PromptSection color={color} />
 
       <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 12 }}>
         Recent Conversations
@@ -668,9 +618,12 @@ const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
     return <div style={{ color: '#8B7355', fontSize: 14 }}>Loading...</div>
   }
 
+  const tab = tabs.find(t => t.id === tabId)
+  const tabColor = tab?.color || '#7B9089'
+
   switch (tabId) {
     case 'call':
-      return <CallView conversations={root.conversations || []} />
+      return <CallView conversations={root.conversations || []} color={tabColor} />
     case 'intentions':
       return <IntentionsView intentions={root.intentions || []} />
     case 'fieldNotes':
