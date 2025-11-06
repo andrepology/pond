@@ -1,17 +1,21 @@
 import React from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
-import { MOVEMENT_DEFAULTS } from './config/Constants'
+import { MOVEMENT_DEFAULTS } from '../config/constants'
 import { useFishMovement } from './movement/useFishMovement'
 import { FishBody } from './render/FishBody'
 import { usePointerGestures } from './interaction/usePointerGestures'
+import { useFoodSystem } from './hooks/useFoodSystem'
+import { FoodVisuals } from './components/FoodVisuals'
 import { useMemo, useRef, useState } from 'react'
+
 
 export interface Fish2Props {
   debug?: boolean
+  onHeadPositionUpdate?: (worldPos: THREE.Vector3) => void
 }
 
-export function Fish2({ debug = false }: Fish2Props) {
+export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
   const { scene, camera } = useThree()
   const rootRef = useRef<THREE.Group>(null)
   const GROUND_Y = 0
@@ -35,6 +39,9 @@ export function Fish2({ debug = false }: Fish2Props) {
   const feedingPhase = useRef<'idle' | 'approach'>('idle')
   const BITE_THRESHOLD = 0.06
 
+  // Food system manages markers and ripples
+  const { foodMarkers, ripples, handleFeed } = useFoodSystem(rootRef, movement)
+
   useFrame((_, dt) => {
     // Face the invisible plane toward the camera and keep it through the sphere center
     if (planeRef.current) {
@@ -46,52 +53,13 @@ export function Fish2({ debug = false }: Fish2Props) {
       planeRef.current.position.set(0, 0, 0)
     }
     movement.step(dt)
-    // Update ripples
-    const now = performance.now()
-    const toRemove: ActiveRipple[] = []
-    activeRipples.current.forEach((r) => {
-      const progress = Math.min((now - r.startTime) / r.duration, 1)
-      const currentScale = RIPPLE_INITIAL_SCALE + progress * RIPPLE_EXPANSION_FACTOR
-      r.mesh.scale.set(currentScale, currentScale, 1)
-      ;(r.mesh.material as THREE.MeshBasicMaterial).opacity = RIPPLE_INITIAL_OPACITY * (1 - progress)
-      if (progress >= 1) toRemove.push(r)
-    })
-    if (toRemove.length) {
-      toRemove.forEach((r) => {
-        scene.remove(r.mesh)
-        r.mesh.geometry.dispose()
-        ;(r.mesh.material as THREE.MeshBasicMaterial).dispose()
-      })
-      activeRipples.current = activeRipples.current.filter((r) => !toRemove.includes(r))
-    }
-    // Feeding control: steer toward active target and consume by mouth-distance
-    if (movement.headRef.current) {
-      const head = movement.headRef.current.position
-      if (feedingPhase.current === 'approach') {
-        const idx = activeMarkerIndex.current ?? 0
-        const target = foodMarkersRef.current[idx]
-        if (target) {
-          movement.setFoodTarget(target)
-          const dist = head.distanceTo(target)
-          if (dist <= BITE_THRESHOLD) {
-            // Remove consumed and advance
-            foodMarkersRef.current.splice(idx, 1)
-            setFoodMarkers([...foodMarkersRef.current])
-            if (foodMarkersRef.current.length > 0) {
-              activeMarkerIndex.current = Math.min(idx, foodMarkersRef.current.length - 1)
-            } else {
-              activeMarkerIndex.current = null
-              feedingPhase.current = 'idle'
-            }
-          }
-        } else {
-          // Safety reset
-          activeMarkerIndex.current = null
-          feedingPhase.current = 'idle'
-        }
-      }
-    }
 
+    // Report head world position for star repulsion
+    if (onHeadPositionUpdate && rootRef.current) {
+      const worldPos = new THREE.Vector3()
+      movement.headRef.current.getWorldPosition(worldPos)
+      onHeadPositionUpdate(worldPos)
+    }
   })
 
   // Invisible ground for feeding
@@ -100,43 +68,6 @@ export function Fish2({ debug = false }: Fish2Props) {
     onDoubleTap: (pt) => handleFeed(pt),
     onLongPress: (pt) => handleFeed(pt),
   })
-
-  // --- Food marker and ripple feedback ---
-  const [foodMarkers, setFoodMarkers] = useState<THREE.Vector3[]>([])
-  const foodMarkersRef = useRef<THREE.Vector3[]>([])
-  const activeRipples = useRef<ActiveRipple[]>([])
-  const RIPPLE_DURATION = 1800
-  const RIPPLE_INITIAL_OPACITY = 0.05
-  const RIPPLE_EXPANSION_FACTOR = 5
-  const RIPPLE_INITIAL_SCALE = 0.1
-
-  interface ActiveRipple { mesh: THREE.Mesh; startTime: number; duration: number }
-
-  function handleFeed(ptWorld: THREE.Vector3) {
-    const local = rootRef.current ? rootRef.current.worldToLocal(ptWorld.clone()) : ptWorld.clone()
-    movement.setFoodTarget(local)
-    foodMarkersRef.current = [...foodMarkersRef.current, local.clone()]
-    setFoodMarkers(foodMarkersRef.current)
-    // Initialize feeding state if idle
-    if (feedingPhase.current === 'idle') {
-      activeMarkerIndex.current = foodMarkersRef.current.length - 1
-      feedingPhase.current = 'approach'
-    }
-    createRipple(local)
-  }
-
-  function createRipple(position: THREE.Vector3) {
-    const geometry = new THREE.CircleGeometry(RIPPLE_INITIAL_SCALE, 32)
-    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: RIPPLE_INITIAL_OPACITY, side: THREE.DoubleSide })
-    const rippleMesh = new THREE.Mesh(geometry, material)
-    rippleMesh.position.copy(position)
-    rippleMesh.position.y = GROUND_Y + 0.01
-    rippleMesh.rotation.x = -Math.PI / 2
-    scene.add(rippleMesh)
-    activeRipples.current.push({ mesh: rippleMesh, startTime: performance.now(), duration: RIPPLE_DURATION })
-  }
-
-
   return (
     <group ref={rootRef}>
       {/* Invisible interaction plane through the center, always facing the camera */}
@@ -151,17 +82,11 @@ export function Fish2({ debug = false }: Fish2Props) {
         <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Head sphere moved to FishBody component */}
-      <FishBody spine={movement.spine} headRef={movement.headRef} headDirection={movement.headDirection} bankRadians={movement.bankRadians.current} />
+      {/* Fish body */}
+      <FishBody spine={movement.spine} headRef={movement.headRef} headDirection={movement.headDirection} velocity={movement.velocity} bankRadians={movement.bankRadians.current} />
 
-
-      {/* Food markers */}
-      {foodMarkers.map((pt, idx) => (
-        <mesh key={`food-${idx}`} position={[pt.x, pt.y, pt.z]}>
-          <sphereGeometry args={[0.018, 12, 12]} />
-          <meshToonMaterial color="#FFFFFF" emissive="#FFFFFF" emissiveIntensity={3.2} toneMapped={false} />
-        </mesh>
-      ))}
+      {/* Food system visuals */}
+      <FoodVisuals foodMarkers={foodMarkers} ripples={ripples} />
     </group>
   )
 }

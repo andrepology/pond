@@ -2,11 +2,13 @@ import React, { useMemo, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 import type { SpineState } from '../core/Spine'
 import { useFrame } from '@react-three/fiber'
+import { createFishBodyShaderMaterial } from './FishBodyShader'
 
 interface TubeBodyProps {
   spine: SpineState
   headRef: React.MutableRefObject<THREE.Mesh | null>
   headDirection: React.MutableRefObject<THREE.Vector3>
+  velocity?: React.MutableRefObject<THREE.Vector3>
   color?: THREE.ColorRepresentation
   onFinData?: (finData: FinAttachmentData[]) => void
 }
@@ -20,7 +22,7 @@ interface FinAttachmentData {
   spineT: number
 }
 
-export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onFinData }: TubeBodyProps) {
+export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FFFFFF', onFinData }: TubeBodyProps) {
   const meshRef = useRef<THREE.Mesh>(null)
   const samplesPerSegment = useMemo(() => 8, [])
   const effectiveSegments = useMemo(() => Math.max(1, spine.points.length + 1), [spine.points.length])
@@ -47,6 +49,7 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
     const totalVertCount = sampleCount * (ringSegments + 1)
     const positions = new Float32Array(totalVertCount * 3)
     const normals = new Float32Array(totalVertCount * 3)
+    const uvs = new Float32Array(totalVertCount * 2)
     const indices: number[] = []
 
     // Ring-to-ring quads only
@@ -61,16 +64,9 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
     const geom = new THREE.BufferGeometry()
     geom.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geom.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
+    geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
     geom.setIndex(indices)
-    const mat = new THREE.MeshToonMaterial({ 
-      color: color, 
-      transparent: true, 
-      opacity: 0.1, 
-      toneMapped: false,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    })
+    const mat = createFishBodyShaderMaterial()
     return { geometry: geom, material: mat }
   }, [sampleCount, ringSegments])
 
@@ -80,13 +76,10 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
 
   // Keep material color in sync without recreating material
   useEffect(() => {
-    if ((material as THREE.MeshToonMaterial).color) (material as THREE.MeshToonMaterial).color.set(color)
+    if ((material as THREE.ShaderMaterial).uniforms?.baseColor) {
+      (material as THREE.ShaderMaterial).uniforms.baseColor.value.set(color)
+    }
   }, [material, color])
-
-  // Temporal smoothing refs
-  const prevCentersRef = useRef<THREE.Vector3[] | null>(null)
-  const prevNormalsRef = useRef<THREE.Vector3[] | null>(null)
-  const prevBinormalsRef = useRef<THREE.Vector3[] | null>(null)
 
   // Working arrays to avoid per-frame allocations
   const centersRef = useRef<THREE.Vector3[] | null>(null)
@@ -94,6 +87,7 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
   const normalsRef = useRef<THREE.Vector3[] | null>(null)
   const binormalsRef = useRef<THREE.Vector3[] | null>(null)
   const ringRadiiRef = useRef<Float32Array | null>(null)
+  const ringRadiiDerivRef = useRef<Float32Array | null>(null)
 
   // Persistent curve and control points
   const controlPointsRef = useRef<THREE.Vector3[] | null>(null)
@@ -119,21 +113,11 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
     ensureVecArray(tangentsRef)
     ensureVecArray(normalsRef)
     ensureVecArray(binormalsRef)
-    // prev arrays for smoothing
-    if (!prevCentersRef.current || prevCentersRef.current.length !== sampleCount) {
-      prevCentersRef.current = new Array(sampleCount)
-      for (let i = 0; i < sampleCount; i++) prevCentersRef.current[i] = new THREE.Vector3()
-    }
-    if (!prevNormalsRef.current || prevNormalsRef.current.length !== sampleCount) {
-      prevNormalsRef.current = new Array(sampleCount)
-      for (let i = 0; i < sampleCount; i++) prevNormalsRef.current[i] = new THREE.Vector3()
-    }
-    if (!prevBinormalsRef.current || prevBinormalsRef.current.length !== sampleCount) {
-      prevBinormalsRef.current = new Array(sampleCount)
-      for (let i = 0; i < sampleCount; i++) prevBinormalsRef.current[i] = new THREE.Vector3()
-    }
     if (!ringRadiiRef.current || ringRadiiRef.current.length !== sampleCount) {
       ringRadiiRef.current = new Float32Array(sampleCount)
+    }
+    if (!ringRadiiDerivRef.current || ringRadiiDerivRef.current.length !== sampleCount) {
+      ringRadiiDerivRef.current = new Float32Array(sampleCount)
     }
   }, [sampleCount])
 
@@ -151,9 +135,19 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
     }
   }, [spine.points.length])
 
-  useFrame(() => {
+  useFrame((state) => {
+    // Update shader uniforms every frame
+    const shaderMat = material as THREE.ShaderMaterial
+    if (shaderMat.uniforms) {
+      shaderMat.uniforms.time.value = state.clock.elapsedTime
+      if (velocity?.current) {
+        shaderMat.uniforms.velocity.value.copy(velocity.current)
+      }
+    }
+
     const positions = (geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array
     const normals = (geometry.getAttribute('normal') as THREE.BufferAttribute).array as Float32Array
+    const uvs = (geometry.getAttribute('uv') as THREE.BufferAttribute).array as Float32Array
 
     // Build curve with ghost endpoints for stability
     const headPos = headRef.current?.position ?? spine.points[0] ?? scratchRef.current.a.set(0, 0, 0)
@@ -186,7 +180,12 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
     const normalsF = normalsRef.current!
     const binormalsF = binormalsRef.current!
     const t0 = tangents[0]
-    const up = Math.abs(t0.y) < 0.9 ? scratchRef.current.a.set(0, 1, 0) : scratchRef.current.a.set(1, 0, 0)
+    // Smooth transition between up vectors to prevent instant orientation switches
+    const upY = new THREE.Vector3(0, 1, 0)
+    const upX = new THREE.Vector3(1, 0, 0)
+    const t = Math.abs(t0.y)
+    const blendFactor = THREE.MathUtils.smoothstep(0.6, 1.0, t) // Wider transition zone
+    const up = scratchRef.current.a.lerpVectors(upY, upX, blendFactor)
     normalsF[0].copy(up).sub(scratchRef.current.b.copy(t0).multiplyScalar(up.dot(t0))).normalize()
     binormalsF[0].crossVectors(t0, normalsF[0]).normalize()
     for (let i = 1; i < sampleCount; i++) {
@@ -203,50 +202,54 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
       binormalsF[i].crossVectors(ti, ni).normalize()
     }
 
-    // Temporal smoothing
-    const smoothAlpha = 0.35
-    if (prevCentersRef.current && prevCentersRef.current.length === centers.length) {
-      for (let i = 0; i < centers.length; i++) {
-        centers[i].lerpVectors(prevCentersRef.current[i], centers[i], smoothAlpha)
-      }
-    }
-    if (prevNormalsRef.current && prevNormalsRef.current.length === normalsF.length && prevBinormalsRef.current) {
-      for (let i = 0; i < normalsF.length; i++) {
-        normalsF[i].lerpVectors(prevNormalsRef.current[i], normalsF[i], smoothAlpha).normalize()
-        binormalsF[i].lerpVectors(prevBinormalsRef.current[i], binormalsF[i], smoothAlpha).normalize()
-      }
-    }
-
     // Fill vertex buffers with teardrop geometry
     const tmp = scratchRef.current.a
     const radial = scratchRef.current.b
     const ringRadii = ringRadiiRef.current!
-    
+    const ringRadiiDeriv = ringRadiiDerivRef.current!
+
+    // Teardrop shape parameters
+    const maxR = 0.35
+    const p = 0.6  // controls head roundness (lower = rounder)
+    const q = 2.1  // controls tail sharpness (higher = sharper)
+
     for (let y = 0; y < sampleCount; y++) {
       const center = centers[y]
       const t = y / (sampleCount - 1)
-      
-      // Mathematical teardrop using parametric equation for perfect smoothness
-      const maxR = 0.35
-      // Teardrop parameter: s goes from 0 (head) to 1 (tail)
       const s = t
-      // Classic teardrop formula: r(s) = a * sqrt(s) * (1-s)^n
-      // Modified for better head roundness: r(s) = a * s^p * (1-s)^q
-      const p = 0.6  // controls head roundness (lower = rounder)
-      const q = 2.1  // controls tail sharpness (higher = sharper)
-      const baseRadius = Math.pow(s, p) * Math.pow(1 - s, q)
+
+      // Compute radius: r(s) = maxR * s^p * (1-s)^q * belly(s)
+      const sPowP = Math.pow(s, p)
+      const oneMinusS = 1 - s
+      const oneMinusSPowQ = Math.pow(oneMinusS, q)
+      const baseRadius = sPowP * oneMinusSPowQ
       
-      // Add slight belly curve for organic feel
-      const belly = 1 + 0.08 * Math.sin(Math.PI * s * 0.8)
+      // Belly curve
+      const bellyArg = Math.PI * s * 0.8
+      const belly = 1 + 0.08 * Math.sin(bellyArg)
       
       const radius = Math.max(0.001, maxR * baseRadius * belly)
       ringRadii[y] = radius
+
+      // Compute dr/ds using product rule: d/ds[s^p * (1-s)^q * belly(s)]
+      // = [p * s^(p-1) * (1-s)^q - q * s^p * (1-s)^(q-1)] * belly + s^p * (1-s)^q * d(belly)/ds
+      const dBaseRadius = p * Math.pow(Math.max(0.001, s), p - 1) * oneMinusSPowQ - 
+                          q * sPowP * Math.pow(oneMinusS, q - 1)
+      const dBelly = 0.08 * Math.PI * 0.8 * Math.cos(bellyArg)
+      const dRadius = maxR * (dBaseRadius * belly + baseRadius * dBelly)
       
+      // Convert ds to dt (since s = t, ds/dt = 1, so dr/dt = dr/ds)
+      // Scale by spine length to get proper world-space derivative
+      ringRadiiDeriv[y] = dRadius
+
       const normal = normalsF[y]
       const binorm = binormalsF[y]
-      
+      const tangent = tangents[y]
+      const drdt = ringRadiiDeriv[y]
+
       for (let x = 0; x <= ringSegments; x++) {
         const idx = (y * (ringSegments + 1) + x) * 3
+        const uvIdx = (y * (ringSegments + 1) + x) * 2
         const nx = ringCos[x]
         const ny = ringSin[x]
         tmp.copy(center)
@@ -255,24 +258,32 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
         positions[idx] = tmp.x
         positions[idx + 1] = tmp.y
         positions[idx + 2] = tmp.z
-        
-        // Compute smooth surface normal
+
+        // Compute correct surface normal for parametric tube
+        // Surface: P(u,v) = C(u) + r(u) * [N(u) * cos(v) + B(u) * sin(v)]
+        // Normal: (radialVector - tangent * dr/du).normalize()
         radial.set(0, 0, 0)
         radial.addScaledVector(normal, nx)
         radial.addScaledVector(binorm, ny)
         
-        // Simple radial normals - good enough for toon shading
-        // (Removed expensive analytical computation)
-        
-        radial.normalize()
-        normals[idx] = radial.x
-        normals[idx + 1] = radial.y
-        normals[idx + 2] = radial.z
+        // Subtract the tangent component weighted by radius derivative
+        const surfaceNormal = scratchRef.current.c
+        surfaceNormal.copy(radial).addScaledVector(tangent, -drdt)
+        surfaceNormal.normalize()
+
+        normals[idx] = surfaceNormal.x
+        normals[idx + 1] = surfaceNormal.y
+        normals[idx + 2] = surfaceNormal.z
+
+        // UV coordinates: x = ring position (0-1), y = spine position (0-1)
+        uvs[uvIdx] = x / ringSegments
+        uvs[uvIdx + 1] = y / (sampleCount - 1)
       }
     }
 
     geometry.getAttribute('position').needsUpdate = true
     geometry.getAttribute('normal').needsUpdate = true
+    geometry.getAttribute('uv').needsUpdate = true
 
     // Generate fin attachment data if callback provided
     if (onFinData) {
@@ -314,17 +325,6 @@ export function TubeBody({ spine, headRef, headDirection, color = '#FFFFFF', onF
       onFinData(finBuf)
       // Flip buffer index for next frame
       finActiveIdxRef.current = 1 - activeIdx
-    }
-
-    // Store for next frame smoothing
-    if (prevCentersRef.current) {
-      for (let i = 0; i < sampleCount; i++) prevCentersRef.current[i].copy(centers[i])
-    }
-    if (prevNormalsRef.current) {
-      for (let i = 0; i < sampleCount; i++) prevNormalsRef.current[i].copy(normalsF[i])
-    }
-    if (prevBinormalsRef.current) {
-      for (let i = 0; i < sampleCount; i++) prevBinormalsRef.current[i].copy(binormalsF[i])
     }
   })
 

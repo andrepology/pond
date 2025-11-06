@@ -29,7 +29,7 @@ interface FontModule {
 // Constants
 const FADE_SPEED = 8
 const LABEL_OFFSET = 0.3
-const FONT_SIZE = 0.15
+const FONT_SIZE = 0.225
 const TEXT_COLOR = '#cccccc' // 80 = 50% opacity in hex
 
 // Font loading
@@ -147,7 +147,7 @@ export function Focusable({
     }
   }, [children, setLabelY])
 
-  useCursor(hovered)
+  // useCursor(hovered) // disabled
 
   return (
     <group

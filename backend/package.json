@@ -1,0 +1,33 @@
+{
+  "name": "pond-backend",
+  "version": "1.0.0",
+  "description": "Authentication server for Pond using Better Auth + Jazz",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "migrate": "pnpm dlx @better-auth/cli migrate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-auth": "^1.0.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jazz-tools": "^0.18.13",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@better-auth/cli": "^0.8.1",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
