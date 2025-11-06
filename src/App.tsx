@@ -12,7 +12,6 @@ import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
-import { AuthFlow } from './components/AuthFlow'
 import { JournalBrowser } from './components/JournalBrowser'
 
 import MindBody from './components/MindBody'
@@ -76,9 +75,6 @@ export default function App() {
     <>
       {import.meta.env.MODE === 'development' && <Leva collapsed />}
 
-      {/* Authentication Flow - shows sign in/sign up forms */}
-      <AuthFlow />
-
       <Canvas
         shadows="soft"
         camera={{ position: [0, 12, 12], fov: 45 }}
@@ -134,7 +130,7 @@ export default function App() {
           centers={[[ 0.4, -3 ]]}
           position={[-1.2, -1, -1.5]}
         /> */}
-        <Center position={[0, 0.5, 1.5]}>
+        <Center position={[0, 1.5, 1.5]}>
           <Focusable id="01" name="" position={[-1.2, 2.5, -3]} inspectable>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </Focusable>

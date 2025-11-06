@@ -1,12 +1,16 @@
 import { motion, useMotionTemplate, useSpring, useTransform, useVelocity, AnimatePresence } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useAccount } from 'jazz-tools/react'
+import { useIsAuthenticated } from 'jazz-tools/react-core'
 import { PondAccount, Intention, Conversation, FieldNote } from '../schema'
 import { CallButton } from '../VoiceChat'
 import { useVoice } from '../VoiceChat/VoiceProvider'
+import { AuthView } from './AuthView'
+
+type TabId = 'call' | 'intentions' | 'fieldNotes'
 
 type Tab = {
-  id: string
+  id: TabId
   label: string
   color: string
   isCallButton: boolean
@@ -18,9 +22,9 @@ const tabs: Tab[] = [
   { id: 'fieldNotes', label: '✎', color: '#8B7B7A', isCallButton: false },
 ]
 
-type TabId = Tab['id']
-
 export function JournalBrowser() {
+  const isAuthenticated = useIsAuthenticated()
+  
   const [activeTab, setActiveTab] = useState<TabId | null>(null)
   const [isDocked, setIsDocked] = useState(true)
   const isMounted = useMounted()
@@ -117,13 +121,37 @@ export function JournalBrowser() {
                 viewIndex={idx}
                 activeIndex={activeTab ? tabs.findIndex((t) => t.id === activeTab) : -1}
               >
-                <TabContent tabId={tab.id} root={root} />
+                <TabContent tabId={tab.id} root={root} isAuthenticated={isAuthenticated} />
               </View>
             ))}
         </motion.div>
 
         {/* Tabs */}
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} isDocked={isDocked} />
+        
+        {/* Auth view when docked and not authenticated */}
+        {isDocked && !isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: 0,
+              right: 0,
+              marginBottom: 8,
+              backgroundColor: 'rgba(243, 240, 235, 0.95)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: 12,
+              border: '1px solid rgba(139, 115, 85, 0.2)',
+              pointerEvents: 'auto',
+            }}
+          >
+            <AuthView />
+          </motion.div>
+        )}
       </motion.div>
     </div>
   )
@@ -613,9 +641,9 @@ const CallView = ({ conversations, color }: { conversations: Conversation[]; col
   )
 }
 
-const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
+const TabContent = ({ tabId, root, isAuthenticated }: { tabId: TabId; root?: any; isAuthenticated: boolean }) => {
   if (!root) {
-    return <div style={{ color: '#8B7355', fontSize: 14 }}>Loading...</div>
+    return <div style={{ color: '#8B7355', fontSize: 14, padding: 16 }}>Loading...</div>
   }
 
   const tab = tabs.find(t => t.id === tabId)
@@ -628,6 +656,8 @@ const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
       return <IntentionsView intentions={root.intentions || []} />
     case 'fieldNotes':
       return <FieldNotesView fieldNotes={root.fieldNotes || []} />
+    default:
+      return null
   }
 }
 
