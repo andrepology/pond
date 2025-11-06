@@ -74,7 +74,7 @@ export default function App() {
 
   return (
     <>
-      {import.meta.env.DEV && <Leva collapsed />}
+      {import.meta.env.MODE === 'development' && <Leva collapsed />}
 
       {/* Authentication Flow - shows sign in/sign up forms */}
       <AuthFlow />
