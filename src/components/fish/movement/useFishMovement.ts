@@ -25,6 +25,7 @@ export interface MovementOutputs {
   step: (delta: number) => void
   bankRadians: React.MutableRefObject<number>
   setFoodTarget: (p: THREE.Vector3) => void
+  clearFoodTarget: () => void
 }
 
 export function useFishMovement(params: MovementParams): MovementOutputs {
@@ -214,7 +215,11 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     foodTarget.current = clamped
   }
 
-  return { headRef, spine, headDirection, velocity, step, bankRadians, setFoodTarget }
+  const clearFoodTarget = () => {
+    foodTarget.current = null
+  }
+
+  return { headRef, spine, headDirection, velocity, step, bankRadians, setFoodTarget, clearFoodTarget }
 }
 
 

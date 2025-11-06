@@ -65,9 +65,9 @@ export default function App() {
   })
 
   const { lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls('Light Settings', {
-    lightRadius: { value: 8, min: 1, max: 20, step: 0.1 },
-    lightAmbient: { value: 0.2, min: 0, max: 1, step: 0.01 },
-    lightIntensity: { value: Math.PI, min: 0, max: Math.PI * 2, step: 0.01 },
+    lightRadius: { value: 11, min: 1, max: 20, step: 0.1 },
+    lightAmbient: { value: 0.3, min: 0, max: 1, step: 0.01 },
+    lightIntensity: { value: 2.3, min: 0, max: Math.PI * 2, step: 0.01 },
     lightPosition: { value: [0, 24, -1.5], step: 0.1 },
     lightBias: { value: 0.001, min: 0, max: 0.01, step: 0.0001 },
   })

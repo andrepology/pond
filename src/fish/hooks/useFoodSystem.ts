@@ -17,6 +17,7 @@ export interface Ripple {
 
 interface MovementOutputs {
   setFoodTarget: (p: THREE.Vector3) => void
+  clearFoodTarget: () => void
   headRef: React.MutableRefObject<THREE.Mesh | null>
 }
 
@@ -155,6 +156,11 @@ export function useFoodSystem(
     foodMarkersRef.current = foodMarkersRef.current.filter(marker => marker.state !== 'gone')
     if (foodMarkersRef.current.length !== initialLength) {
       hasChanges = true
+    }
+
+    // Clear food target when all markers consumed - resume wandering
+    if (foodMarkersRef.current.length === 0 && initialLength > 0) {
+      movement.clearFoodTarget()
     }
 
     if (hasChanges) {
