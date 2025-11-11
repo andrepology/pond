@@ -31,7 +31,7 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
     const isActive = !!active
 
     // This factor controls how much the camera moves up when the journal is undocked.
-    const verticalShiftFactor = isMobileDevice() ? -1.0 : -1.5
+    const verticalShiftFactor = isMobileDevice() ? -1.0 : -1.8
     const yOffset = isJournalDocked ? 0 : verticalShiftFactor
 
     if (isActive) {

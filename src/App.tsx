@@ -16,7 +16,8 @@ import { JournalBrowser } from './components/JournalBrowser'
 import MindBody from './components/MindBody'
 import ZenSand from './components/ZenSand'
 import { Perf } from 'r3f-perf'
-import { EffectComposer, Bloom, HueSaturation } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, HueSaturation, ToneMapping } from '@react-three/postprocessing'
+import { ToneMappingMode } from 'postprocessing'
 
 //useGLTF.preload('/models/mindbody.glb')
 //useGLTF.preload('/models/wellstone.glb')
@@ -60,9 +61,13 @@ export default function App() {
     }
   }, [])
 
-  const { mapping, exposure } = useControls({
-    exposure: { value: 0.85, min: 0, max: 4 },
-    mapping: { value: 'ACESFilmic', options: ['No', 'Linear', 'AgX', 'ACESFilmic', 'Reinhard', 'Cineon', 'Custom'] },
+
+  const { toneMappingMode } = useControls('Tone Mapping', {
+    toneMappingMode: {
+      value: 'NEUTRAL',
+      options: ['LINEAR', 'REINHARD', 'REINHARD2', 'REINHARD2_ADAPTIVE', 'UNCHARTED2', 'CINEON', 'ACES_FILMIC', 'AGX', 'NEUTRAL'],
+      labels: ['Linear', 'Reinhard', 'Reinhard2', 'Reinhard2 Adaptive', 'Uncharted2', 'Cineon', 'ACES Filmic', 'AGX', 'Neutral'],
+    },
   })
 
   const { lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls('Light Settings', {
@@ -84,6 +89,7 @@ export default function App() {
     saturation: { value: 0, min: -1, max: 1, step: 0.01 },
     hue: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
   })
+
 
   return (
     <>
@@ -170,9 +176,6 @@ export default function App() {
           </AccumulativeShadows>
         </Center>
 
-        {/* Tone mapping modifies shader chunks - must be before EffectComposer */}
-        {/* <Tone mapping={mapping} exposure={exposure} /> */}
-
         {/* Post-processing effects run after scene render */}
         <PostProcessingEffects
           bloomIntensity={bloomIntensity}
@@ -181,6 +184,7 @@ export default function App() {
           bloomKernelSize={bloomKernelSize}
           saturation={saturation}
           hue={hue}
+          toneMappingMode={toneMappingMode}
         />
 
 
@@ -208,6 +212,7 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
   bloomKernelSize,
   saturation,
   hue,
+  toneMappingMode,
 }: {
   bloomIntensity: number
   bloomThreshold: number
@@ -215,7 +220,10 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
   bloomKernelSize: number
   saturation: number
   hue: number
+  toneMappingMode: string
 }) {
+  const mode = useMemo(() => ToneMappingMode[toneMappingMode as keyof typeof ToneMappingMode], [toneMappingMode])
+
   return (
     <EffectComposer autoClear={false} multisampling={0}>
       <Bloom
@@ -225,44 +233,7 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
         kernelSize={bloomKernelSize}
       />
       <HueSaturation saturation={saturation} hue={hue} />
+      <ToneMapping mode={mode} />
     </EffectComposer>
   )
 })
-
-function Tone({ mapping, exposure }) {
-  const gl = useThree((state) => state.gl)
-  useEffect(() => {
-    const prevFrag = THREE.ShaderChunk.tonemapping_pars_fragment
-    const prevTonemapping = gl.toneMapping
-    const prevTonemappingExp = gl.toneMappingExposure
-    // Model viewers "commerce" tone mapping
-    // https://github.com/google/model-viewer/blob/master/packages/model-viewer/src/three-components/Renderer.ts#L141
-    THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
-      'vec3 CustomToneMapping( vec3 color ) { return color; }',
-      `float startCompression = 0.8 - 0.04;
-       float desaturation = 0.15;
-       vec3 CustomToneMapping( vec3 color ) {
-         color *= toneMappingExposure;
-         float x = min(color.r, min(color.g, color.b));
-         float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
-         color -= offset;
-         float peak = max(color.r, max(color.g, color.b));
-         if (peak < startCompression) return color;
-         float d = 1. - startCompression;
-         float newPeak = 1. - d * d / (peak + d - startCompression);
-         color *= newPeak / peak;
-         float g = 1. - 1. / (desaturation * (peak - newPeak) + 1.);
-         return mix(color, vec3(1, 1, 1), g);
-       }`,
-    )
-    gl.toneMapping = THREE[mapping + 'ToneMapping']
-    gl.toneMappingExposure = exposure
-    return () => {
-      // Retore on unmount or data change
-      gl.toneMapping = prevTonemapping
-      gl.toneMappingExposure = prevTonemappingExp
-      THREE.ShaderChunk.tonemapping_pars_fragment = prevFrag
-    }
-  }, [mapping, exposure])
-  return null
-}
