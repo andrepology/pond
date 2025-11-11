@@ -93,7 +93,7 @@ export default function App() {
 
   return (
     <>
-      {/* {__IS_DEV__ && <Leva collapsed />} */}
+      <Leva hidden={!__IS_DEV__} collapsed={__IS_DEV__} />
 
       <Canvas
         shadows="soft"
