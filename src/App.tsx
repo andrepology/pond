@@ -87,7 +87,7 @@ export default function App() {
 
   return (
     <>
-      {import.meta.env.MODE === 'development' && <Leva collapsed />}
+      {import.meta.env.DEV && <Leva collapsed />}
 
       <Canvas
         shadows="soft"
