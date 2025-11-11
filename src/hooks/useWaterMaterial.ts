@@ -32,12 +32,12 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
     ior: { value: 2.26, min: 1, max: 2.333, step: 0.001 },
     transmission: { value: 1.00, min: 0, max: 1, step: 0.01 },
-    thickness: { value: 0.05, min: 0, max: 2, step: 0.01 },
+    thickness: { value: 0.89, min: 0, max: 2, step: 0.01 },
     attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
     attenuationColor: '#ffffff',
     specularIntensity: { value: 0.92, min: 0, max: 1, step: 0.01 },
-    normalStrength: { value: 0.44, min: 0, max: 2, step: 0.01 },
-    triplanarScale: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
+    normalStrength: { value: 0.16, min: 0, max: 2, step: 0.01 },
+    triplanarScale: { value: 0.15, min: 0, max: 0.3, step: 0.01 },
     flowSpeed: { value: 0.01, min: 0, max: 0.1, step: 0.001 },
     blendSharpness: { value: 4.0, min: 1, max: 10, step: 0.5 }
   })

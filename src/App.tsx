@@ -74,10 +74,10 @@ export default function App() {
   })
 
   const { bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize } = useControls('Bloom', {
-    bloomIntensity: { value: 1.0, min: 0, max: 3, step: 0.1 },
-    bloomThreshold: { value: 0.9, min: 0, max: 1, step: 0.01 },
+    bloomIntensity: { value: 0.7, min: 0, max: 3, step: 0.1 },
+    bloomThreshold: { value: 0.90, min: 0, max: 1, step: 0.01 },
     bloomSmoothing: { value: 0.025, min: 0, max: 1, step: 0.001 },
-    bloomKernelSize: { value: 2, options: [0, 1, 2], labels: ['Small', 'Medium', 'Large'] },
+    bloomKernelSize: { value: 1, options: [0, 1, 2], labels: ['Small', 'Medium', 'Large'] },
   })
 
   const { saturation, hue } = useControls('Hue & Saturation', {
@@ -171,7 +171,7 @@ export default function App() {
         </Center>
 
         {/* Tone mapping modifies shader chunks - must be before EffectComposer */}
-        <Tone mapping={mapping} exposure={exposure} />
+        {/* <Tone mapping={mapping} exposure={exposure} /> */}
 
         {/* Post-processing effects run after scene render */}
         <PostProcessingEffects

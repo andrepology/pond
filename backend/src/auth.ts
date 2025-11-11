@@ -89,6 +89,15 @@ export const auth = betterAuth({
     },
   },
   
+  // Cross-origin cookie settings for production (pond.space → pond-backend.fly.dev)
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: "none",
+      secure: true,
+      partitioned: true, // Required by newer browser standards for cross-site cookies
+    },
+  },
+  
   // Add Jazz plugin - CRITICAL for Jazz account key storage
   plugins: [
     jazzPlugin(),
