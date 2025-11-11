@@ -117,12 +117,8 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
-        pointerEvents: isDocked && !showAuthAfterCollapse ? 'none' : 'auto',
+        pointerEvents: 'none', // Allow touches to pass through to canvas
       }}
-      onPointerDown={(e) => e.stopPropagation()}
-      onPointerMove={(e) => e.stopPropagation()}
-      onPointerUp={(e) => e.stopPropagation()}
-      onWheel={(e) => e.stopPropagation()}
     >
       <motion.div
         animate={{
@@ -133,7 +129,10 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
+          pointerEvents: 'auto', // Re-enable for interactive children
+          touchAction: 'manipulation', // Prevent browser touch gestures from interfering
         }}
+        onWheel={(e) => e.stopPropagation()} // Only stop wheel events, let pointer events complete naturally
       >
         {/* Views Container */}
         <motion.div
@@ -151,7 +150,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
             backdropFilter: 'blur(10px)',
             borderRadius: 12,
             border: '1px solid rgba(139, 115, 85, 0.2)',
-            pointerEvents: 'auto',
+            pointerEvents: isDocked ? 'none' : 'auto', // Don't block canvas when collapsed
           }}
           onWheel={(e) => e.stopPropagation()}
         >

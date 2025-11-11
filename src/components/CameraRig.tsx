@@ -22,6 +22,15 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
   const savedCameraPosition = useRef(new THREE.Vector3())
   const wasActiveRef = useRef(false)
 
+  // Reset CameraControls state when journal state changes to prevent stuck interactions
+  // useEffect(() => {
+  //   const cameraControls = controls as CameraControlsImpl | null
+  //   if (cameraControls) {
+  //     // Cancel any active drag/zoom operations that might be stuck
+  //     cameraControls.cancel()
+  //   }
+  // }, [isJournalDocked, controls])
+
   useEffect(() => {
     const cameraControls = controls as CameraControlsImpl | null
     // Fallback to "pond" if no route match, otherwise use route param
