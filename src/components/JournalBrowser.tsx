@@ -103,7 +103,8 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
           setIsAuthTransitioningOut(false)
         }, 200)
       } else {
-        setIsDocked(false)
+        // Delay camera movement to let UI animation start first
+        setTimeout(() => setIsDocked(false), 200)
       }
     }
   }
