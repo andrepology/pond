@@ -32,7 +32,7 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
 
     // This factor controls how much the camera moves up when the journal is undocked.
     const verticalShiftFactor = isMobileDevice() ? -1.0 : -1.8
-    const yOffset = isJournalDocked ? 0 : verticalShiftFactor
+    const yOffset = isJournalDocked ? 0.0 : verticalShiftFactor
 
     if (isActive) {
       // Save current camera position before moving to active item
@@ -87,16 +87,18 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
     wasActiveRef.current = isActive
   }, [params.id, controls, scene, viewport.aspect, isJournalDocked])
 
+  console.log('isMobileDevice:', isMobileDevice())
+
   return (
     <CameraControls
       makeDefault
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 2}
       smoothTime={0.8}
-      draggingSmoothTime={0.2}
+      draggingSmoothTime={0.6}
       enabled={true}
-      dollySpeed={isMobileDevice ? 6.5 : 0.1}
-      truckSpeed={isMobileDevice ? 6.5 : 0.1}
+      dollySpeed={isMobileDevice() ? 6.5 : 0.5}
+      truckSpeed={isMobileDevice() ? 6.5 : 0.5}
       
       touches={{
         one: ACTION.ACTION.TOUCH_ROTATE,

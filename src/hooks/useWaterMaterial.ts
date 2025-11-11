@@ -1,8 +1,8 @@
 import * as THREE from 'three'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
-import { useControls } from 'leva'
+import { useControls, folder } from 'leva'
 
 interface WaterMaterialControls {
   roughness: number
@@ -16,17 +16,32 @@ interface WaterMaterialControls {
   triplanarScale: number
   flowSpeed: number
   blendSharpness: number
+  displacementStrength: number
+}
+
+interface Ripple {
+  centerX: number
+  centerY: number
+  centerZ: number
+  startTime: number
+  intensity: number
 }
 
 interface UseWaterMaterialReturn {
   materialRef: React.MutableRefObject<THREE.MeshPhysicalMaterial | null>
   controls: WaterMaterialControls
   waterNormals: THREE.Texture | null
+  createRipple: (worldPos: THREE.Vector3) => void
 }
+
+const MAX_RIPPLES = 16
 
 export function useWaterMaterial(): UseWaterMaterialReturn {
   const materialRef = useRef<THREE.MeshPhysicalMaterial | null>(null)
   const shaderUniformsRef = useRef<any>(null)
+  const [ripples, setRipples] = useState<Ripple[]>([])
+  const ripplesRef = useRef<Ripple[]>([])
+  const timeRef = useRef(0)
 
   const controls = useControls('Water Material', {
     roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
@@ -39,8 +54,31 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     normalStrength: { value: 0.16, min: 0, max: 2, step: 0.01 },
     triplanarScale: { value: 0.15, min: 0, max: 0.3, step: 0.01 },
     flowSpeed: { value: 0.01, min: 0, max: 0.1, step: 0.001 },
-    blendSharpness: { value: 4.0, min: 1, max: 10, step: 0.5 }
+    blendSharpness: { value: 4.0, min: 1, max: 10, step: 0.5 },
+    displacementStrength: { value: 0.04, min: 0, max: 0.1, step: 0.001 },
+    Ripples: folder({
+      ripplesEnabled: true,
+      rippleIntensity: { value: 1.0, min: 0, max: 1, step: 0.05 },
+      rippleSpeed: { value: 0.4, min: 0.1, max: 3, step: 0.1 },
+      rippleDecay: { value: 2.4, min: 0.1, max: 5, step: 0.1 },
+      rippleMaxRadius: { value: 1.0, min: 0.1, max: 1.0, step: 0.05 }
+    })
   })
+
+  const createRipple = useCallback((worldPos: THREE.Vector3) => {
+    setRipples(prev => {
+      const newRipples = [...prev, {
+        centerX: worldPos.x,
+        centerY: worldPos.y,
+        centerZ: worldPos.z,
+        startTime: timeRef.current,
+        intensity: controls.rippleIntensity
+      }]
+      const updated = newRipples.slice(-MAX_RIPPLES)
+      ripplesRef.current = updated
+      return updated
+    })
+  }, [controls.rippleIntensity])
 
   const waterNormals = useTexture('/waternormals.jpg')
 
@@ -54,7 +92,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     }
   }, [waterNormals])
 
-  // Setup triplanar mapping shader
+  // Setup triplanar mapping shader with vertex displacement
   useEffect(() => {
     const material = materialRef.current
     if (!material || !waterNormals) return
@@ -67,9 +105,80 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       shader.uniforms.uNormalStrength = { value: controls.normalStrength }
       shader.uniforms.uFlowSpeed = { value: controls.flowSpeed }
       shader.uniforms.uBlendSharpness = { value: controls.blendSharpness }
+      shader.uniforms.uDisplacementStrength = { value: controls.displacementStrength }
+
+      // Ripple uniforms
+      shader.uniforms.uRipplesEnabled = { value: true }
+      shader.uniforms.uRippleSpeed = { value: 0.4 }
+      shader.uniforms.uRippleDecay = { value: 2.4 }
+      shader.uniforms.uRippleMaxRadius = { value: 1.0 }
+      shader.uniforms.uRippleIntensity = { value: 1.0 }
+      shader.uniforms.uRippleCount = { value: 0 }
+
+      // Array of ripples (vec4: xyz=center, w=startTime)
+      const rippleArray = new Array(MAX_RIPPLES).fill(null).map(() => new THREE.Vector4(0, 0, 0, -1))
+      shader.uniforms.uRipples = { value: rippleArray }
 
       // Store reference for live updates
       shaderUniformsRef.current = shader.uniforms
+
+      // Add vertex displacement uniforms and shared variables
+      shader.vertexShader = shader.vertexShader.replace(
+        'void main() {',
+        `uniform float uTime;
+        uniform sampler2D uWaterNormalMap;
+        uniform float uFlowSpeed;
+        uniform float uDisplacementStrength;
+        
+        // Shared variables for displacement calculation
+        vec2 flowOffset;
+        vec2 displacementUv;
+        vec2 texelSize;
+        float dispCenter;
+        float dispRight;
+        float dispTop;
+        
+        void main() {`
+      )
+
+      // Compute displacement values and perturb normals in beginnormal_vertex
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <beginnormal_vertex>',
+        `#include <beginnormal_vertex>
+        
+        // Calculate displacement values (computed once, used for both normal and vertex)
+        flowOffset = vec2(uTime * uFlowSpeed * 0.3, -uTime * uFlowSpeed);
+        displacementUv = uv + flowOffset;
+        texelSize = vec2(1.0 / 512.0); // Assuming 512x512 texture
+        
+        // Sample center and neighboring texels
+        dispCenter = (texture2D(uWaterNormalMap, displacementUv).r + 
+                      texture2D(uWaterNormalMap, displacementUv).g + 
+                      texture2D(uWaterNormalMap, displacementUv).b) / 3.0;
+        dispRight = (texture2D(uWaterNormalMap, displacementUv + vec2(texelSize.x, 0.0)).r +
+                     texture2D(uWaterNormalMap, displacementUv + vec2(texelSize.x, 0.0)).g +
+                     texture2D(uWaterNormalMap, displacementUv + vec2(texelSize.x, 0.0)).b) / 3.0;
+        dispTop = (texture2D(uWaterNormalMap, displacementUv + vec2(0.0, texelSize.y)).r +
+                   texture2D(uWaterNormalMap, displacementUv + vec2(0.0, texelSize.y)).g +
+                   texture2D(uWaterNormalMap, displacementUv + vec2(0.0, texelSize.y)).b) / 3.0;
+        
+        // Compute gradients for normal perturbation (reduced multiplier to prevent normal flipping)
+        vec2 gradient = vec2(dispRight - dispCenter, dispTop - dispCenter) * uDisplacementStrength * 3.5;
+        
+        // Perturb object normal based on displacement gradients
+        vec3 displacedNormal = normalize(objectNormal - vec3(gradient.x, gradient.y, 0.0));
+        objectNormal = displacedNormal;`
+      )
+
+      // Apply smooth displacement using precomputed values
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        
+        // Apply smooth displacement with gentler smoothstep to prevent folding
+        float displacement = smoothstep(0.2, 0.8, dispCenter);
+        transformed += objectNormal * displacement * uDisplacementStrength;`
+      )
 
       // Add uniforms and triplanar function to fragment shader
       shader.fragmentShader = `
@@ -79,7 +188,76 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
         uniform float uNormalStrength;
         uniform float uFlowSpeed;
         uniform float uBlendSharpness;
-        
+        uniform bool uRipplesEnabled;
+        uniform float uRippleSpeed;
+        uniform float uRippleDecay;
+        uniform float uRippleMaxRadius;
+        uniform float uRippleIntensity;
+        uniform int uRippleCount;
+        uniform vec4 uRipples[${MAX_RIPPLES}];
+
+        // Calculate world-space ripple perturbation
+        vec3 calculateRippleNormal(vec3 worldPos, float time) {
+          vec3 rippleNormal = vec3(0.0);
+
+          if (!uRipplesEnabled) return rippleNormal;
+
+          for (int i = 0; i < ${MAX_RIPPLES}; i++) {
+            if (i >= uRippleCount) break;
+
+            vec4 ripple = uRipples[i];
+            vec3 center = ripple.xyz;
+            float startTime = ripple.w;
+
+            if (startTime < 0.0) continue; // Skip empty slots
+
+            float age = time - startTime;
+            if (age < 0.0) continue;
+
+            // 3D distance from fragment to ripple center
+            vec3 delta = worldPos - center;
+            float dist = length(delta);
+
+            // Skip if beyond max radius
+            if (dist > uRippleMaxRadius) continue;
+
+            // Normalized distance [0-1]
+            float normDist = dist / uRippleMaxRadius;
+
+            // Create expanding ring pattern
+            float rippleRadius = age * uRippleSpeed;
+
+            // Create a ring (sharp peak at ripple front)
+            float ringWidth = 0.08;
+            float distFromRing = abs(dist - rippleRadius);
+            float ring = smoothstep(ringWidth, 0.0, distFromRing);
+
+            // Add multiple frequency components for realistic ripple
+            float wave1 = sin((dist - rippleRadius) * 40.0) * 0.5;
+            float wave2 = sin((dist - rippleRadius) * 80.0) * 0.3;
+            float wave = (wave1 + wave2) * ring;
+
+            // Exponential decay over time only (not distance)
+            float timeDecay = exp(-age * uRippleDecay);
+
+            // Fade at edges of max radius
+            float edgeFade = 1.0 - smoothstep(uRippleMaxRadius * 0.7, uRippleMaxRadius, dist);
+
+            float totalDecay = timeDecay * edgeFade;
+
+            // Calculate normal perturbation from gradient
+            if (length(delta) > 0.001 && totalDecay > 0.01) {
+              vec3 gradient = normalize(delta);
+              // Smoother amplitude with ring effect
+              float amplitude = wave * totalDecay * uRippleIntensity * 0.5;
+
+              rippleNormal += gradient * amplitude;
+            }
+          }
+
+          return rippleNormal;
+        }
+
         // Triplanar normal mapping function
         vec3 triplanarNormal(vec3 worldPos, vec3 worldNormal) {
           // Calculate blend weights based on surface normal
@@ -140,7 +318,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
         #elif defined( USE_NORMALMAP_TANGENTSPACE )
           // Use triplanar mapping - no UV seams possible
           vec3 mapN = triplanarNormal(vWorldPosition, normalize(vNormal));
-          
+
           #ifdef USE_TANGENT
             normal = normalize( vTBN * mapN );
           #else
@@ -148,15 +326,20 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
             vec3 pos_dx = dFdx( vViewPosition );
             vec3 pos_dy = dFdy( vViewPosition );
             vec3 surfaceNormal = normalize( vNormal );
-            
+
             // Construct tangent space basis
             vec3 tangent = normalize( pos_dx );
             vec3 bitangent = normalize( cross( surfaceNormal, tangent ) );
             mat3 vTBN = mat3( tangent, bitangent, surfaceNormal );
-            
+
             normal = normalize( vTBN * mapN );
           #endif
         #endif
+
+        // Apply ripple normal perturbation to the final normal
+        vec3 ripplePerturbation = calculateRippleNormal(vWorldPosition, uTime);
+        normal += ripplePerturbation;
+        normal = normalize(normal);
         `
       )
     }
@@ -180,19 +363,79 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       if (shaderUniformsRef.current.uBlendSharpness) {
         shaderUniformsRef.current.uBlendSharpness.value = controls.blendSharpness
       }
+      if (shaderUniformsRef.current.uDisplacementStrength) {
+        shaderUniformsRef.current.uDisplacementStrength.value = controls.displacementStrength
+      }
     }
-  }, [controls.triplanarScale, controls.normalStrength, controls.flowSpeed, controls.blendSharpness])
+  }, [controls.triplanarScale, controls.normalStrength, controls.flowSpeed, controls.blendSharpness, controls.displacementStrength])
 
-  // Animate time uniform
+  // Animate time uniform and manage ripples
   useFrame((_, delta) => {
+    timeRef.current += delta
+
     if (shaderUniformsRef.current?.uTime) {
-      shaderUniformsRef.current.uTime.value += delta
+      shaderUniformsRef.current.uTime.value = timeRef.current
+    }
+
+    // Remove expired ripples (older than ripple lifetime)
+    const maxAge = controls.rippleMaxRadius / controls.rippleSpeed
+    const currentRipples = ripplesRef.current.filter(r => (timeRef.current - r.startTime) < maxAge)
+
+    // Update ref and state
+    if (currentRipples.length !== ripplesRef.current.length) {
+      ripplesRef.current = currentRipples
+      setRipples(currentRipples)
+    }
+
+    // Update shader uniforms with current ripple data
+    if (shaderUniformsRef.current) {
+      const uniforms = shaderUniformsRef.current
+
+      // Update ripple enable state
+      if (uniforms.uRipplesEnabled) {
+        uniforms.uRipplesEnabled.value = controls.ripplesEnabled
+      }
+
+      // Update ripple parameters
+      if (uniforms.uRippleSpeed) {
+        uniforms.uRippleSpeed.value = controls.rippleSpeed
+      }
+      if (uniforms.uRippleDecay) {
+        uniforms.uRippleDecay.value = controls.rippleDecay
+      }
+      if (uniforms.uRippleMaxRadius) {
+        uniforms.uRippleMaxRadius.value = controls.rippleMaxRadius
+      }
+      if (uniforms.uRippleIntensity) {
+        uniforms.uRippleIntensity.value = controls.rippleIntensity
+      }
+
+      // Pack ripple data into uniform array
+      if (uniforms.uRipples) {
+        const rippleArray = uniforms.uRipples.value
+        for (let i = 0; i < MAX_RIPPLES; i++) {
+          if (i < currentRipples.length) {
+            const ripple = currentRipples[i]
+            // vec4: x=centerX, y=centerY, z=centerZ, w=startTime
+            rippleArray[i].set(ripple.centerX, ripple.centerY, ripple.centerZ, ripple.startTime)
+          } else {
+            // Empty slot
+            rippleArray[i].set(0, 0, 0, -1)
+          }
+        }
+      }
+
+      // Update ripple count
+      if (uniforms.uRippleCount) {
+        uniforms.uRippleCount.value = Math.min(currentRipples.length, MAX_RIPPLES)
+      }
     }
   })
 
   return {
     materialRef,
     controls,
-    waterNormals
+    waterNormals,
+    createRipple
   }
 }

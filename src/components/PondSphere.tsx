@@ -18,7 +18,7 @@ interface InteractiveProps {
 }
 
 export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  const { materialRef: waterMaterialRef, controls: waterControls, waterNormals } = useWaterMaterial()
+  const { materialRef: waterMaterialRef, controls: waterControls, waterNormals, createRipple } = useWaterMaterial()
   const { fade } = usePondCrossfade({ start: 1.4, end: 1.5 })
 
   const starfieldRef = useRef<StarfieldHandle>(null)
@@ -76,7 +76,15 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       {/* <IntentionInput hasInputSignal={props.hasInputSignal} /> */}
 
       {/* Water sphere - render last for proper transparency */}
-      <mesh castShadow renderOrder={0} raycast={() => null}>
+      <mesh
+        castShadow
+        renderOrder={0}
+        onClick={(event) => {
+          if (waterControls.ripplesEnabled && event.point) {
+            createRipple(event.point)
+          }
+        }}
+      >
         <sphereGeometry args={[1.01, 64, 64]} />
         <meshPhysicalMaterial
           ref={(mat) => { waterMaterialRef.current = mat as unknown as THREE.MeshPhysicalMaterial }}

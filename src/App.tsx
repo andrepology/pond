@@ -16,7 +16,7 @@ import { JournalBrowser } from './components/JournalBrowser'
 import MindBody from './components/MindBody'
 import ZenSand from './components/ZenSand'
 import { Perf } from 'r3f-perf'
-import { EffectComposer, Bloom, HueSaturation, ToneMapping } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, HueSaturation, ToneMapping, DepthOfField } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 
 //useGLTF.preload('/models/mindbody.glb')
@@ -72,10 +72,20 @@ export default function App() {
 
   const { lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls('Light Settings', {
     lightRadius: { value: 11, min: 1, max: 20, step: 0.1 },
-    lightAmbient: { value: 0.3, min: 0, max: 1, step: 0.01 },
-    lightIntensity: { value: 2.3, min: 0, max: Math.PI * 2, step: 0.01 },
-    lightPosition: { value: [0, 24, -1.5], step: 0.1 },
+    lightAmbient: { value: 0.35, min: 0, max: 1, step: 0.01 },
+    lightIntensity: { value: 2.1, min: 0, max: Math.PI * 2, step: 0.01 },
+    lightPosition: { value: [0, 17.5, -1.5], step: 0.1 },
     lightBias: { value: 0.001, min: 0, max: 0.01, step: 0.0001 },
+  })
+
+  const { shadowFrames, shadowBlend, shadowAlphaTest, shadowColor, shadowColorBlend, shadowOpacity, shadowScale } = useControls('Shadow Settings', {
+    shadowFrames: { value: 90, min: 1, max: 300, step: 1 },
+    shadowBlend: { value: 1.5, min: 0, max: 2, step: 0.01 },
+    shadowAlphaTest: { value: 0.6, min: 0, max: 1, step: 0.01 },
+    shadowColor: { value: '#ffb700' },
+    shadowColorBlend: { value: 0.20, min: 0, max: 2, step: 0.01 },
+    shadowOpacity: { value: 0.25, min: 0, max: 1, step: 0.01 },
+    shadowScale: { value: 10, min: 10, max: 100, step: 1 },
   })
 
   const { bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize } = useControls('Bloom', {
@@ -88,6 +98,12 @@ export default function App() {
   const { saturation, hue } = useControls('Hue & Saturation', {
     saturation: { value: 0, min: -1, max: 1, step: 0.01 },
     hue: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+  })
+
+  const { dofFocusDistance, dofFocalLength, dofBokehScale } = useControls('Depth of Field', {
+    dofFocusDistance: { value: 17.5, min: 1, max: 30, step: 0.1 },
+    dofFocalLength: { value: 0.025, min: 0.01, max: 1.0, step: 0.001 },
+    dofBokehScale: { value: 1.5, min: 0.1, max: 20, step: 0.1 },
   })
 
 
@@ -105,7 +121,7 @@ export default function App() {
           powerPreference: "high-performance",
           localClippingEnabled: true
         }}
-        dpr={[1.0, 1.1]}
+        dpr={[1.0, 1.2]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         {/* <Stats /> */}
@@ -117,7 +133,7 @@ export default function App() {
         <color attach="background" args={['#F6F5F3']} />
         <AdaptiveFog
           color="#F6F5F3"
-          defaultFog={{ near: 4, far: 18 }}
+          defaultFog={{ near: 4, far: 8 }}
           focusedFog={{ near: 4, far: 12 }}
           animationDuration={1.2}
         />
@@ -144,7 +160,7 @@ export default function App() {
           position={[-1.2, -1, -1.5]}
         /> */}
         <Center position={[0, 1.0, 1.5]}>
-          <group name="pond" position={[-1.2, 3.0, -3]} userData={{ inspectable: true }}>
+          <group name="pond" position={[-1.2, 2.0, -3]} userData={{ inspectable: true }}>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </group>
           {/* <Focusable id="02" name="mindbody" position={[1.0, 0.2, -3]}>
@@ -158,13 +174,13 @@ export default function App() {
            {/* Shadows and Ground */}
            <AccumulativeShadows
              temporal={false}
-             frames={200}
-             blend={1.0}
-             alphaTest={0.42}
-             color="#FFF9EA" // cream
-             colorBlend={1.0}
-             opacity={0.10}
-             scale={30}
+             frames={shadowFrames}
+             blend={shadowBlend}
+             alphaTest={shadowAlphaTest}
+             color={shadowColor}
+             colorBlend={shadowColorBlend}
+             opacity={shadowOpacity}
+             scale={shadowScale}
            >
             <RandomizedLight
               radius={lightRadius}
@@ -185,6 +201,9 @@ export default function App() {
           saturation={saturation}
           hue={hue}
           toneMappingMode={toneMappingMode}
+          dofFocusDistance={dofFocusDistance}
+          dofFocalLength={dofFocalLength}
+          dofBokehScale={dofBokehScale}
         />
 
 
@@ -213,6 +232,9 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
   saturation,
   hue,
   toneMappingMode,
+  dofFocusDistance,
+  dofFocalLength,
+  dofBokehScale,
 }: {
   bloomIntensity: number
   bloomThreshold: number
@@ -221,11 +243,15 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
   saturation: number
   hue: number
   toneMappingMode: string
+  dofFocusDistance: number
+  dofFocalLength: number
+  dofBokehScale: number
 }) {
   const mode = useMemo(() => ToneMappingMode[toneMappingMode as keyof typeof ToneMappingMode], [toneMappingMode])
 
   return (
     <EffectComposer autoClear={false} multisampling={0}>
+      
       <Bloom
         intensity={bloomIntensity}
         luminanceThreshold={bloomThreshold}
@@ -233,6 +259,11 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
         kernelSize={bloomKernelSize}
       />
       <HueSaturation saturation={saturation} hue={hue} />
+      {/* <DepthOfField
+        focusDistance={dofFocusDistance}
+        focalLength={dofFocalLength}
+        bokehScale={dofBokehScale}
+      /> */}
       <ToneMapping mode={mode} />
     </EffectComposer>
   )

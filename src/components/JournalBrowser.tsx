@@ -5,7 +5,7 @@ import { useIsAuthenticated } from 'jazz-tools/react-core'
 import { PondAccount, Intention, Conversation, FieldNote } from '../schema'
 import { CallButton } from '../VoiceChat'
 import { useVoice } from '../VoiceChat/VoiceProvider'
-import { AuthView } from './AuthView'
+import { useAuthFlow } from '../hooks/useAuthFlow'
 
 type TabId = 'call' | 'intentions' | 'fieldNotes'
 
@@ -17,9 +17,9 @@ type Tab = {
 }
 
 const tabs: Tab[] = [
-  { id: 'call', label: '◎', color: '#7B9089', isCallButton: true },
+  { id: 'call', label: '◎', color: '#8B7355', isCallButton: true },
   { id: 'intentions', label: '⚘', color: '#8B7355', isCallButton: false },
-  { id: 'fieldNotes', label: '✎', color: '#8B7B7A', isCallButton: false },
+  { id: 'fieldNotes', label: '✎', color: '#8B7355', isCallButton: false },
 ]
 
 interface JournalBrowserProps {
@@ -29,12 +29,33 @@ interface JournalBrowserProps {
 
 export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
   const isAuthenticated = useIsAuthenticated()
-  
+
   const [activeTab, setActiveTab] = useState<TabId | null>(null)
   const [isAuthMinimized, setIsAuthMinimized] = useState(true)
+  const [isAuthTransitioningOut, setIsAuthTransitioningOut] = useState(false)
+  const [showAuthAfterCollapse, setShowAuthAfterCollapse] = useState(true)
   const isMounted = useMounted()
   const viewsContainerRef = useRef<HTMLDivElement>(null)
   const [viewsContainerWidth, setViewsContainerWidth] = useState(0)
+
+  // Auth flow state
+  const {
+    email,
+    setEmail,
+    emailChecked,
+    userExists,
+    password,
+    setPassword,
+    name,
+    setName,
+    loading,
+    checking,
+    error,
+    handleEmailSubmit,
+    handleSignIn,
+    handleSignUp,
+    resetToEmail,
+  } = useAuthFlow()
 
   const { me } = useAccount(PondAccount, {
     resolve: {
@@ -64,10 +85,26 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
       // Clicking active tab while expanded -> dock
       setIsDocked(true)
       setActiveTab(null)
+      setShowAuthAfterCollapse(false)
+      // Wait for collapse animation to complete, then show auth view
+      setTimeout(() => {
+        setShowAuthAfterCollapse(true)
+      }, 300)
     } else {
       // Switching tabs or expanding from docked
       setActiveTab(tabId)
-      setIsDocked(false)
+
+      // If expanding from docked and auth view is showing, stagger the transition
+      if (isDocked && !isAuthenticated) {
+        setIsAuthTransitioningOut(true)
+        // Wait for auth view to fade out before expanding views
+        setTimeout(() => {
+          setIsDocked(false)
+          setIsAuthTransitioningOut(false)
+        }, 200)
+      } else {
+        setIsDocked(false)
+      }
     }
   }
 
@@ -76,7 +113,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
       data-ui
       style={{
         position: 'fixed',
-        bottom: '20px',
+        bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
@@ -133,85 +170,38 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
 
         {/* Tabs */}
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} isDocked={isDocked} />
-        
+
         {/* Auth view when docked and not authenticated */}
-        {isDocked && !isAuthenticated && (
-          <motion.div
-            layout
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 60 }}
-            style={{
-              position: 'absolute',
-              bottom: '100%',
-              left: 0,
-              right: 0,
-              marginBottom: 8,
-              backgroundColor: 'rgba(243, 240, 235, 0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: 12,
-              border: '1px solid rgba(139, 115, 85, 0.2)',
-              pointerEvents: 'auto',
-              overflow: 'hidden',
-            }}
-          >
-            {isAuthMinimized ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 20px',
-                  gap: 12,
-                }}
-              >
-                <motion.div
-                  layoutId="authTitle"
-                  transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: '#2C2C2C',
-                    whiteSpace: 'nowrap',
-                    letterSpacing: '-0.01em',
-                    width: 'fit-content',
-                  }}
-                >
-                  Get Started
-                </motion.div>
-                <motion.button
-                  layoutId="continueButton"
-                  transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
-                  onClick={() => setIsAuthMinimized(false)}
-                  style={{
-                    padding: '8px 20px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: '#fff',
-                    backgroundColor: '#8B7355',
-                    border: 'none',
-                    borderRadius: 9999,
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                    letterSpacing: '-0.01em',
-                    width: 'fit-content',
-                  }}
-                  whileHover={{ backgroundColor: '#7B6355' }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  continue
-                </motion.button>
-              </div>
-            ) : (
-              <div>
+        <AnimatePresence>
+          {isDocked && !isAuthenticated && showAuthAfterCollapse && !isAuthTransitioningOut && (
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.2 } }}
+              transition={{ type: 'spring', stiffness: 400, damping: 60 }}
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: 0,
+                right: 0,
+                marginBottom: 8,
+                backgroundColor: 'rgba(243, 240, 235, 0.95)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 12,
+                border: '1px solid rgba(139, 115, 85, 0.2)',
+                pointerEvents: 'auto',
+                overflow: 'hidden',
+              }}
+            >
+              {isAuthMinimized ? (
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '12px 20px 0 20px',
+                    padding: '12px 18px',
+                    gap: 12,
                   }}
                 >
                   <motion.div
@@ -226,34 +216,462 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
                       width: 'fit-content',
                     }}
                   >
-                    Get Started
+                    hey, human bean.
                   </motion.div>
-                  <button
-                    onClick={() => setIsAuthMinimized(true)}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <motion.button
+                      layoutId="continueButton"
+                      transition={{ layout: { type: 'spring', stiffness: 400, damping: 50 } }}
+                      onClick={() => setIsAuthMinimized(false)}
+                      style={{
+                        padding: '8px 20px',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: '#fff',
+                        backgroundColor: '#8B7355',
+                        border: 'none',
+                        borderRadius: 9999,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '-0.0125em',
+                        width: 'fit-content',
+                      }}
+                      whileHover={{ backgroundColor: '#7B6355', scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      continue
+                    </motion.button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div
                     style={{
-                      width: 28,
-                      height: 28,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'rgba(139, 115, 85, 0.08)',
-                      border: '1px solid rgba(139, 115, 85, 0.2)',
-                      borderRadius: 9999,
-                      cursor: 'pointer',
-                      fontSize: 16,
-                      color: '#666',
-                      padding: 0,
-                      flexShrink: 0,
+                      justifyContent: 'space-between',
+                      padding: '14px 20px 0px 20px',
                     }}
                   >
-                    ×
-                  </button>
+                    <motion.div
+                      layoutId="authTitle"
+                      transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: '#2C2C2C',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '-0.01em',
+                        width: 'fit-content',
+                      }}
+                    >
+                      hey, human bean.
+                    </motion.div>
+                    <button
+                      onClick={() => setIsAuthMinimized(true)}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(139, 115, 85, 0.08)',
+                        border: 'none',
+                        borderRadius: 9999,
+                        cursor: 'pointer',
+                        padding: 0,
+                        flexShrink: 0,
+                      }}
+                      aria-label="Minimize"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ display: 'block' }}
+                      >
+                        <line x1="4" y1="4" x2="12" y2="12" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
+                        <line x1="12" y1="4" x2="4" y2="12" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div style={{ padding: '12px 20px 20px 20px' }}>
+                    {/* Step 1: Email Input Only */}
+                    {!emailChecked && (
+                      <form onSubmit={handleEmailSubmit} style={{ marginTop: 12 }}>
+                        <div style={{ marginBottom: 12 }}>
+                          <label
+                            htmlFor="email"
+                            style={{
+                              display: 'block',
+                              marginBottom: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#666',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}
+                          >
+                            Email
+                          </label>
+                          <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            disabled={checking}
+                            placeholder="your@email.com"
+                            autoComplete="email"
+                            autoFocus
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: '1px solid rgba(139, 115, 85, 0.2)',
+                              borderRadius: 8,
+                              fontSize: 14,
+                              boxSizing: 'border-box',
+                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                              color: '#2C2C2C',
+                              outline: 'none',
+                              transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
+                              e.target.style.backgroundColor = '#fff'
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
+                              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                            }}
+                          />
+                        </div>
+
+                        {error && (
+                          <div style={{
+                            color: '#d32f2f',
+                            backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                            padding: '10px 12px',
+                            borderRadius: 8,
+                            marginBottom: 12,
+                            fontSize: 12,
+                            border: '1px solid rgba(211, 47, 47, 0.2)',
+                            lineHeight: 1.4
+                          }}>
+                            {error}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                          <motion.button
+                            layoutId="continueButton"
+                            transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                            type="submit"
+                            disabled={checking}
+                            style={{
+                              padding: '8px 20px',
+                              backgroundColor: checking ? 'rgba(139, 115, 85, 0.3)' : '#8B7355',
+                              fontSize: 13,
+                              fontWeight: 500,
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 9999,
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              whiteSpace: 'nowrap',
+                              letterSpacing: '-0.0125em',
+                              width: 'fit-content',
+                            }}
+                            whileHover={{ backgroundColor: '#7B6355', scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {checking ? "Checking..." : "continue"}
+                          </motion.button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Step 2: Existing User - Sign In */}
+                    {emailChecked && userExists && (
+                      <form onSubmit={handleSignIn} style={{ marginTop: 12 }}>
+                        <div style={{ marginBottom: 12 }}>
+                          <label
+                            htmlFor="password-signin"
+                            style={{
+                              display: 'block',
+                              marginBottom: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#666',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}
+                          >
+                            Password
+                          </label>
+                          <input
+                            id="password-signin"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={loading}
+                            minLength={8}
+                            placeholder="Your password"
+                            autoComplete="current-password"
+                            autoFocus
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: '1px solid rgba(139, 115, 85, 0.2)',
+                              borderRadius: 8,
+                              fontSize: 14,
+                              boxSizing: 'border-box',
+                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                              color: '#2C2C2C',
+                              outline: 'none',
+                              transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
+                              e.target.style.backgroundColor = '#fff'
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
+                              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                            }}
+                          />
+                        </div>
+
+                        {error && (
+                          <div style={{
+                            color: '#d32f2f',
+                            backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                            padding: '10px 12px',
+                            borderRadius: 8,
+                            marginBottom: 12,
+                            fontSize: 12,
+                            border: '1px solid rgba(211, 47, 47, 0.2)',
+                            lineHeight: 1.4
+                          }}>
+                            {error}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                          <motion.button
+                            layoutId="continueButton"
+                            transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                            type="submit"
+                            disabled={loading}
+                            style={{
+                              padding: '8px 20px',
+                              backgroundColor: loading ? 'rgba(107, 142, 126, 0.4)' : '#6B8E7E',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 9999,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: loading ? 'not-allowed' : 'pointer',
+                              opacity: loading ? 0.6 : 1,
+                              letterSpacing: '-0.01em',
+                              transition: 'background-color 0.2s ease, opacity 0.2s ease',
+                            }}
+                          >
+                            {loading ? "Signing In..." : "Sign In"}
+                          </motion.button>
+                        </div>
+
+                        <button
+                          onClick={resetToEmail}
+                          disabled={loading}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: 'none',
+                            border: 'none',
+                            color: '#888',
+                            fontSize: 11,
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            opacity: loading ? 0.5 : 1,
+                            textAlign: 'center',
+                            marginTop: 8,
+                            transition: 'opacity 0.2s ease',
+                          }}
+                        >
+                          Different email?
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Step 3: New User - Sign Up */}
+                    {emailChecked && !userExists && (
+                      <form onSubmit={handleSignUp} style={{ marginTop: 12 }}>
+                        <div style={{ marginBottom: 12 }}>
+                          <label
+                            htmlFor="name"
+                            style={{
+                              display: 'block',
+                              marginBottom: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#666',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}
+                          >
+                            Name
+                          </label>
+                          <input
+                            id="name"
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            disabled={loading}
+                            placeholder="Your name"
+                            autoFocus
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: '1px solid rgba(139, 115, 85, 0.2)',
+                              borderRadius: 8,
+                              fontSize: 14,
+                              boxSizing: 'border-box',
+                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                              color: '#2C2C2C',
+                              outline: 'none',
+                              transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
+                              e.target.style.backgroundColor = '#fff'
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
+                              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: 12 }}>
+                          <label
+                            htmlFor="password-signup"
+                            style={{
+                              display: 'block',
+                              marginBottom: 6,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#666',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}
+                          >
+                            Password
+                          </label>
+                          <input
+                            id="password-signup"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={loading}
+                            minLength={8}
+                            placeholder="Min. 8 characters"
+                            autoComplete="new-password"
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: '1px solid rgba(139, 115, 85, 0.2)',
+                              borderRadius: 8,
+                              fontSize: 14,
+                              boxSizing: 'border-box',
+                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                              color: '#2C2C2C',
+                              outline: 'none',
+                              transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
+                              e.target.style.backgroundColor = '#fff'
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
+                              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                            }}
+                          />
+                        </div>
+
+                        {error && (
+                          <div style={{
+                            color: '#d32f2f',
+                            backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                            padding: '10px 12px',
+                            borderRadius: 8,
+                            marginBottom: 12,
+                            fontSize: 12,
+                            border: '1px solid rgba(211, 47, 47, 0.2)',
+                            lineHeight: 1.4
+                          }}>
+                            {error}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                          <motion.button
+                            layoutId="continueButton"
+                            transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                            type="submit"
+                            disabled={loading}
+                            style={{
+                              padding: '8px 20px',
+                              backgroundColor: loading ? 'rgba(139, 115, 85, 0.4)' : '#8B7355',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: 9999,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: loading ? 'not-allowed' : 'pointer',
+                              opacity: loading ? 0.6 : 1,
+                              letterSpacing: '-0.01em',
+                              transition: 'background-color 0.2s ease, opacity 0.2s ease',
+                            }}
+                          >
+                            {loading ? "Creating Account..." : "Sign Up"}
+                          </motion.button>
+                        </div>
+
+                        <button
+                          onClick={resetToEmail}
+                          disabled={loading}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: 'none',
+                            border: 'none',
+                            color: '#888',
+                            fontSize: 11,
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            opacity: loading ? 0.5 : 1,
+                            textAlign: 'center',
+                            marginTop: 8,
+                            transition: 'opacity 0.2s ease',
+                          }}
+                        >
+                          Different email?
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
-                <AuthView onMinimize={() => setIsAuthMinimized(true)} />
-              </div>
-            )}
-          </motion.div>
-        )}
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   )
@@ -368,8 +786,8 @@ const Tabs = ({
               idx === 0
                 ? '4px 0px 4px 4px'
                 : idx === tabs.length - 1
-                ? '4px 4px 4px 0px'
-                : 4,
+                  ? '4px 4px 4px 0px'
+                  : 4,
           }}
         >
           {tab.isCallButton ? (
@@ -387,7 +805,7 @@ const Tabs = ({
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
-                color: activeTab === tab.id ? '#fff' : '#4A90E2',
+                color: activeTab === tab.id ? '#fff' : tab.color,
                 transition: 'color 0.2s',
               }}
               whileFocus={{
@@ -433,7 +851,7 @@ const Tabs = ({
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
-                color: activeTab === tab.id ? '#fff' : '#8B7355',
+                color: activeTab === tab.id ? '#fff' : tab.color,
                 transition: 'color 0.2s',
               }}
               whileFocus={{
@@ -663,10 +1081,10 @@ const PromptSection = ({ color }: { color: string }) => {
         </div>
 
         {/* Call button */}
-        <div style={{ 
-          flexShrink: 0, 
-          paddingRight: 32, 
-          position: 'relative', 
+        <div style={{
+          flexShrink: 0,
+          paddingRight: 32,
+          position: 'relative',
           zIndex: 50,
           pointerEvents: 'auto'
         }}>
@@ -771,7 +1189,7 @@ const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
   const [newIntentionTitle, setNewIntentionTitle] = useState('')
   const [startingIntentionId, setStartingIntentionId] = useState<string | null>(null)
   const [timerMinutes, setTimerMinutes] = useState('')
-  
+
   const { me } = useAccount(PondAccount, {
     resolve: {
       root: {
@@ -819,7 +1237,7 @@ const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
     // Start this intention
     intention.$jazz.set('status', 'active')
     intention.$jazz.set('updatedAt', Date.now())
-    
+
     setStartingIntentionId(null)
     setTimerMinutes('')
   }
@@ -1202,7 +1620,7 @@ const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
           >
             {showCompleted ? '−' : '+'} Completed ({completedIntentions.length})
           </button>
-          
+
           <AnimatePresence>
             {showCompleted && (
               <motion.div
@@ -1286,7 +1704,7 @@ const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
           >
             {showArchived ? '−' : '+'} Archived ({archivedIntentions.length})
           </button>
-          
+
           <AnimatePresence>
             {showArchived && (
               <motion.div

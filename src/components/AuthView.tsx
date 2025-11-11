@@ -113,7 +113,7 @@ export function AuthView({ onMinimize }: { onMinimize?: () => void }) {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
               <motion.button
                 layoutId="continueButton"
-                transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                transition={{ layout: { type: 'spring', stiffness: 400, damping: 35 } }}
                 type="submit" 
                 disabled={checking}
                 style={{
@@ -207,8 +207,10 @@ export function AuthView({ onMinimize }: { onMinimize?: () => void }) {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-              <button 
-                type="submit" 
+              <motion.button
+                layoutId="continueButton"
+                transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                type="submit"
                 disabled={loading}
                 style={{
                   padding: '8px 20px',
@@ -225,7 +227,7 @@ export function AuthView({ onMinimize }: { onMinimize?: () => void }) {
                 }}
               >
                 {loading ? "Signing In..." : "Sign In"}
-              </button>
+              </motion.button>
             </div>
           </form>
 
@@ -366,8 +368,10 @@ export function AuthView({ onMinimize }: { onMinimize?: () => void }) {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-              <button 
-                type="submit" 
+              <motion.button
+                layoutId="continueButton"
+                transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                type="submit"
                 disabled={loading}
                 style={{
                   padding: '8px 20px',
@@ -384,7 +388,7 @@ export function AuthView({ onMinimize }: { onMinimize?: () => void }) {
                 }}
               >
                 {loading ? "Creating Account..." : "Sign Up"}
-              </button>
+              </motion.button>
             </div>
           </form>
 

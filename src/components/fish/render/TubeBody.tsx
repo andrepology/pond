@@ -136,6 +136,9 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
   }, [spine.points.length])
 
   useFrame((state) => {
+    // Skip frame if refs not initialized yet (race condition guard)
+    if (!controlPointsRef.current || !centersRef.current) return
+
     // Update shader uniforms every frame
     const shaderMat = material as THREE.ShaderMaterial
     if (shaderMat.uniforms) {
@@ -156,7 +159,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     const prevLast = spine.points[spine.points.length - 2] ?? scratchRef.current.b.copy(last).add(scratchRef.current.c.set(0, 0, -0.001))
     const ghostHead = scratchRef.current.a.copy(headPos).add(scratchRef.current.b.copy(headPos).sub(first))
     const ghostTail = scratchRef.current.c.copy(last).add(scratchRef.current.b.copy(last).sub(prevLast))
-    const controlPoints = controlPointsRef.current!
+    const controlPoints = controlPointsRef.current
     controlPoints[0].copy(ghostHead)
     controlPoints[1].copy(headPos)
     for (let i = 0; i < spine.points.length; i++) controlPoints[i + 2].copy(spine.points[i])
