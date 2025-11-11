@@ -117,7 +117,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
-        pointerEvents: 'auto',
+        pointerEvents: isDocked && !showAuthAfterCollapse ? 'none' : 'auto',
       }}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerMove={(e) => e.stopPropagation()}

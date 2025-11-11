@@ -17,13 +17,12 @@ body {
 
 #root {
   width: 100%;
-  height: 100%;
+  height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden;
   background-color: #F6F5F3;
-  position: fixed;
-  inset: 0;
+  position: relative;
 }
 
 canvas {
@@ -34,18 +33,12 @@ canvas {
 
 /* iOS PWA specific fixes */
 @supports (-webkit-touch-callout: none) {
-  html,
-  body,
   #root {
-    height: -webkit-fill-available;
-    min-height: -webkit-fill-available;
-    height: 100dvh; /* Dynamic viewport height - includes safe areas */
-    min-height: 100dvh;
+    height: 100vh; /* Dynamic viewport height - accounts for iOS safe areas */
   }
   
   canvas {
-    min-height: -webkit-fill-available;
-    min-height: 100dvh;
+    min-height: 100vh;
   }
 }
 
