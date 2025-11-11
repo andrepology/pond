@@ -93,7 +93,7 @@ export default function App() {
 
   return (
     <>
-      {import.meta.env.DEV && <Leva collapsed />}
+      {__IS_DEV__ && <Leva collapsed />}
 
       <Canvas
         shadows="soft"
@@ -105,7 +105,7 @@ export default function App() {
           powerPreference: "high-performance",
           localClippingEnabled: true
         }}
-        dpr={[0.8, 1.1]}
+        dpr={[1.0, 1.1]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         {/* <Stats /> */}
