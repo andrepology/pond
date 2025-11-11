@@ -90,7 +90,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           metalness={0}
           clearcoat={0.0}
           normalMap={waterNormals as unknown as THREE.Texture}
-          normalScale={new THREE.Vector2(waterControls.normalScale, waterControls.normalScale)}
+          normalScale={new THREE.Vector2(waterControls.normalStrength, waterControls.normalStrength)}
           transparent
           opacity={1.0}
           depthWrite={false}
