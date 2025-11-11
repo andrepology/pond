@@ -4,8 +4,8 @@
   "description": "A local-first journal app by curl.projects",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "transparent",
-  "theme_color": "transparent",
+  "background_color": "#F6F5F3",
+  "theme_color": "#F6F5F3",
   "icons": [
     {
       "src": "/icons/manifest-icon-192.maskable.png",
