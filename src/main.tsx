@@ -9,6 +9,22 @@ import { VoiceProvider } from './VoiceChat'
 
 const JAZZ_PEER = import.meta.env.VITE_JAZZ_SYNC_PEER
 
+// Fix iOS PWA viewport calculation race condition
+if ('standalone' in navigator && (navigator as any).standalone) {
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const root = document.getElementById('root')
+      if (root) {
+        // Force reflow without visual flash
+        const current = root.style.transform
+        root.style.transform = 'translateZ(0)'
+        root.offsetHeight // Trigger layout recalculation
+        root.style.transform = current
+      }
+    }, 50)
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <JazzReactProvider
     AccountSchema={PondAccount}
