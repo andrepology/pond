@@ -762,40 +762,52 @@ const Tabs = ({
   isDocked: boolean
 }) => {
   return (
-    <ul
+    <motion.ul
+      animate={{
+        borderColor: isDocked ? 'rgba(139, 115, 85, 0)' : 'rgba(139, 115, 85, 0.2)',
+        backgroundColor: isDocked ? 'rgba(243, 240, 235, 0)' : 'rgba(243, 240, 235, 0.8)',
+        backdropFilter: isDocked ? 'blur(0px)' : 'blur(10px)',
+        paddingTop: isDocked ? 0 : 4,
+        paddingBottom: isDocked ? 0 : 4,
+        paddingLeft: isDocked ? 0 : 4,
+        paddingRight: isDocked ? 0 : 4,
+      }}
+      transition={{ type: 'spring', stiffness: 400, damping: 60 }}
       style={{
-        border: '1px solid rgba(139, 115, 85, 0.2)',
-        backgroundColor: 'rgba(243, 240, 235, 0.8)',
-        backdropFilter: 'blur(10px)',
+        border: '1px solid',
         borderRadius: 12,
         display: 'flex',
-        padding: 0,
         width: '100%',
         margin: 0,
         listStyle: 'none',
+        willChange: 'border-color, background-color, backdrop-filter, padding',
       }}
     >
       {tabs.map((tab, idx) => (
         <motion.li
           key={tab.id}
+          animate={{
+            paddingTop: isDocked ? 2 : 4,
+            paddingBottom: isDocked ? 2 : 4,
+            paddingLeft: idx === 0 ? (isDocked ? 0 : 4) : 0,
+            paddingRight: idx === tabs.length - 1 ? (isDocked ? 0 : 4) : 0,
+          }}
+          transition={{ type: 'spring', stiffness: 400, damping: 60 }}
           style={{
             display: 'flex',
             cursor: 'pointer',
             flexGrow: 1,
-            padding:
-              idx === 0
-                ? '4px 0px 4px 4px'
-                : idx === tabs.length - 1
-                  ? '4px 4px 4px 0px'
-                  : 4,
           }}
         >
           {tab.isCallButton ? (
             <motion.button
+              animate={{
+                padding: isDocked ? 4 : 6,
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 60 }}
               style={{
                 position: 'relative',
                 width: '100%',
-                padding: 6,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -838,10 +850,13 @@ const Tabs = ({
             </motion.button>
           ) : (
             <motion.button
+              animate={{
+                padding: isDocked ? 4 : 6,
+              }}
+              transition={{ type: 'spring', stiffness: 400, damping: 60 }}
               style={{
                 position: 'relative',
                 width: '100%',
-                padding: 6,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -885,7 +900,7 @@ const Tabs = ({
           )}
         </motion.li>
       ))}
-    </ul>
+    </motion.ul>
   )
 }
 
