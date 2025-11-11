@@ -38,6 +38,14 @@ canvas {
   body,
   #root {
     height: -webkit-fill-available;
+    min-height: -webkit-fill-available;
+    height: 100dvh; /* Dynamic viewport height - includes safe areas */
+    min-height: 100dvh;
+  }
+  
+  canvas {
+    min-height: -webkit-fill-available;
+    min-height: 100dvh;
   }
 }
 
