@@ -90,11 +90,13 @@ export const auth = betterAuth({
   },
   
   // Cross-origin cookie settings for production (pond.space → pond-backend.fly.dev)
+  // Note: partitioned cookies (CHIPS) not supported in Safari/iOS yet, so omitted for iOS PWA compatibility
+  // Chrome 118+ supports partitioned, but Safari ignores it. Keep sameSite: "none" + secure: true for cross-site cookies.
   advanced: {
     defaultCookieAttributes: {
       sameSite: "none",
       secure: true,
-      partitioned: true, // Required by newer browser standards for cross-site cookies
+      // partitioned: true, // Chrome 118+ only; Safari/iOS doesn't support yet - keep commented for iOS PWA compatibility
     },
   },
   
