@@ -85,7 +85,7 @@ export default function App() {
 
   const { shadowFrames, shadowBlend, shadowAlphaTest, shadowColor, shadowColorBlend, shadowOpacity, shadowScale } = useControls({
     'Shadow Settings': folder({
-      shadowFrames: { value: 90, min: 1, max: 300, step: 1 },
+      shadowFrames: { value: 120, min: 1, max: 300, step: 1 },
       shadowBlend: { value: 1.5, min: 0, max: 2, step: 0.01 },
       shadowAlphaTest: { value: 0.6, min: 0, max: 1, step: 0.01 },
       shadowColor: { value: '#ffb700' },
