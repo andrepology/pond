@@ -17,6 +17,11 @@ interface WaterMaterialControls {
   flowSpeed: number
   blendSharpness: number
   displacementStrength: number
+  ripplesEnabled: boolean
+  rippleIntensity: number
+  rippleSpeed: number
+  rippleDecay: number
+  rippleMaxRadius: number
 }
 
 interface Ripple {
