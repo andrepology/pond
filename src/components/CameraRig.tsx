@@ -100,7 +100,7 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
       
       touches={{
         one: ACTION.ACTION.TOUCH_ROTATE,
-        two: ACTION.ACTION.TOUCH_ZOOM,
+        two: ACTION.ACTION.TOUCH_DOLLY,
         three: ACTION.ACTION.NONE
       }}
       
