@@ -22,11 +22,16 @@ const tabs: Tab[] = [
   { id: 'fieldNotes', label: '✎', color: '#8B7B7A', isCallButton: false },
 ]
 
-export function JournalBrowser() {
+interface JournalBrowserProps {
+  isDocked: boolean
+  setIsDocked: (docked: boolean) => void
+}
+
+export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
   const isAuthenticated = useIsAuthenticated()
   
   const [activeTab, setActiveTab] = useState<TabId | null>(null)
-  const [isDocked, setIsDocked] = useState(true)
+  const [isAuthMinimized, setIsAuthMinimized] = useState(true)
   const isMounted = useMounted()
   const viewsContainerRef = useRef<HTMLDivElement>(null)
   const [viewsContainerWidth, setViewsContainerWidth] = useState(0)
@@ -84,7 +89,7 @@ export function JournalBrowser() {
     >
       <motion.div
         animate={{
-          width: isDocked ? 320 : 400,
+          width: isDocked ? 'min(320px, 70vw)' : 'min(400px, 80vw)',
         }}
         transition={{ type: 'spring', stiffness: 400, damping: 60 }}
         style={{
@@ -132,10 +137,11 @@ export function JournalBrowser() {
         {/* Auth view when docked and not authenticated */}
         {isDocked && !isAuthenticated && (
           <motion.div
+            layout
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 60 }}
             style={{
               position: 'absolute',
               bottom: '100%',
@@ -147,9 +153,105 @@ export function JournalBrowser() {
               borderRadius: 12,
               border: '1px solid rgba(139, 115, 85, 0.2)',
               pointerEvents: 'auto',
+              overflow: 'hidden',
             }}
           >
-            <AuthView />
+            {isAuthMinimized ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 20px',
+                  gap: 12,
+                }}
+              >
+                <motion.div
+                  layoutId="authTitle"
+                  transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#2C2C2C',
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '-0.01em',
+                    width: 'fit-content',
+                  }}
+                >
+                  Get Started
+                </motion.div>
+                <motion.button
+                  layoutId="continueButton"
+                  transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                  onClick={() => setIsAuthMinimized(false)}
+                  style={{
+                    padding: '8px 20px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#fff',
+                    backgroundColor: '#8B7355',
+                    border: 'none',
+                    borderRadius: 9999,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '-0.01em',
+                    width: 'fit-content',
+                  }}
+                  whileHover={{ backgroundColor: '#7B6355' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  continue
+                </motion.button>
+              </div>
+            ) : (
+              <div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 20px 0 20px',
+                  }}
+                >
+                  <motion.div
+                    layoutId="authTitle"
+                    transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: '#2C2C2C',
+                      whiteSpace: 'nowrap',
+                      letterSpacing: '-0.01em',
+                      width: 'fit-content',
+                    }}
+                  >
+                    Get Started
+                  </motion.div>
+                  <button
+                    onClick={() => setIsAuthMinimized(true)}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(139, 115, 85, 0.08)',
+                      border: '1px solid rgba(139, 115, 85, 0.2)',
+                      borderRadius: 9999,
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      color: '#666',
+                      padding: 0,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+                <AuthView onMinimize={() => setIsAuthMinimized(true)} />
+              </div>
+            )}
           </motion.div>
         )}
       </motion.div>

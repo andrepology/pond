@@ -4,14 +4,17 @@ import { useThree } from '@react-three/fiber'
 import { CameraControls } from '@react-three/drei'
 import { useRoute } from 'wouter'
 import CameraControlsImpl from 'camera-controls'
+import ACTION from 'camera-controls'
+import { isMobileDevice } from '../helpers/deviceDetection'
+
 
 CameraControlsImpl.install({ THREE })
 
 interface CameraRigProps {
-  sheetPercentage: number;
+  isJournalDocked: boolean;
 }
 
-export function CameraRig({ sheetPercentage }: CameraRigProps) {
+export function CameraRig({ isJournalDocked }: CameraRigProps) {
   const { controls, scene, viewport } = useThree()
   const [routeMatch, paramsRaw] = useRoute('/item/:id')
   const params: Record<string, string> = paramsRaw || {}
@@ -21,12 +24,15 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
 
   useEffect(() => {
     const cameraControls = controls as CameraControlsImpl | null
-    const active = routeMatch && params.id ? scene.getObjectByName(params.id) : null
+    // Fallback to "pond" if no route match, otherwise use route param
+    const active = routeMatch && params.id 
+      ? scene.getObjectByName(params.id) 
+      : scene.getObjectByName('pond')
     const isActive = !!active
 
-    // This factor controls how much the camera moves up when the sheet is open.
-    const verticalShiftFactor = 3
-    const yOffset = sheetPercentage * verticalShiftFactor
+    // This factor controls how much the camera moves up when the journal is undocked.
+    const verticalShiftFactor = isMobileDevice() ? -1.0 : -1.5
+    const yOffset = isJournalDocked ? 0 : verticalShiftFactor
 
     if (isActive) {
       // Save current camera position before moving to active item
@@ -79,15 +85,25 @@ export function CameraRig({ sheetPercentage }: CameraRigProps) {
     }
 
     wasActiveRef.current = isActive
-  }, [params.id, controls, scene, viewport.aspect, sheetPercentage])
+  }, [params.id, controls, scene, viewport.aspect, isJournalDocked])
 
   return (
     <CameraControls
       makeDefault
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 2}
-      smoothTime={0.5}
+      smoothTime={0.8}
       draggingSmoothTime={0.2}
+      enabled={true}
+      dollySpeed={isMobileDevice ? 0.5 : 0.1}
+      truckSpeed={isMobileDevice ? 0.5 : 0.1}
+      
+      touches={{
+        one: ACTION.ACTION.TOUCH_ROTATE,
+        two: ACTION.ACTION.TOUCH_ZOOM,
+        three: ACTION.ACTION.NONE
+      }}
+      
     />
   )
 } 

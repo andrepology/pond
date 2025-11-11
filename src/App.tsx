@@ -1,14 +1,13 @@
 import * as THREE from 'three'
-import { useState, forwardRef, useMemo, useRef, useEffect } from 'react'
+import { useState, forwardRef, useMemo, useRef, useEffect, memo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats, Backdrop } from '@react-three/drei'
 import { Leva, useControls } from 'leva'
 import { signal } from '@preact/signals-core'
-import { Focusable } from './components/focusable'
+// import { Focusable } from './components/focusable' // Kept for potential reversion
 import { CameraRig } from './components/CameraRig'
 import { PondSphere } from './components/PondSphere'
 
-import { useLocation } from 'wouter'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
@@ -16,15 +15,18 @@ import { JournalBrowser } from './components/JournalBrowser'
 
 import MindBody from './components/MindBody'
 import ZenSand from './components/ZenSand'
+import { Perf } from 'r3f-perf'
+import { EffectComposer, Bloom, HueSaturation } from '@react-three/postprocessing'
 
 //useGLTF.preload('/models/mindbody.glb')
 //useGLTF.preload('/models/wellstone.glb')
 
+
+
 export default function App() {
-  const [sheetPercentage, setSheetPercentage] = useState(0)
+  const [isJournalDocked, setIsJournalDocked] = useState(true)
   const markersVisibleRef = useRef(false)
   const hasInputSignal = useMemo(() => signal(false), [])
-  const [, setLocation] = useLocation()
 
   // Sync signal to ref for RadialMarkers (inverted: visible when no input)
   useEffect(() => {
@@ -71,6 +73,18 @@ export default function App() {
     lightBias: { value: 0.001, min: 0, max: 0.01, step: 0.0001 },
   })
 
+  const { bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize } = useControls('Bloom', {
+    bloomIntensity: { value: 1.0, min: 0, max: 3, step: 0.1 },
+    bloomThreshold: { value: 0.9, min: 0, max: 1, step: 0.01 },
+    bloomSmoothing: { value: 0.025, min: 0, max: 1, step: 0.001 },
+    bloomKernelSize: { value: 2, options: [0, 1, 2], labels: ['Small', 'Medium', 'Large'] },
+  })
+
+  const { saturation, hue } = useControls('Hue & Saturation', {
+    saturation: { value: 0, min: -1, max: 1, step: 0.01 },
+    hue: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+  })
+
   return (
     <>
       {import.meta.env.MODE === 'development' && <Leva collapsed />}
@@ -80,25 +94,18 @@ export default function App() {
         camera={{ position: [0, 12, 12], fov: 45 }}
         eventSource={document.getElementById('root')!}
         eventPrefix="client"
-        // needed for switching back to default camera
-        onPointerMissed={(event) => {
-          const target = event.target as HTMLElement
-          if (target?.closest('[class*="leva-c-"]')) return
-          if (target?.closest('[data-ui]')) return
-          setLocation('/')
-        }}
         gl={{
           antialias: true,
           powerPreference: "high-performance",
           localClippingEnabled: true
         }}
-        dpr={[1, 1.2]}
+        dpr={[1, 1.1]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         {/* <Stats /> */}
         <Preload all />
 
-        <CameraRig sheetPercentage={sheetPercentage} />
+        <CameraRig isJournalDocked={isJournalDocked} />
 
 
         <color attach="background" args={['#F6F5F3']} />
@@ -130,10 +137,10 @@ export default function App() {
           centers={[[ 0.4, -3 ]]}
           position={[-1.2, -1, -1.5]}
         /> */}
-        <Center position={[0, 0.5, 1.5]}>
-          <Focusable id="01" name="" position={[-1.2, 2.5, -3]} inspectable>
+        <Center position={[0, 1.0, 1.5]}>
+          <group name="pond" position={[-1.2, 3.0, -3]} userData={{ inspectable: true }}>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
-          </Focusable>
+          </group>
           {/* <Focusable id="02" name="mindbody" position={[1.0, 0.2, -3]}>
             <MindBody
               color="indianred"
@@ -163,29 +170,64 @@ export default function App() {
           </AccumulativeShadows>
         </Center>
 
-         
-
-
+        {/* Tone mapping modifies shader chunks - must be before EffectComposer */}
         <Tone mapping={mapping} exposure={exposure} />
+
+        {/* Post-processing effects run after scene render */}
+        <PostProcessingEffects
+          bloomIntensity={bloomIntensity}
+          bloomThreshold={bloomThreshold}
+          bloomSmoothing={bloomSmoothing}
+          bloomKernelSize={bloomKernelSize}
+          saturation={saturation}
+          hue={hue}
+        />
 
 
 
       </Canvas>
 
 
-      <DateTimeDisplay />
+      {/* <DateTimeDisplay /> */}
 
       {/* Journal Browser */}
-      <JournalBrowser />
+      <JournalBrowser isDocked={isJournalDocked} setIsDocked={setIsJournalDocked} />
 
-
-      {/* <MeditationContainer markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} /> */}
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
        <Controls onPercentageChange={setSheetPercentage} /> */}
     </>
   )
 }
+
+
+const PostProcessingEffects = memo(function PostProcessingEffects({
+  bloomIntensity,
+  bloomThreshold,
+  bloomSmoothing,
+  bloomKernelSize,
+  saturation,
+  hue,
+}: {
+  bloomIntensity: number
+  bloomThreshold: number
+  bloomSmoothing: number
+  bloomKernelSize: number
+  saturation: number
+  hue: number
+}) {
+  return (
+    <EffectComposer autoClear={false} multisampling={0}>
+      <Bloom
+        intensity={bloomIntensity}
+        luminanceThreshold={bloomThreshold}
+        luminanceSmoothing={bloomSmoothing}
+        kernelSize={bloomKernelSize}
+      />
+      <HueSaturation saturation={saturation} hue={hue} />
+    </EffectComposer>
+  )
+})
 
 function Tone({ mapping, exposure }) {
   const gl = useThree((state) => state.gl)

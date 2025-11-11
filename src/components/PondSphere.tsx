@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import React, { forwardRef, useRef } from 'react'
-import { Icosahedron } from '@react-three/drei'
 import SphericalSky from './SphericalSky'
 import Starfield, { type StarfieldHandle } from './Starfield'
 import Fish2 from './fish/Fish2'
@@ -71,13 +70,14 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Radial markers */}
-      <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} />
+      {/* <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} /> */}
 
       {/* Intention Input */}
-      <IntentionInput hasInputSignal={props.hasInputSignal} />
+      {/* <IntentionInput hasInputSignal={props.hasInputSignal} /> */}
 
-      {/* Water sphere using icosahedron - render last for proper transparency */}
-      <Icosahedron castShadow args={[1.01, 18]} renderOrder={0} raycast={() => null}>
+      {/* Water sphere - render last for proper transparency */}
+      <mesh castShadow renderOrder={0} raycast={() => null}>
+        <sphereGeometry args={[1.01, 64, 64]} />
         <meshPhysicalMaterial
           ref={(mat) => { waterMaterialRef.current = mat as unknown as THREE.MeshPhysicalMaterial }}
           transmission={waterControls.transmission}
@@ -95,7 +95,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           opacity={1.0}
           depthWrite={false}
         />
-      </Icosahedron>
+      </mesh>
 
     </group>
   )
