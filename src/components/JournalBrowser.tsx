@@ -113,7 +113,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
       data-ui
       style={{
         position: 'fixed',
-        bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+        bottom: '20px',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
@@ -126,7 +126,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
     >
       <motion.div
         animate={{
-          width: isDocked ? 'min(320px, 70vw)' : 'min(400px, 80vw)',
+          width: isDocked ? 'min(320px, 85vw)' : 'min(400px, 90vw)',
         }}
         transition={{ type: 'spring', stiffness: 400, damping: 60 }}
         style={{

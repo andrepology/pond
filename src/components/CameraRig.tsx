@@ -95,10 +95,10 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 2}
       smoothTime={0.8}
-      draggingSmoothTime={0.6}
+      draggingSmoothTime={0.2}
       enabled={true}
-      dollySpeed={isMobileDevice() ? 6.5 : 0.5}
-      truckSpeed={isMobileDevice() ? 6.5 : 0.5}
+      dollySpeed={isMobileDevice() ? 5.5 : 0.5}
+      truckSpeed={isMobileDevice() ? 5.5 : 0.5}
       
       touches={{
         one: ACTION.ACTION.TOUCH_ROTATE,
