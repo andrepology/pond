@@ -97,8 +97,8 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
       smoothTime={0.8}
       draggingSmoothTime={0.2}
       enabled={true}
-      dollySpeed={isMobileDevice() ? 5.5 : 0.5}
-      truckSpeed={isMobileDevice() ? 5.5 : 0.5}
+      dollySpeed={isMobileDevice() ? 3.5 : 0.5}
+      truckSpeed={isMobileDevice() ? 3.5 : 0.5}
       
       touches={{
         one: ACTION.ACTION.TOUCH_ROTATE,
