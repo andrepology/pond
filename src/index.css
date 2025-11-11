@@ -2,8 +2,8 @@
 
 html,
 body {
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100dvh;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -16,8 +16,8 @@ body {
 }
 
 #root {
-  width: 100%;
-  height: 100vh;
+  width: 100vw;
+  height: 100dvh;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -27,18 +27,18 @@ body {
 
 canvas {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100dvh;
 }
 
 /* iOS PWA specific fixes */
 @supports (-webkit-touch-callout: none) {
   #root {
-    height: 100vh; /* Dynamic viewport height - accounts for iOS safe areas */
+    height: 100dvh; /* Dynamic viewport height - accounts for iOS safe areas */
   }
   
   canvas {
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 }
 
