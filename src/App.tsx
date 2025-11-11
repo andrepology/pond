@@ -99,7 +99,7 @@ export default function App() {
           powerPreference: "high-performance",
           localClippingEnabled: true
         }}
-        dpr={[1, 1.1]}
+        dpr={[0.8, 1.1]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         {/* <Stats /> */}
