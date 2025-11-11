@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import React, { forwardRef, useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Center, useGLTF, useTexture } from '@react-three/drei'
-import { useControls } from 'leva'
+import { useControls, folder } from 'leva'
 
 interface InteractiveProps {
   hovered?: boolean;
@@ -33,11 +33,13 @@ export const WellStone = forwardRef<any, InteractiveProps>(({ color, hovered, ac
   const groupRef = useRef<THREE.Group>(null)
   const { scene } = useGLTF('/models/wellstone.glb')
 
-  const { roughness, metalness, textureRepeat, normalScale } = useControls('WellStone Material', {
-    roughness: { value: 0.3, min: 0, max: 1, step: 0.01 },
-    metalness: { value: 0.39, min: 0, max: 1, step: 0.01 },
-    textureRepeat: { value: 5.0, min: 0.1, max: 10, step: 0.1 },
-    normalScale: { value: 1.2, min: 0, max: 1, step: 0.05 }
+  const { roughness, metalness, textureRepeat, normalScale } = useControls({
+    'WellStone Material': folder({
+      roughness: { value: 0.3, min: 0, max: 1, step: 0.01 },
+      metalness: { value: 0.39, min: 0, max: 1, step: 0.01 },
+      textureRepeat: { value: 5.0, min: 0.1, max: 10, step: 0.1 },
+      normalScale: { value: 1.2, min: 0, max: 1, step: 0.05 }
+    }, { collapsed: true })
   })
 
   const rockTextures = useTexture({

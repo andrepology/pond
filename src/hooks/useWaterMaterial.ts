@@ -48,7 +48,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
   const ripplesRef = useRef<Ripple[]>([])
   const timeRef = useRef(0)
 
-  const controls = useControls('Water Material', {
+  const controls = useControls({
+    'Water Material': folder({
     roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
     ior: { value: 2.26, min: 1, max: 2.333, step: 0.001 },
     transmission: { value: 1.00, min: 0, max: 1, step: 0.01 },
@@ -60,7 +61,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     triplanarScale: { value: 0.15, min: 0, max: 0.3, step: 0.01 },
     flowSpeed: { value: 0.01, min: 0, max: 0.1, step: 0.001 },
     blendSharpness: { value: 4.0, min: 1, max: 10, step: 0.5 },
-    displacementStrength: { value: 0.04, min: 0, max: 0.1, step: 0.001 },
+    displacementStrength: { value: 0.02, min: 0, max: 0.1, step: 0.001 },
     Ripples: folder({
       ripplesEnabled: true,
       rippleIntensity: { value: 1.0, min: 0, max: 1, step: 0.05 },
@@ -68,7 +69,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       rippleDecay: { value: 2.4, min: 0.1, max: 5, step: 0.1 },
       rippleMaxRadius: { value: 1.0, min: 0.1, max: 1.0, step: 0.05 }
     })
-  })
+  }, { collapsed: true })
+})
 
   const createRipple = useCallback((worldPos: THREE.Vector3) => {
     setRipples(prev => {

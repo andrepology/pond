@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
-import { useControls } from 'leva'
+import { useControls, folder } from 'leva'
 
 interface WaterMaterialControls {
   roughness: number
@@ -48,7 +48,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
   const timeRef = useRef(0)
   const waterNormals = useTexture('/waternormals.jpg')
 
-  const controls = useControls('Water Material', {
+  const controls = useControls({
+    'Water Material': folder({
     roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
     ior: { value: 2.26, min: 1, max: 2.333, step: 0.001 },
     transmission: { value: 1.00, min: 0, max: 1, step: 0.01 },
@@ -66,7 +67,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     rippleSpeed: { value: 0.5, min: 0.1, max: 5, step: 0.1 },
     rippleDecay: { value: 0.4, min: 0.1, max: 3, step: 0.1 },
     rippleMaxRadius: { value: 1.5, min: 0.1, max: 3, step: 0.1 }
-  })
+  }, { collapsed: true })
+})
 
   const createRipple = useCallback((u: number, v: number) => {
     setRipples(prev => {

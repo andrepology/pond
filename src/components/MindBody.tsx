@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import React, { forwardRef, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Center, useGLTF } from '@react-three/drei'
-import { useControls } from 'leva'
+import { useControls, folder } from 'leva'
 import { useMindBodyWander } from './useMindBodyWander'
 
 interface InteractiveProps {
@@ -17,9 +17,11 @@ export const MindBody = forwardRef<any, InteractiveProps>(({ color, hovered, act
   const groupRef = useRef<THREE.Group>(null)
   const { nodes } = useGLTF('/models/mindbody.glb')
 
-  const { roughness, metalness } = useControls('MindBody Material', {
-    roughness: { value: 0.2, min: 0, max: 1, step: 0.01 },
-    metalness: { value: 0.0, min: 0, max: 1, step: 0.01 }
+  const { roughness, metalness } = useControls({
+    'MindBody Material': folder({
+      roughness: { value: 0.2, min: 0, max: 1, step: 0.01 },
+      metalness: { value: 0.0, min: 0, max: 1, step: 0.01 }
+    }, { collapsed: true })
   })
 
   const material = useMemo(() => {

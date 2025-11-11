@@ -6,6 +6,7 @@ import { Leva, useControls } from 'leva'
 import { signal } from '@preact/signals-core'
 // import { Focusable } from './components/focusable' // Kept for potential reversion
 import { CameraRig } from './components/CameraRig'
+import { folder } from 'leva'
 import { PondSphere } from './components/PondSphere'
 
 import { DateTimeDisplay } from './components/DateTimeDisplay'
@@ -62,48 +63,60 @@ export default function App() {
   }, [])
 
 
-  const { toneMappingMode } = useControls('Tone Mapping', {
-    toneMappingMode: {
-      value: 'NEUTRAL',
-      options: ['LINEAR', 'REINHARD', 'REINHARD2', 'REINHARD2_ADAPTIVE', 'UNCHARTED2', 'CINEON', 'ACES_FILMIC', 'AGX', 'NEUTRAL'],
-      labels: ['Linear', 'Reinhard', 'Reinhard2', 'Reinhard2 Adaptive', 'Uncharted2', 'Cineon', 'ACES Filmic', 'AGX', 'Neutral'],
-    },
+  const { toneMappingMode } = useControls({
+    'Tone Mapping': folder({
+      toneMappingMode: {
+        value: 'NEUTRAL',
+        options: ['LINEAR', 'REINHARD', 'REINHARD2', 'REINHARD2_ADAPTIVE', 'UNCHARTED2', 'CINEON', 'ACES_FILMIC', 'AGX', 'NEUTRAL'],
+        labels: ['Linear', 'Reinhard', 'Reinhard2', 'Reinhard2 Adaptive', 'Uncharted2', 'Cineon', 'ACES Filmic', 'AGX', 'Neutral'],
+      },
+    }, { collapsed: true })
   })
 
-  const { lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls('Light Settings', {
-    lightRadius: { value: 11, min: 1, max: 20, step: 0.1 },
-    lightAmbient: { value: 0.35, min: 0, max: 1, step: 0.01 },
-    lightIntensity: { value: 2.1, min: 0, max: Math.PI * 2, step: 0.01 },
-    lightPosition: { value: [0, 17.5, -1.5], step: 0.1 },
-    lightBias: { value: 0.001, min: 0, max: 0.01, step: 0.0001 },
+  const { lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls({
+    'Light Settings': folder({
+      lightRadius: { value: 11, min: 1, max: 20, step: 0.1 },
+      lightAmbient: { value: 0.35, min: 0, max: 1, step: 0.01 },
+      lightIntensity: { value: 2.1, min: 0, max: Math.PI * 2, step: 0.01 },
+      lightPosition: { value: [0, 17.5, -1.5], step: 0.1 },
+      lightBias: { value: 0.001, min: 0, max: 0.01, step: 0.0001 },
+    }, { collapsed: true })
   })
 
-  const { shadowFrames, shadowBlend, shadowAlphaTest, shadowColor, shadowColorBlend, shadowOpacity, shadowScale } = useControls('Shadow Settings', {
-    shadowFrames: { value: 90, min: 1, max: 300, step: 1 },
-    shadowBlend: { value: 1.5, min: 0, max: 2, step: 0.01 },
-    shadowAlphaTest: { value: 0.6, min: 0, max: 1, step: 0.01 },
-    shadowColor: { value: '#ffb700' },
-    shadowColorBlend: { value: 0.20, min: 0, max: 2, step: 0.01 },
-    shadowOpacity: { value: 0.25, min: 0, max: 1, step: 0.01 },
-    shadowScale: { value: 10, min: 10, max: 100, step: 1 },
+  const { shadowFrames, shadowBlend, shadowAlphaTest, shadowColor, shadowColorBlend, shadowOpacity, shadowScale } = useControls({
+    'Shadow Settings': folder({
+      shadowFrames: { value: 90, min: 1, max: 300, step: 1 },
+      shadowBlend: { value: 1.5, min: 0, max: 2, step: 0.01 },
+      shadowAlphaTest: { value: 0.6, min: 0, max: 1, step: 0.01 },
+      shadowColor: { value: '#ffb700' },
+      shadowColorBlend: { value: 0.20, min: 0, max: 2, step: 0.01 },
+      shadowOpacity: { value: 0.25, min: 0, max: 1, step: 0.01 },
+      shadowScale: { value: 10, min: 10, max: 100, step: 1 },
+    }, { collapsed: true })
   })
 
-  const { bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize } = useControls('Bloom', {
-    bloomIntensity: { value: 0.7, min: 0, max: 3, step: 0.1 },
-    bloomThreshold: { value: 0.90, min: 0, max: 1, step: 0.01 },
-    bloomSmoothing: { value: 0.025, min: 0, max: 1, step: 0.001 },
-    bloomKernelSize: { value: 1, options: [0, 1, 2], labels: ['Small', 'Medium', 'Large'] },
+  const { bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize } = useControls({
+    'Bloom': folder({
+      bloomIntensity: { value: 0.7, min: 0, max: 3, step: 0.1 },
+      bloomThreshold: { value: 0.90, min: 0, max: 1, step: 0.01 },
+      bloomSmoothing: { value: 0.025, min: 0, max: 1, step: 0.001 },
+      bloomKernelSize: { value: 1, options: [0, 1, 2], labels: ['Small', 'Medium', 'Large'] },
+    }, { collapsed: true })
   })
 
-  const { saturation, hue } = useControls('Hue & Saturation', {
-    saturation: { value: 0, min: -1, max: 1, step: 0.01 },
-    hue: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+  const { saturation, hue } = useControls({
+    'Hue & Saturation': folder({
+      saturation: { value: 0, min: -1, max: 1, step: 0.01 },
+      hue: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
+    }, { collapsed: true })
   })
 
-  const { dofFocusDistance, dofFocalLength, dofBokehScale } = useControls('Depth of Field', {
-    dofFocusDistance: { value: 17.5, min: 1, max: 30, step: 0.1 },
-    dofFocalLength: { value: 0.025, min: 0.01, max: 1.0, step: 0.001 },
-    dofBokehScale: { value: 1.5, min: 0.1, max: 20, step: 0.1 },
+  const { dofFocusDistance, dofFocalLength, dofBokehScale } = useControls({
+    'Depth of Field': folder({
+      dofFocusDistance: { value: 17.5, min: 1, max: 30, step: 0.1 },
+      dofFocalLength: { value: 0.025, min: 0.01, max: 1.0, step: 0.001 },
+      dofBokehScale: { value: 1.5, min: 0.1, max: 20, step: 0.1 },
+    }, { collapsed: true })
   })
 
 
@@ -121,7 +134,7 @@ export default function App() {
           powerPreference: "high-performance",
           localClippingEnabled: true
         }}
-        dpr={[1.0, 1.2]}
+        dpr={[1.0, 1.5]}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         {/* <Stats /> */}
@@ -149,17 +162,15 @@ export default function App() {
 
 
         {/* Main Scene Content */}
-        {/* <ZenSand
-          size={40}
-          segments={512}
-          color="#ffffff"
-          amplitude={0.05}
-          frequency={4}
+        <ZenSand
+          size={30}
+          segments={128}
           driftSpeed={1.1}
-          centers={[[ 0.4, -3 ]]}
-          position={[-1.2, -1, -1.5]}
-        /> */}
-        <Center position={[0, 1.0, 1.5]}>
+          centers={[[0, 0]]}
+          position={[-1.2, -2.5, -3]}
+         //bgColor="#F6F5F3"
+        />
+        
           <group name="pond" position={[-1.2, 2.0, -3]} userData={{ inspectable: true }}>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </group>
@@ -172,7 +183,7 @@ export default function App() {
           </Focusable> */}
 
            {/* Shadows and Ground */}
-           <AccumulativeShadows
+           {/* <AccumulativeShadows
              temporal={false}
              frames={shadowFrames}
              blend={shadowBlend}
@@ -189,9 +200,8 @@ export default function App() {
               position={lightPosition}
               bias={lightBias}
             />
-          </AccumulativeShadows>
-        </Center>
-
+          </AccumulativeShadows> */}
+      
         {/* Post-processing effects run after scene render */}
         <PostProcessingEffects
           bloomIntensity={bloomIntensity}
@@ -264,7 +274,7 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
         focalLength={dofFocalLength}
         bokehScale={dofBokehScale}
       /> */}
-      <ToneMapping mode={mode} />
+      {/* <ToneMapping mode={mode} /> */}
     </EffectComposer>
   )
 })

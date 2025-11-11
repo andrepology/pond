@@ -40,7 +40,8 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
   const { camera } = useThree();
   const sphereRef = useRef<THREE.Mesh>(null);
   
-  const controls = useControls('water', {
+  const controls = useControls({
+    'water': folder({
     Flow: folder({
       flowSpeed: { value: 0.02, min: 0.001, max: 0.1, step: 0.001 },
       flowDir1X: { value: 0.5, min: -1, max: 1, step: 0.1 },
@@ -70,7 +71,8 @@ const WaterSphere: React.FC<WaterSphereProps> = ({
       textureRepeatX: { value: 4.0, min: 0.5, max: 10, step: 0.5 },
       textureRepeatY: { value: 4.0, min: 0.5, max: 10, step: 0.5 },
     }),
-  });
+  }, { collapsed: true })
+});
 
   const sphereMaterial = useMemo(() => {
     const material = new THREE.ShaderMaterial({

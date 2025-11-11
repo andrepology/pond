@@ -407,7 +407,8 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
   const groupRef = useRef<THREE.Group>(null)
 
   // Leva controls for spine spheres
-  const controls = useControls('Spine Spheres', {
+  const controls = useControls({
+    'Spine Spheres': folder({
     enabled: { value: true, label: 'Enabled' },
     wave: folder({
       waveSpeed: { value: 0.4, min: 0.1, max: 2.0, step: 0.1, label: 'Wave Speed' },
@@ -431,7 +432,8 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
       opacity: { value: 1.0, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
       maxRenderDistance: { value: 100, min: 50, max: 200, step: 5, label: 'Max Distance' },
     }),
-  })
+  }, { collapsed: true })
+})
 
   // Create custom spine sphere material with size variation and traveling wave
   const spineSphereMaterial = useMemo(() => createSpineSphereMaterial(), [])

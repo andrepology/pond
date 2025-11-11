@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
-import { useControls } from 'leva'
+import { useControls, folder } from 'leva'
 
 interface WaterMaterialControls {
   roughness: number
@@ -29,7 +29,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
   const materialRef = useRef<THREE.MeshPhysicalMaterial | null>(null)
   const shaderUniformsRef = useRef<any>(null)
 
-  const controls = useControls('Water Material', {
+  const controls = useControls({
+    'Water Material': folder({
     roughness: { value: 0.00, min: 0, max: 1, step: 0.005 },
     ior: { value: 2.26, min: 1, max: 2.333, step: 0.001 },
     transmission: { value: 1.00, min: 0, max: 1, step: 0.01 },
@@ -42,7 +43,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     flowU: { value: 0.00, min: -0.3, max: 0.3, step: 0.001 },
     flowV: { value: -0.01, min: -0.3, max: 0.3, step: 0.001 },
     displacementStrength: { value: 0.02, min: 0, max: 0.1, step: 0.001 }
-  })
+  }, { collapsed: true })
+})
 
   const waterNormals = useTexture('/waternormals.jpg')
 
