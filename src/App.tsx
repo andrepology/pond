@@ -162,28 +162,22 @@ export default function App() {
 
 
         {/* Main Scene Content */}
-        <ZenSand
+        {/* <ZenSand
           size={30}
           segments={128}
           driftSpeed={1.1}
           centers={[[0, 0]]}
           position={[-1.2, -2.5, -3]}
          //bgColor="#F6F5F3"
-        />
+        /> */}
         
           <group name="pond" position={[-1.2, 2.0, -3]} userData={{ inspectable: true }}>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </group>
-          {/* <Focusable id="02" name="mindbody" position={[1.0, 0.2, -3]}>
-            <MindBody
-              color="indianred"
-              wandering={true}
-              wanderCenter={new THREE.Vector3(-1.2, 1.8, -3)}
-            />
-          </Focusable> */}
+
 
            {/* Shadows and Ground */}
-           {/* <AccumulativeShadows
+           <AccumulativeShadows
              temporal={false}
              frames={shadowFrames}
              blend={shadowBlend}
@@ -200,7 +194,7 @@ export default function App() {
               position={lightPosition}
               bias={lightBias}
             />
-          </AccumulativeShadows> */}
+          </AccumulativeShadows>
       
         {/* Post-processing effects run after scene render */}
         <PostProcessingEffects
