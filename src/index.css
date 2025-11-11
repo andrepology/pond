@@ -8,7 +8,7 @@ body {
   padding: 0;
   overflow: hidden;
   background-color: #F6F5F3;
-  position: fixed;
+  position: relative;
   top: 0;
   left: 0;
   right: 0;
