@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import React, { forwardRef, useRef } from 'react'
 import SphericalSky from './SphericalSky'
 import Starfield, { type StarfieldHandle } from './Starfield'
-import Fish2 from './fish/Fish2'
+import Fish from './fish/Fish'
 import { RadialMarkers } from './RadialMarkers'
 import IntentionInput from './IntentionInput'
 import type { Signal } from '@preact/signals-core'
@@ -65,8 +65,8 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Fish inside sphere - render before water */}
-      <group name="innio-container" scale={0.15} renderOrder={-1}>
-        <Fish2 onHeadPositionUpdate={(worldPos) => { fishWorldPositionRef.current.copy(worldPos) }} />
+      <group name="innio-container" scale={0.20} renderOrder={-1}>
+        <Fish onHeadPositionUpdate={(worldPos) => { fishWorldPositionRef.current.copy(worldPos) }} />
       </group>
 
       {/* Radial markers */}
@@ -85,7 +85,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           }
         }}
       >
-        <sphereGeometry args={[1.01, 64, 64]} />
+        <sphereGeometry args={[1.01, 50, 50]} />
         <meshPhysicalMaterial
           ref={(mat) => { waterMaterialRef.current = mat as unknown as THREE.MeshPhysicalMaterial }}
           transmission={waterControls.transmission}

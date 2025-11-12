@@ -10,19 +10,9 @@ interface TubeBodyProps {
   headDirection: React.MutableRefObject<THREE.Vector3>
   velocity?: React.MutableRefObject<THREE.Vector3>
   color?: THREE.ColorRepresentation
-  onFinData?: (finData: FinAttachmentData[]) => void
 }
 
-interface FinAttachmentData {
-  position: THREE.Vector3
-  normal: THREE.Vector3
-  binormal: THREE.Vector3
-  tangent: THREE.Vector3
-  radius: number
-  spineT: number
-}
-
-export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FFFFFF', onFinData }: TubeBodyProps) {
+export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FFFFFF' }: TubeBodyProps) {
   const meshRef = useRef<THREE.Mesh>(null)
   const samplesPerSegment = useMemo(() => 8, [])
   const effectiveSegments = useMemo(() => Math.max(1, spine.points.length + 1), [spine.points.length])
@@ -95,11 +85,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
 
   // Scratch vectors
   const scratchRef = useRef({ a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3() })
-
-  // Double-buffer fin data arrays to avoid per-frame allocations while changing reference
-  const finBuffersRef = useRef<[FinAttachmentData[], FinAttachmentData[]]>([[], []])
-  const finInitRef = useRef(false)
-  const finActiveIdxRef = useRef(0)
 
   // Ensure vector arrays sized to sampleCount
   useEffect(() => {
@@ -287,48 +272,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     geometry.getAttribute('position').needsUpdate = true
     geometry.getAttribute('normal').needsUpdate = true
     geometry.getAttribute('uv').needsUpdate = true
-
-    // Generate fin attachment data if callback provided
-    if (onFinData) {
-      const stepSize = 4
-      const expectedLength = Math.ceil(sampleCount / stepSize)
-      // Initialize or resize both buffers
-      for (let b = 0; b < 2; b++) {
-        const buf = finBuffersRef.current[b]
-        if (!finInitRef.current || buf.length !== expectedLength) {
-          finBuffersRef.current[b] = []
-          for (let i = 0; i < expectedLength; i++) {
-            finBuffersRef.current[b].push({
-              position: new THREE.Vector3(),
-              normal: new THREE.Vector3(),
-              binormal: new THREE.Vector3(),
-              tangent: new THREE.Vector3(),
-              radius: 0,
-              spineT: 0
-            })
-          }
-        }
-      }
-      finInitRef.current = true
-      // Write into the active buffer
-      const activeIdx = finActiveIdxRef.current
-      const finBuf = finBuffersRef.current[activeIdx]
-      let finIdx = 0
-      for (let y = 0; y < sampleCount; y += stepSize) {
-        const t = y / (sampleCount - 1)
-        const fin = finBuf[finIdx]
-        fin.position.copy(centers[y])
-        fin.normal.copy(normalsF[y])
-        fin.binormal.copy(binormalsF[y])
-        fin.tangent.copy(tangents[y])
-        fin.radius = ringRadii[y]
-        fin.spineT = t
-        finIdx++
-      }
-      onFinData(finBuf)
-      // Flip buffer index for next frame
-      finActiveIdxRef.current = 1 - activeIdx
-    }
   })
 
   return (

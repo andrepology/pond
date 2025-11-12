@@ -6,7 +6,10 @@ import { useRoute } from 'wouter'
 import CameraControlsImpl from 'camera-controls'
 import ACTION from 'camera-controls'
 import { isMobileDevice } from '../helpers/deviceDetection'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
+// Debounce camera animations to prevent blocking UI transitions
+const CAMERA_DEBOUNCE_MS = 125
 
 CameraControlsImpl.install({ THREE })
 
@@ -21,6 +24,9 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
   const targetPositionRef = useRef(new THREE.Vector3())
   const savedCameraPosition = useRef(new THREE.Vector3())
   const wasActiveRef = useRef(false)
+  
+  // Debounce journal dock state to let UI animations complete before moving camera
+  const debouncedDocked = useDebouncedValue(isJournalDocked, CAMERA_DEBOUNCE_MS)
 
   // Reset CameraControls state when journal state changes to prevent stuck interactions
   // useEffect(() => {
@@ -32,8 +38,6 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
   // }, [isJournalDocked, controls])
 
   useEffect(() => {
-    // Defer camera operations to next frame to avoid competing with UI animations
-    requestAnimationFrame(() => {
       const cameraControls = controls as CameraControlsImpl | null
       // Fallback to "pond" if no route match, otherwise use route param
       const active = routeMatch && params.id
@@ -43,7 +47,7 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
 
       // This factor controls how much the camera moves up when the journal is undocked.
       const verticalShiftFactor = isMobileDevice() ? -1.0 : -1.8
-      const yOffset = isJournalDocked ? 0.0 : verticalShiftFactor
+      const yOffset = debouncedDocked ? 0.0 : verticalShiftFactor
 
       if (isActive) {
         // Save current camera position before moving to active item
@@ -96,17 +100,15 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
       }
 
       wasActiveRef.current = isActive
-    })
-  }, [params.id, controls, scene, viewport.aspect, isJournalDocked])
+  }, [params.id, controls, scene, viewport.aspect, debouncedDocked])
 
-  console.log('isMobileDevice:', isMobileDevice())
 
   return (
     <CameraControls
       makeDefault
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 2}
-      smoothTime={0.8}
+      smoothTime={1.2}
       draggingSmoothTime={0.2}
       enabled={true}
       dollySpeed={isMobileDevice() ? 0.6 : 0.5}

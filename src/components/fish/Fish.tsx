@@ -10,12 +10,12 @@ import { FoodVisuals } from '../../fish/components/FoodVisuals'
 import { useMemo, useRef, useState } from 'react'
 
 
-export interface Fish2Props {
+export interface FishProps {
   debug?: boolean
   onHeadPositionUpdate?: (worldPos: THREE.Vector3) => void
 }
 
-export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
+export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
   const { scene, camera } = useThree()
   const rootRef = useRef<THREE.Group>(null)
   const GROUND_Y = 0
@@ -93,6 +93,6 @@ export function Fish2({ debug = false, onHeadPositionUpdate }: Fish2Props) {
 
 // Spherical stars per spec
 
-export default Fish2
+export default Fish
 
 

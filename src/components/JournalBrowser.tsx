@@ -122,6 +122,9 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
       }}
     >
       <motion.div
+        initial={{
+          width: 'min(400px, 90vw)',
+        }}
         animate={{
           width: isDocked ? 'min(320px, 85vw)' : 'min(400px, 90vw)',
         }}
@@ -138,6 +141,10 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
         {/* Views Container */}
         <motion.div
           ref={viewsContainerRef}
+          initial={{
+            height: 0,
+            opacity: 0,
+          }}
           animate={{
             height: isDocked ? 0 : 280,
             opacity: isDocked ? 0 : 1,
@@ -763,6 +770,15 @@ const Tabs = ({
 }) => {
   return (
     <motion.ul
+      initial={{
+        borderColor: 'rgba(139, 115, 85, 0)',
+        backgroundColor: 'rgba(243, 240, 235, 0)',
+        backdropFilter: 'blur(0px)',
+        paddingTop: 0,
+        paddingBottom: 0,
+        paddingLeft: 0,
+        paddingRight: 0,
+      }}
       animate={{
         borderColor: isDocked ? 'rgba(139, 115, 85, 0)' : 'rgba(139, 115, 85, 0.2)',
         backgroundColor: isDocked ? 'rgba(243, 240, 235, 0)' : 'rgba(243, 240, 235, 0.8)',
