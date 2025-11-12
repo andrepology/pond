@@ -131,7 +131,7 @@ export default function App() {
       shadowAlphaTest: { label: 'Alpha Test', value: 0.6, min: 0, max: 1, step: 0.01 },
       shadowColor: { label: 'Color', value: '#ffb700' },
       shadowColorBlend: { label: 'Color Blend', value: 0.20, min: 0, max: 2, step: 0.01 },
-      shadowOpacity: { label: 'Opacity', value: 0.25, min: 0, max: 1, step: 0.01 },
+      shadowOpacity: { label: 'Opacity', value: 0.15, min: 0, max: 1, step: 0.01 },
       shadowScale: { label: 'Scale', value: 10, min: 10, max: 100, step: 1 },
     }, { collapsed: true })
   })

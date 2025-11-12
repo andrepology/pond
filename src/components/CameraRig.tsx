@@ -9,7 +9,7 @@ import { isMobileDevice } from '../helpers/deviceDetection'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 // Debounce camera animations to prevent blocking UI transitions
-const CAMERA_DEBOUNCE_MS = 125
+const CAMERA_DEBOUNCE_MS = 500
 
 CameraControlsImpl.install({ THREE })
 
