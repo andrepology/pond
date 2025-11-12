@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import type { SpineState } from '../core/Spine'
 import { useFrame } from '@react-three/fiber'
 import { createFishBodyShaderMaterial } from './FishBodyShader'
+import { useControls, folder } from 'leva'
 
 interface TubeBodyProps {
   spine: SpineState
@@ -14,10 +15,34 @@ interface TubeBodyProps {
 
 export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FFFFFF' }: TubeBodyProps) {
   const meshRef = useRef<THREE.Mesh>(null)
-  const samplesPerSegment = useMemo(() => 8, [])
+  
+  // Leva controls for body shape parameters
+  const bodyControls = useControls('Fish Body', {
+    shape: folder({
+      maxRadius: { value: 0.35, min: 0.1, max: 1.0, step: 0.05, label: 'Max Radius' },
+      headRoundness: { value: 0.6, min: 0.1, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
+      tailSharpness: { value: 2.1, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
+    }),
+    belly: folder({
+      bellyAmount: { value: 0.08, min: 0.0, max: 0.3, step: 0.01, label: 'Belly Amount' },
+      bellyFrequency: { value: 0.8, min: 0.3, max: 2.0, step: 0.1, label: 'Belly Frequency' },
+    }),
+    shader: folder({
+      inkDensity: { value: 0.8, min: 0.0, max: 2.0, step: 0.1, label: 'Ink Density' },
+      turbulenceScale: { value: 2.5, min: 0.5, max: 10.0, step: 0.5, label: 'Turbulence Scale' },
+      flowStrength: { value: 3.0, min: 0.0, max: 10.0, step: 0.5, label: 'Flow Strength' },
+      opacity: { value: 0.5, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
+    }),
+    geometry: folder({
+      samplesPerSegment: { value: 8, min: 4, max: 16, step: 1, label: 'Samples/Segment' },
+      ringSegments: { value: 32, min: 16, max: 64, step: 4, label: 'Ring Segments' },
+    }),
+  }, { collapsed: true })
+
+  const samplesPerSegment = bodyControls.samplesPerSegment
   const effectiveSegments = useMemo(() => Math.max(1, spine.points.length + 1), [spine.points.length])
   const sampleCount = useMemo(() => Math.max(2, effectiveSegments * samplesPerSegment + 1), [effectiveSegments, samplesPerSegment])
-  const ringSegments = useMemo(() => 32, [])
+  const ringSegments = bodyControls.ringSegments
   const ringCos = useMemo(() => {
     const a = new Float32Array(ringSegments + 1)
     for (let x = 0; x <= ringSegments; x++) a[x] = Math.cos((x / ringSegments) * Math.PI * 2)
@@ -128,6 +153,10 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     const shaderMat = material as THREE.ShaderMaterial
     if (shaderMat.uniforms) {
       shaderMat.uniforms.time.value = state.clock.elapsedTime
+      shaderMat.uniforms.inkDensity.value = bodyControls.inkDensity
+      shaderMat.uniforms.turbulenceScale.value = bodyControls.turbulenceScale
+      shaderMat.uniforms.flowStrength.value = bodyControls.flowStrength
+      shaderMat.uniforms.opacity.value = bodyControls.opacity
       if (velocity?.current) {
         shaderMat.uniforms.velocity.value.copy(velocity.current)
       }
@@ -196,10 +225,10 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     const ringRadii = ringRadiiRef.current!
     const ringRadiiDeriv = ringRadiiDerivRef.current!
 
-    // Teardrop shape parameters
-    const maxR = 0.35
-    const p = 0.6  // controls head roundness (lower = rounder)
-    const q = 2.1  // controls tail sharpness (higher = sharper)
+    // Teardrop shape parameters from Leva controls
+    const maxR = bodyControls.maxRadius
+    const p = bodyControls.headRoundness  // controls head roundness (lower = rounder)
+    const q = bodyControls.tailSharpness  // controls tail sharpness (higher = sharper)
 
     for (let y = 0; y < sampleCount; y++) {
       const center = centers[y]
@@ -212,9 +241,9 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
       const oneMinusSPowQ = Math.pow(oneMinusS, q)
       const baseRadius = sPowP * oneMinusSPowQ
       
-      // Belly curve
-      const bellyArg = Math.PI * s * 0.8
-      const belly = 1 + 0.08 * Math.sin(bellyArg)
+      // Belly curve from Leva controls
+      const bellyArg = Math.PI * s * bodyControls.bellyFrequency
+      const belly = 1 + bodyControls.bellyAmount * Math.sin(bellyArg)
       
       const radius = Math.max(0.001, maxR * baseRadius * belly)
       ringRadii[y] = radius
@@ -223,7 +252,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
       // = [p * s^(p-1) * (1-s)^q - q * s^p * (1-s)^(q-1)] * belly + s^p * (1-s)^q * d(belly)/ds
       const dBaseRadius = p * Math.pow(Math.max(0.001, s), p - 1) * oneMinusSPowQ - 
                           q * sPowP * Math.pow(oneMinusS, q - 1)
-      const dBelly = 0.08 * Math.PI * 0.8 * Math.cos(bellyArg)
+      const dBelly = bodyControls.bellyAmount * Math.PI * bodyControls.bellyFrequency * Math.cos(bellyArg)
       const dRadius = maxR * (dBaseRadius * belly + baseRadius * dBelly)
       
       // Convert ds to dt (since s = t, ds/dt = 1, so dr/dt = dr/ds)

@@ -47,23 +47,27 @@ float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
 }
 
-// Improved Perlin-like noise
-float noise(vec2 p) {
+// Tileable noise for seamless ring geometry
+float tiledNoise(vec2 p) {
   vec2 i = floor(p);
   vec2 f = fract(p);
   vec2 u = f * f * (3.0 - 2.0 * f);
   
-  float n00 = hash(i);
-  float n10 = hash(i + vec2(1.0, 0.0));
-  float n01 = hash(i + vec2(0.0, 1.0));
-  float n11 = hash(i + vec2(1.0, 1.0));
+  // Wrap grid coordinates to create tiles
+  vec2 i0 = mod(i, 256.0);
+  vec2 i1 = mod(i + 1.0, 256.0);
+  
+  float n00 = hash(i0);
+  float n10 = hash(vec2(i1.x, i0.y));
+  float n01 = hash(vec2(i0.x, i1.y));
+  float n11 = hash(i1);
   
   float nx0 = mix(n00, n10, u.x);
   float nx1 = mix(n01, n11, u.x);
   return mix(nx0, nx1, u.y);
 }
 
-// Fractal Brownian Motion - multiple octaves
+// Fractal Brownian Motion - multiple octaves, tileable
 float fbm(vec2 p) {
   float value = 0.0;
   float amplitude = 0.5;
@@ -71,7 +75,7 @@ float fbm(vec2 p) {
   float maxValue = 0.0;
   
   for (int i = 0; i < 5; i++) {
-    value += amplitude * noise(p * frequency);
+    value += amplitude * tiledNoise(mod(p * frequency, 256.0));
     maxValue += amplitude;
     amplitude *= 0.5;
     frequency *= 2.0;
