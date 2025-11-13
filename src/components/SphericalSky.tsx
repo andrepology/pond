@@ -290,7 +290,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           // composition + solar disc
           float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00008, cosTheta );
           // Make the sun disc larger and avoid atmospheric extinction on the disc
-          L0 += ( vSunE * 1.0 ) * sundisk;
+          L0 += ( vSunE * 10.0 ) * sundisk;
           vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
 
           vec3 retColor = pow( texColor, vec3( 1.0 / ( 1.2 + ( 1.2 * vSunfade ) ) ) );

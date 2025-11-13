@@ -19,19 +19,21 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
   // Leva controls for body shape parameters
   const bodyControls = useControls('Fish Body', {
     shape: folder({
-      maxRadius: { value: 0.35, min: 0.1, max: 1.0, step: 0.05, label: 'Max Radius' },
+      maxRadius: { value: 0.30, min: 0.1, max: 1.0, step: 0.05, label: 'Max Radius' },
       headRoundness: { value: 0.6, min: 0.1, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
-      tailSharpness: { value: 2.1, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
+      tailSharpness: { value: 3.0, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
     }),
     belly: folder({
       bellyAmount: { value: 0.08, min: 0.0, max: 0.3, step: 0.01, label: 'Belly Amount' },
-      bellyFrequency: { value: 0.8, min: 0.3, max: 2.0, step: 0.1, label: 'Belly Frequency' },
+      bellyFrequency: { value: 1.5, min: 0.3, max: 2.0, step: 0.1, label: 'Belly Frequency' },
     }),
     shader: folder({
-      inkDensity: { value: 0.8, min: 0.0, max: 2.0, step: 0.1, label: 'Ink Density' },
-      turbulenceScale: { value: 2.5, min: 0.5, max: 10.0, step: 0.5, label: 'Turbulence Scale' },
-      flowStrength: { value: 3.0, min: 0.0, max: 10.0, step: 0.5, label: 'Flow Strength' },
-      opacity: { value: 0.5, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
+      opacity: { value: 0.1, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
+      headConcentration: { value: 2.5, min: 0.5, max: 4.0, step: 0.1, label: 'Head Concentration' },
+      fresnelStrength: { value: 0.3, min: 0.0, max: 1.0, step: 0.05, label: 'Edge Fresnel' },
+      pulseSpeed: { value: 0.10, min: 0.01, max: 0.8, step: 0.01, label: 'Pulse Speed' },
+      pulseWidth: { value: 0.35, min: 0.05, max: 0.8, step: 0.05, label: 'Pulse Width' },
+      pulseStrength: { value: 0.6, min: 0.0, max: 2.0, step: 0.05, label: 'Pulse Strength' },
     }),
     geometry: folder({
       samplesPerSegment: { value: 8, min: 4, max: 16, step: 1, label: 'Samples/Segment' },
@@ -153,13 +155,12 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     const shaderMat = material as THREE.ShaderMaterial
     if (shaderMat.uniforms) {
       shaderMat.uniforms.time.value = state.clock.elapsedTime
-      shaderMat.uniforms.inkDensity.value = bodyControls.inkDensity
-      shaderMat.uniforms.turbulenceScale.value = bodyControls.turbulenceScale
-      shaderMat.uniforms.flowStrength.value = bodyControls.flowStrength
       shaderMat.uniforms.opacity.value = bodyControls.opacity
-      if (velocity?.current) {
-        shaderMat.uniforms.velocity.value.copy(velocity.current)
-      }
+      shaderMat.uniforms.headConcentration.value = bodyControls.headConcentration
+      shaderMat.uniforms.fresnelStrength.value = bodyControls.fresnelStrength
+      shaderMat.uniforms.pulseSpeed.value = bodyControls.pulseSpeed
+      shaderMat.uniforms.pulseWidth.value = bodyControls.pulseWidth
+      shaderMat.uniforms.pulseStrength.value = bodyControls.pulseStrength
     }
 
     const positions = (geometry.getAttribute('position') as THREE.BufferAttribute).array as Float32Array

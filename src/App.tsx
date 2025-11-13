@@ -97,8 +97,8 @@ export default function App() {
         toneMappingAdaptationRate: { label: 'Adapt Rate', value: 1.0, min: 0.1, max: 5.0, step: 0.01 },
       }, { collapsed: true }),
       'Bloom': folder({
-        bloomIntensity: { label: 'Intensity', value: 1.0, min: 0, max: 3, step: 0.1 },
-        bloomThreshold: { label: 'Threshold', value: 0.95, min: 0, max: 1, step: 0.01 },
+        bloomIntensity: { label: 'Intensity', value: 0.1, min: 0, max: 3, step: 0.1 },
+        bloomThreshold: { label: 'Threshold', value: 0.96, min: 0, max: 1, step: 0.01 },
         bloomSmoothing: { label: 'Smoothing', value: 0.025, min: 0, max: 1, step: 0.001 },
         bloomKernelSize: { label: 'Kernel Size', value: 1, options: [0, 1, 2], labels: ['Small', 'Medium', 'Large'] },
       }, { collapsed: true }),
@@ -170,12 +170,12 @@ export default function App() {
         />
 
         <Environment
-          //  files={['/rogland_clear_night_2k.hdr']}
-           preset='sunset'
+           // files={['/envmaps/qwantani_sunset_puresky_1k.hdr']}
+           preset="sunset"
            backgroundBlurriness={0.0}
            environmentIntensity={1.0}
            
-           resolution={128}
+           // resolution={10}
           />
         
 

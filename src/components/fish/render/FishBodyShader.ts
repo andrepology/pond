@@ -2,27 +2,26 @@ import * as THREE from 'three'
 
 export interface FishBodyShaderUniforms {
   time: { value: number }
-  velocity: { value: THREE.Vector3 }
   baseColor: { value: THREE.Color }
-  inkDensity: { value: number }
-  turbulenceScale: { value: number }
-  flowStrength: { value: number }
   opacity: { value: number }
+  headConcentration: { value: number }
+  fresnelStrength: { value: number }
+  pulseSpeed: { value: number }
+  pulseWidth: { value: number }
+  pulseStrength: { value: number }
   [key: string]: any
 }
 
 export const vertexShader = `
-varying vec3 vWorldPosition;
-varying vec3 vWorldNormal;
+varying vec3 vNormal;
 varying vec2 vUv;
 varying vec3 vViewDir;
 
 void main() {
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-  vWorldPosition = worldPosition.xyz;
-  vWorldNormal = normalize(normalMatrix * normal);
+  vNormal = normalize(normalMatrix * normal);
   vUv = uv;
-  vViewDir = normalize(cameraPosition - vWorldPosition);
+  vViewDir = normalize(cameraPosition - worldPosition.xyz);
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
@@ -30,146 +29,71 @@ void main() {
 
 export const fragmentShader = `
 uniform float time;
-uniform vec3 velocity;
 uniform vec3 baseColor;
-uniform float inkDensity;
-uniform float turbulenceScale;
-uniform float flowStrength;
 uniform float opacity;
+uniform float headConcentration;
+uniform float fresnelStrength;
+uniform float pulseSpeed;
+uniform float pulseWidth;
+uniform float pulseStrength;
 
-varying vec3 vWorldPosition;
-varying vec3 vWorldNormal;
+varying vec3 vNormal;
 varying vec2 vUv;
 varying vec3 vViewDir;
 
-// Fast hash function
-float hash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-}
-
-// Tileable noise for seamless ring geometry
-float tiledNoise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  
-  // Wrap grid coordinates to create tiles
-  vec2 i0 = mod(i, 256.0);
-  vec2 i1 = mod(i + 1.0, 256.0);
-  
-  float n00 = hash(i0);
-  float n10 = hash(vec2(i1.x, i0.y));
-  float n01 = hash(vec2(i0.x, i1.y));
-  float n11 = hash(i1);
-  
-  float nx0 = mix(n00, n10, u.x);
-  float nx1 = mix(n01, n11, u.x);
-  return mix(nx0, nx1, u.y);
-}
-
-// Fractal Brownian Motion - multiple octaves, tileable
-float fbm(vec2 p) {
-  float value = 0.0;
-  float amplitude = 0.5;
-  float frequency = 1.0;
-  float maxValue = 0.0;
-  
-  for (int i = 0; i < 5; i++) {
-    value += amplitude * tiledNoise(mod(p * frequency, 256.0));
-    maxValue += amplitude;
-    amplitude *= 0.5;
-    frequency *= 2.0;
-  }
-  
-  return value / maxValue;
-}
-
-// Swirling coordinate transformation
-vec2 swirl(vec2 p, float t) {
-  float angle = t * 0.5 + length(p) * 0.3;
-  float c = cos(angle);
-  float s = sin(angle);
-  return vec2(c * p.x - s * p.y, s * p.x + c * p.y);
-}
-
-// Main ink cloud noise - use UV coordinates for stability
-float inkNoise(vec2 uv, float t) {
-  vec2 flowBase = velocity.xz * flowStrength * t * 0.2;
-  
-  // Multiple coordinate systems using UVs (0-1 space)
-  vec2 coord1 = uv * turbulenceScale;
-  vec2 coord2 = uv * turbulenceScale * 0.7;
-  vec2 coord3 = uv * turbulenceScale * 1.3;
-  
-  // Apply swirls with different phase offsets
-  vec2 swirl1 = swirl(coord1, t * 0.3);
-  vec2 swirl2 = swirl(coord2, t * 0.45 + 1.5);
-  vec2 swirl3 = swirl(coord3, t * 0.25 + 3.0);
-  
-  // Layer turbulence
-  float n1 = fbm(swirl1 + flowBase);
-  float n2 = fbm(swirl2 + flowBase.yx * 0.8);
-  float n3 = fbm(swirl3 - flowBase * 0.6);
-  
-  // Blend layers
-  float combined = (n1 + n2 + n3) * 0.333;
-  
-  // Add secondary turbulence for detail
-  float detail = fbm(uv * turbulenceScale * 2.0 + t * 0.1);
-  combined = mix(combined, detail, 0.3);
-  
-  return combined;
-}
-
-// Ink dispersal pattern - soft bell curve along spine for even aura
-float inkDispersion(float spineT) {
-  return exp(-spineT * 8.5);  // exponential decay: strong at head, fades to tail
-}
-
 void main() {
-  // Ensure normals always face outward relative to camera
-  vec3 normal = vWorldNormal;
-  if (!gl_FrontFacing) normal = -normal;
-  
-  // Compute cloud density using UV coordinates
-  float cloud = inkNoise(vUv, time);
-  
-  // Even distribution along spine
-  float disperse = inkDispersion(vUv.y);
-  
-  // Vein structure adds detail
-  float veins = abs(sin(cloud * 6.28)) * 0.5;
-  
-  // Blend for final density - increased noise visibility
-  float density = cloud * 0.7 + disperse * 0.5 + veins * 0.15;
-  
-  // Fresnel effect - edges glow softly
-  float fresnel = pow(1.0 - max(0.0, dot(normal, vViewDir)), 1.5);
-  
-  // Modulate density with fresnel for silhouette glow
-  float auraStrength = mix(0.3, 1.0, fresnel);
-  density *= auraStrength;
-  
-  // Smooth opacity with fresnel softening
-  float cloudOpacity = smoothstep(0.1, 0.9, density) * inkDensity;
-  cloudOpacity *= mix(1.0, 2.0, fresnel); // Edges brighter
-  
-  // Dithering
-  float dither = hash(vUv) * 0.06 - 0.03;
-  cloudOpacity += dither;
-  cloudOpacity = clamp(cloudOpacity, 0.0, 1.0);
-  
-  // Apply base opacity with fresnel edge fade
-  float finalOpacity = opacity * cloudOpacity * mix(0.5, 1.0, fresnel);
-  if (finalOpacity < 0.02) discard;
-  
-  // White mystical glow
+  vec3 normal = vNormal;
+  if (!gl_FrontFacing) {
+    normal = -normal;
+  }
+
+  // 0.0 = head, 1.0 = tail (from TubeBody UV generation)
+  float spineT = clamp(vUv.y, 0.0, 1.0);
+
+  // Base gradient: gentle translucency, kept fairly low so the pulse dominates
+  float gradient = pow(1.0 - spineT, headConcentration);
+  float baseFactor = gradient * 0.1;
+
+  // Time-based pulse of concentrated color that travels from head → tail
+  float phase = fract(time * pulseSpeed);
+  float pulseCenter = phase;                 // 0 → 1 along the body
+  float width = max(0.001, pulseWidth);      // avoid divide-by-zero
+
+  // Circular distance along the spine so the pulse wraps smoothly head ↔ tail
+  float rawDelta = abs(spineT - pulseCenter);
+  float d = min(rawDelta, 1.0 - rawDelta);
+
+  float pulse = max(0.0, 1.0 - d / width);   // triangular pulse profile
+  float pulseFactor = pulseStrength * pulse;
+
+  // Combined longitudinal factor: faint body + bright traveling band
+  float longitudinalFactor = clamp(baseFactor + pulseFactor, 0.0, 1.0);
+
+  // Radial coordinate across the ring (0 = center line, 1 = outer edge)
+  float radial = abs(vUv.x - 0.5) * 2.0;
+
+  // Core stays brighter, edges soften; stronger toward the tail for a smeared "streak"
+  float radialCore = 1.0 - smoothstep(0.4, 1.0, radial); // 1 at center, 0 at outer edge
+  float tailT = spineT;
+  float streakFactor = mix(1.0, radialCore, tailT);
+
+  // Subtle fresnel term for nicer edges without ink/glow patterns
+  float viewDot = max(0.0, dot(normalize(normal), normalize(vViewDir)));
+  float fresnel = pow(1.0 - viewDot, 1.5);
+  float fresnelFactor = mix(1.0, 1.0 + fresnel * 1.5, clamp(fresnelStrength, 0.0, 1.0));
+
+  float finalOpacity = opacity * longitudinalFactor * streakFactor * fresnelFactor;
+
+  // Early discard for very transparent fragments
+  if (finalOpacity <= 0.01) {
+    discard;
+  }
+
+  // Simple color with mild fresnel lighting for an ethereal translucency
   vec3 color = baseColor;
-  
-  // Lighting boosted by fresnel for ethereal effect
-  float lighting = 0.7 + 0.3 * fresnel;
+  float lighting = 0.8 + 0.2 * fresnel;
   color *= lighting;
-  
+
   gl_FragColor = vec4(color, finalOpacity);
 }
 `
@@ -177,12 +101,13 @@ void main() {
 export function createFishBodyShaderMaterial(): THREE.ShaderMaterial {
   const uniforms: FishBodyShaderUniforms = {
     time: { value: 0 },
-    velocity: { value: new THREE.Vector3(0, 0, 0) },
-    baseColor: { value: new THREE.Color('#FFFFFF') }, // White glow
-    inkDensity: { value: 0.8 },
-    turbulenceScale: { value: 2.5 },
-    flowStrength: { value: 3.0 },
+    baseColor: { value: new THREE.Color('#FFFFFF') },
     opacity: { value: 0.5 },
+    headConcentration: { value: 2.0 },
+    fresnelStrength: { value: 0.3 },
+    pulseSpeed: { value: 0.12 },
+    pulseWidth: { value: 0.3 },
+    pulseStrength: { value: 1.0 },
   }
 
   return new THREE.ShaderMaterial({
@@ -191,7 +116,7 @@ export function createFishBodyShaderMaterial(): THREE.ShaderMaterial {
     fragmentShader,
     transparent: true,
     blending: THREE.NormalBlending,
-    depthWrite: true,
+    depthWrite: false,
     side: THREE.DoubleSide,
   })
 }

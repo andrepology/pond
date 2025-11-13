@@ -12,6 +12,7 @@ function createSpineSphereMaterial(): THREE.ShaderMaterial {
     uniforms: {
       time: { value: 0 },
       opacity: { value: 1.0 },
+      tailFadeStrength: { value: 0.6 },
       sphereRadius: { value: 64 },
       distanceFalloff: { value: 1.0 },
       coreBrightness: { value: 0.8 },
@@ -100,6 +101,7 @@ function createSpineSphereMaterial(): THREE.ShaderMaterial {
     `,
     fragmentShader: `
       uniform float opacity;
+      uniform float tailFadeStrength;
       uniform float distanceFalloff;
       uniform float coreBrightness;
       varying float vBrightness;
@@ -170,6 +172,15 @@ function createSpineSphereMaterial(): THREE.ShaderMaterial {
         vec3 finalColor = starColor * intensity * distanceDimming;
         float finalAlpha = intensity * opacity * vBrightness * distanceDimming * vDistanceAlpha * edgeFalloff;
 
+        // Extra transparency toward the tail: head stays brighter, tail fades out
+        float tailAlpha = 1.0 - vSpinePosition * tailFadeStrength;
+        tailAlpha = clamp(tailAlpha, 0.0, 1.0);
+
+        // With additive blending, alpha alone doesn't control brightness strongly,
+        // so scale the color intensity as well for a clearly visible fade.
+        finalColor *= tailAlpha;
+        finalAlpha *= tailAlpha;
+
         gl_FragColor = vec4(finalColor, finalAlpha);
       }
     `,
@@ -190,6 +201,7 @@ interface FishBodyProps {
 
 export function FishBody({ spine, headRef, headDirection, velocity, bankRadians = 0 }: FishBodyProps) {
   const spineSphereRefs = useRef<(THREE.Points | null)[]>([])
+  const headSphereRef = useRef<THREE.Points | null>(null)
   const groupRef = useRef<THREE.Group>(null)
 
   // Leva controls for spine spheres
@@ -198,31 +210,36 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
     enabled: { value: true, label: 'Enabled' },
     wave: folder({
       waveSpeed: { value: 0.4, min: 0.1, max: 2.0, step: 0.1, label: 'Wave Speed' },
-      waveStrength: { value: 1.0, min: 0.0, max: 2.0, step: 0.1, label: 'Wave Strength' },
-      wavelength: { value: 2.5, min: 0.5, max: 5.0, step: 0.1, label: 'Wavelengths' },
+      waveStrength: { value: 0.2, min: 0.0, max: 2.0, step: 0.1, label: 'Wave Strength' },
+      wavelength: { value: 0.5, min: 0.5, max: 5.0, step: 0.1, label: 'Wavelengths' },
     }),
     brightness: folder({
-      coreBrightness: { value: 0.8, min: 0.1, max: 2.0, step: 0.1, label: 'Core Brightness' },
-      headBoost: { value: 0.3, min: 0.0, max: 1.0, step: 0.1, label: 'Head Boost' },
+      coreBrightness: { value: 0.9, min: 0.1, max: 2.0, step: 0.1, label: 'Core Brightness' },
+      headBoost: { value: 1.0, min: 0.0, max: 1.0, step: 0.1, label: 'Head Boost' },
     }),
     size: folder({
-      baseSize: { value: 0.4, min: 0.1, max: 1.0, step: 0.05, label: 'Base Size' },
-      sizeVariation: { value: 0.15, min: 0.0, max: 0.5, step: 0.01, label: 'Size Variation' },
-      minSize: { value: 2.0, min: 0.5, max: 5.0, step: 0.1, label: 'Min Size' },
+      baseSize: { value: 0.3, min: 0.1, max: 1.0, step: 0.05, label: 'Base Size' },
+      sizeVariation: { value: 0.0, min: 0.0, max: 0.5, step: 0.01, label: 'Size Variation' },
+      minSize: { value: 0.5, min: 0.5, max: 5.0, step: 0.1, label: 'Min Size' },
     }),
     animation: folder({
-      phaseStrength: { value: 0.3, min: 0.0, max: 1.0, step: 0.05, label: 'Phase Strength' },
-      phaseSpeed: { value: 1.5, min: 0.5, max: 3.0, step: 0.1, label: 'Phase Speed' },
+      phaseStrength: { value: 0.0, min: 0.0, max: 1.0, step: 0.05, label: 'Phase Strength' },
+      phaseSpeed: { value: 0.0, min: 0.5, max: 3.0, step: 0.1, label: 'Phase Speed' },
     }),
     visual: folder({
       opacity: { value: 1.0, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
+      tailFadeStrength: { value: 1.0, min: 0.0, max: 1.0, step: 0.05, label: 'Tail Fade' },
       maxRenderDistance: { value: 100, min: 50, max: 200, step: 5, label: 'Max Distance' },
+      spacingFalloff: { value: 0.8, min: 0.0, max: 3.0, step: 0.05, label: 'Spacing Falloff' },
     }),
   }, { collapsed: true })
 })
 
   // Create custom spine sphere material with size variation and traveling wave
   const spineSphereMaterial = useMemo(() => createSpineSphereMaterial(), [])
+
+  // Separate material instance for the head glow so it can stay constant-bright
+  const headSphereMaterial = useMemo(() => createSpineSphereMaterial(), [])
 
   // Generate per-sphere phase offsets for variation (seed based on index)
   const phaseOffsets = useMemo(() => {
@@ -238,6 +255,7 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
     if (spineSphereMaterial) {
       spineSphereMaterial.uniforms.time.value = state.clock.elapsedTime
       spineSphereMaterial.uniforms.opacity.value = controls.opacity
+      spineSphereMaterial.uniforms.tailFadeStrength.value = controls.tailFadeStrength
       spineSphereMaterial.uniforms.waveSpeed.value = controls.waveSpeed
       spineSphereMaterial.uniforms.waveStrength.value = controls.waveStrength
       spineSphereMaterial.uniforms.wavelength.value = controls.wavelength
@@ -249,6 +267,34 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
       spineSphereMaterial.uniforms.phaseStrength.value = controls.phaseStrength
       spineSphereMaterial.uniforms.phaseSpeed.value = controls.phaseSpeed
       spineSphereMaterial.uniforms.maxRenderDistance.value = controls.maxRenderDistance
+    }
+
+    // Head glow: use same shader family but clamp to constant brightness (no wave/phase)
+    if (headSphereMaterial) {
+      headSphereMaterial.uniforms.time.value = state.clock.elapsedTime
+      headSphereMaterial.uniforms.opacity.value = controls.opacity
+      headSphereMaterial.uniforms.tailFadeStrength.value = 0.0
+      headSphereMaterial.uniforms.waveSpeed.value = controls.waveSpeed
+      headSphereMaterial.uniforms.waveStrength.value = 0.0
+      headSphereMaterial.uniforms.wavelength.value = controls.wavelength
+      // Slightly boosted core/head brightness so the head reads as the energy source,
+      // but with a smaller apparent size than the first tail segment.
+      headSphereMaterial.uniforms.coreBrightness.value = controls.coreBrightness * 1.2
+      headSphereMaterial.uniforms.headBoost.value = 1.0
+      headSphereMaterial.uniforms.baseSize.value = controls.baseSize * 0.6
+      headSphereMaterial.uniforms.sizeVariation.value = 0.0
+      headSphereMaterial.uniforms.minStarSize.value = controls.minSize * 0.6
+      headSphereMaterial.uniforms.phaseStrength.value = 0.0
+      headSphereMaterial.uniforms.phaseSpeed.value = controls.phaseSpeed
+      headSphereMaterial.uniforms.maxRenderDistance.value = controls.maxRenderDistance
+    }
+
+    // Sync geometric spacing falloff with Leva control so segments bunch toward the tail.
+    spine.falloff = controls.spacingFalloff
+
+    // Keep head glow attached to the physical head transform
+    if (headSphereRef.current && headRef.current) {
+      headSphereRef.current.position.copy(headRef.current.position)
     }
 
     const pts = spine.points
@@ -264,17 +310,18 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
 
   return (
     <group ref={groupRef}>
-      {/* Head sphere with matching material */}
+      {/* Invisible head anchor; movement & other systems still use headRef for transforms */}
       <mesh ref={headRef}>
-        <sphereGeometry args={[0.02, 16, 16]} />
-        <meshToonMaterial blending={THREE.AdditiveBlending} color="#9FA8DA" emissive="#FFFFFF" emissiveIntensity={0.6} toneMapped={false} transparent opacity={0.1} depthWrite={false} />
+        <sphereGeometry args={[0.002, 8, 8]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      
+
       {/* Render spine spheres first, then tube body for proper transparency layering */}
       {/* Skip the last 4 spine segments to avoid overlap with tail */}
       {controls.enabled && spine.points.slice(0, -4).map((_, idx) => {
-        const totalPoints = spine.points.length
-        const spinePosition = idx / Math.max(1, totalPoints - 1) // 0.0 (head) to 1.0 (tail)
+        const visibleCount = Math.max(1, spine.points.length - 4)
+        // Normalize over the visible segment range so the last rendered sphere reaches spinePosition=1.0.
+        const spinePosition = idx / Math.max(1, visibleCount - 1) // 0.0 (head) to 1.0 (tail end)
         const phaseOffset = phaseOffsets[idx]
 
         // Create geometry with per-sphere attributes
@@ -303,6 +350,22 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
         )
       })}
       <TubeBody spine={spine} headRef={headRef} headDirection={headDirection} velocity={velocity} />
+
+      {/* Head glow: same shader family as spine spheres, but constant-bright.
+          Rendered after TubeBody so it appears on top of the body geometry. */}
+      {controls.enabled && (
+        <points ref={headSphereRef}>
+          <bufferGeometry>
+            {/* Single point at local origin; world position is driven via headSphereRef.position */}
+            <bufferAttribute attach="attributes-position" args={[new Float32Array([0, 0, 0]), 3]} />
+            {/* Head is spinePosition 0.0 so it uses the warm head color branch */}
+            <bufferAttribute attach="attributes-spinePosition" args={[new Float32Array([0.0]), 1]} />
+            {/* Phase offset unused because phaseStrength is 0, but attribute required by shader */}
+            <bufferAttribute attach="attributes-phaseOffset" args={[new Float32Array([0.0]), 1]} />
+          </bufferGeometry>
+          <primitive object={headSphereMaterial} attach="material" />
+        </points>
+      )}
     </group>
   )
 }

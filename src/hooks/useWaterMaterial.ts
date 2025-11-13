@@ -115,7 +115,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
     attenuationColor: '#ffffff',
     specularIntensity: { value: 0.92, min: 0, max: 1, step: 0.01 },
-    normalStrength: { value: 0.32, min: 0, max: 2, step: 0.01 },
+    normalStrength: { value: 0.20, min: 0, max: 2, step: 0.01 },
     triplanarScale: { value: 0.07, min: 0, max: 0.3, step: 0.01 },
     flowSpeed: { value: 0.01, min: 0, max: 0.1, step: 0.001 },
     blendSharpness: { value: 1.5, min: 1, max: 10, step: 0.5 },
@@ -149,7 +149,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     })
   }, [controls.rippleIntensity])
 
-  const waterNormals = useTexture('/waternormals.jpg')
+  const waterNormals = useTexture('/waternormals/waternormals_3.jpg')
 
   // Setup texture properties
   useMemo(() => {

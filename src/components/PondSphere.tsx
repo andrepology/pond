@@ -89,11 +89,11 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
         <Starfield
           ref={starfieldRef}
           radius={1.00}
-          count={80}
-          minStarSize={1.2}
+          count={50}
+          minStarSize={1.1}
           twinkleSpeed={1.3}
           twinkleAmount={0.3}
-          bloomSize={0.3}
+          bloomSize={0.25}
           bloomStrength={0.1}
           distanceFalloff={1.8}
           coreBrightness={1.0}
