@@ -13,7 +13,7 @@ export function createFoodMarkerMaterial(): THREE.ShaderMaterial {
       sphereRadius: { value: 64 },
       distanceFalloff: { value: 1.0 },
       coreBrightness: { value: 1.5 }, // Brighter than stars
-      minStarSize: { value: 3.0 },
+      minStarSize: { value: 0.25 },
       maxRenderDistance: { value: 100 },
     },
     vertexShader: `
@@ -56,7 +56,7 @@ export function createFoodMarkerMaterial(): THREE.ShaderMaterial {
 
         // Size calculation (small but visible, like medium stars)
         float sizeVariation = 1.0 + (twinkle * 2.0 - 1.0) * 0.08;
-        float calculatedSize = 0.35 * sizeVariation * (90.0 / cameraDistance);
+        float calculatedSize = 0.15 * sizeVariation * (90.0 / cameraDistance);
         gl_PointSize = max(calculatedSize * (1.0 - vanishProgress), 1.0);
       }
     `,

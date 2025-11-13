@@ -21,7 +21,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     shape: folder({
       maxRadius: { value: 0.30, min: 0.1, max: 1.0, step: 0.05, label: 'Max Radius' },
       headRoundness: { value: 0.6, min: 0.1, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
-      tailSharpness: { value: 3.0, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
+      tailSharpness: { value: 2.5, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
     }),
     belly: folder({
       bellyAmount: { value: 0.08, min: 0.0, max: 0.3, step: 0.01, label: 'Belly Amount' },
