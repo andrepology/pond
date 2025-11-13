@@ -4,6 +4,62 @@ import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import { useControls, folder } from 'leva'
 
+// Simplex noise GLSL (3D), adapted from the implementation used in MeshDistortMaterial
+// Public domain / Stefan Gustavson; compacted for embedding
+const DISTORT_NOISE_GLSL = `
+vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float snoise(vec3 v){
+  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+  vec3 i  = floor(v + dot(v, C.yyy) );
+  vec3 x0 =   v - i + dot(i, C.xxx) ;
+  vec3 g = step(x0.yzx, x0.xyz);
+  vec3 l = 1.0 - g;
+  vec3 i1 = min( g.xyz, l.zxy );
+  vec3 i2 = max( g.xyz, l.zxy );
+  vec3 x1 = x0 - i1 + C.xxx;
+  vec3 x2 = x0 - i2 + C.yyy;
+  vec3 x3 = x0 - D.yyy;
+  i = mod289(i);
+  vec4 p = permute( permute( permute(
+             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+           + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+  float n_ = 0.142857142857;
+  vec3  ns = n_ * D.wyz - D.xzx;
+  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+  vec4 x_ = floor(j * ns.z);
+  vec4 y_ = floor(j - 7.0 * x_ );
+  vec4 x = x_ *ns.x + ns.yyyy;
+  vec4 y = y_ *ns.x + ns.yyyy;
+  vec4 h = 1.0 - abs(x) - abs(y);
+  vec4 b0 = vec4( x.xy, y.xy );
+  vec4 b1 = vec4( x.zw, y.zw );
+  vec4 s0 = floor(b0)*2.0 + 1.0;
+  vec4 s1 = floor(b1)*2.0 + 1.0;
+  vec4 sh = -step(h, vec4(0.0));
+  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+  vec3 p0 = vec3(a0.xy,h.x);
+  vec3 p1 = vec3(a0.zw,h.y);
+  vec3 p2 = vec3(a1.xy,h.z);
+  vec3 p3 = vec3(a1.zw,h.w);
+  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+  p0 *= norm.x;
+  p1 *= norm.y;
+  p2 *= norm.z;
+  p3 *= norm.w;
+  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1),
+                          dot(x2,x2), dot(x3,x3)), 0.0);
+  m = m * m;
+  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),
+                                dot(p2,x2), dot(p3,x3) ) );
+}
+`
+
 interface WaterMaterialControls {
   roughness: number
   ior: number
@@ -16,12 +72,14 @@ interface WaterMaterialControls {
   triplanarScale: number
   flowSpeed: number
   blendSharpness: number
-  displacementStrength: number
   ripplesEnabled: boolean
   rippleIntensity: number
   rippleSpeed: number
   rippleDecay: number
   rippleMaxRadius: number
+  distortAmount: number
+  distortRadius: number
+  distortSpeed: number
 }
 
 interface Ripple {
@@ -61,7 +119,11 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     triplanarScale: { value: 0.07, min: 0, max: 0.3, step: 0.01 },
     flowSpeed: { value: 0.01, min: 0, max: 0.1, step: 0.001 },
     blendSharpness: { value: 1.5, min: 1, max: 10, step: 0.5 },
-    displacementStrength: { value: 0.02, min: 0, max: 0.1, step: 0.001 },
+  Distortion: folder({
+    distortAmount: { value: 0.12, min: 0, max: 1, step: 0.01 },
+    distortRadius: { value: 1.02, min: 0.5, max: 1.5, step: 0.01 },
+    distortSpeed: { value: 0.06, min: 0.0, max: 0.14, step: 0.01 }
+  }),
     Ripples: folder({
       ripplesEnabled: true,
       rippleIntensity: { value: 1.0, min: 0, max: 1, step: 0.05 },
@@ -112,7 +174,9 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       shader.uniforms.uNormalStrength = { value: controls.normalStrength }
       shader.uniforms.uFlowSpeed = { value: controls.flowSpeed }
       shader.uniforms.uBlendSharpness = { value: controls.blendSharpness }
-      shader.uniforms.uDisplacementStrength = { value: controls.displacementStrength }
+      shader.uniforms.uDistortAmount = { value: controls.distortAmount }
+      shader.uniforms.uDistortRadius = { value: controls.distortRadius }
+      shader.uniforms.uDistortSpeed = { value: controls.distortSpeed }
 
       // Ripple uniforms
       shader.uniforms.uRipplesEnabled = { value: true }
@@ -129,63 +193,34 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       // Store reference for live updates
       shaderUniformsRef.current = shader.uniforms
 
-      // Add vertex displacement uniforms and shared variables
+      // Add vertex displacement uniforms, noise, and shared variables
       shader.vertexShader = shader.vertexShader.replace(
         'void main() {',
-        `uniform float uTime;
+        `        uniform float uTime;
         uniform sampler2D uWaterNormalMap;
         uniform float uFlowSpeed;
-        uniform float uDisplacementStrength;
-        
-        // Shared variables for displacement calculation
-        vec2 flowOffset;
-        vec2 displacementUv;
-        vec2 texelSize;
-        float dispCenter;
-        float dispRight;
-        float dispTop;
-        
+        uniform float uDistortAmount;
+        uniform float uDistortRadius;
+        uniform float uDistortSpeed;
+
+        ${DISTORT_NOISE_GLSL}
+
         void main() {`
       )
 
-      // Compute displacement values and perturb normals in beginnormal_vertex
-      shader.vertexShader = shader.vertexShader.replace(
-        '#include <beginnormal_vertex>',
-        `#include <beginnormal_vertex>
-        
-        // Calculate displacement values (computed once, used for both normal and vertex)
-        flowOffset = vec2(uTime * uFlowSpeed * 0.3, -uTime * uFlowSpeed);
-        displacementUv = uv + flowOffset;
-        texelSize = vec2(1.0 / 512.0); // Assuming 512x512 texture
-        
-        // Sample center and neighboring texels
-        dispCenter = (texture2D(uWaterNormalMap, displacementUv).r + 
-                      texture2D(uWaterNormalMap, displacementUv).g + 
-                      texture2D(uWaterNormalMap, displacementUv).b) / 3.0;
-        dispRight = (texture2D(uWaterNormalMap, displacementUv + vec2(texelSize.x, 0.0)).r +
-                     texture2D(uWaterNormalMap, displacementUv + vec2(texelSize.x, 0.0)).g +
-                     texture2D(uWaterNormalMap, displacementUv + vec2(texelSize.x, 0.0)).b) / 3.0;
-        dispTop = (texture2D(uWaterNormalMap, displacementUv + vec2(0.0, texelSize.y)).r +
-                   texture2D(uWaterNormalMap, displacementUv + vec2(0.0, texelSize.y)).g +
-                   texture2D(uWaterNormalMap, displacementUv + vec2(0.0, texelSize.y)).b) / 3.0;
-        
-        // Compute gradients for normal perturbation (reduced multiplier to prevent normal flipping)
-        vec2 gradient = vec2(dispRight - dispCenter, dispTop - dispCenter) * uDisplacementStrength * 3.5;
-        
-        // Perturb object normal based on displacement gradients
-        vec3 displacedNormal = normalize(objectNormal - vec3(gradient.x, gradient.y, 0.0));
-        objectNormal = displacedNormal;`
-      )
-
-      // Apply smooth displacement using precomputed values
+      // Override begin_vertex to apply simplex-noise-based radial distortion
       shader.vertexShader = shader.vertexShader.replace(
         '#include <begin_vertex>',
-        `#include <begin_vertex>
-        
-        // Apply smooth displacement with gentler smoothstep to prevent folding
-        float displacement = smoothstep(0.2, 0.8, dispCenter);
-        transformed += objectNormal * displacement * uDisplacementStrength;`
+        `
+        vec3 transformed = vec3(position);
+
+        float updateTime = uTime * uDistortSpeed;
+        float noise = snoise(vec3(position * 0.5 + updateTime * 5.0));
+        transformed = position * (noise * pow(uDistortAmount, 2.0) + uDistortRadius);
+        `
       )
+
+
 
       // Add uniforms and triplanar function to fragment shader
       shader.fragmentShader = `
@@ -265,88 +300,104 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
           return rippleNormal;
         }
 
-        // Triplanar normal mapping function
-        vec3 triplanarNormal(vec3 worldPos, vec3 worldNormal) {
-          // Calculate blend weights based on surface normal
-          vec3 blendWeights = abs(worldNormal);
+        // Triplanar normal mapping function (world-space), following the
+        // BGolus-style approach for UV flipping and per-plane bases.
+        vec3 triplanarNormal(vec3 worldPos, vec3 worldGeomNormal) {
+          // Calculate blend weights from geometric world normal
+          vec3 blendWeights = abs(worldGeomNormal);
           blendWeights = pow(blendWeights, vec3(uBlendSharpness));
-          blendWeights /= dot(blendWeights, vec3(1.0));
-          
+          blendWeights /= max(dot(blendWeights, vec3(1.0)), 0.0001);
+
           // Animated offset for flow
           vec2 flowOffset = vec2(uTime * uFlowSpeed * 0.3, -uTime * uFlowSpeed);
-          
-          // Sample normal map from 3 planes
-          vec2 uvX = worldPos.yz * uTriplanarScale + flowOffset;
-          vec2 uvY = worldPos.xz * uTriplanarScale + flowOffset;
-          vec2 uvZ = worldPos.xy * uTriplanarScale + flowOffset;
-          
-          // Sample and unpack normals (0-1 to -1 to 1)
+
+          // Sign for each axis so +X/-X, +Y/-Y, +Z/-Z are consistent.
+          // Use explicit comparison to avoid 0.0 from sign() and keep values strictly +/-1.
+          vec3 axisSign = vec3(
+            worldGeomNormal.x >= 0.0 ? 1.0 : -1.0,
+            worldGeomNormal.y >= 0.0 ? 1.0 : -1.0,
+            worldGeomNormal.z >= 0.0 ? 1.0 : -1.0
+          );
+
+          // Projected UVs for each axis (world-space triplanar)
+          // X-facing plane uses YZ, Y-facing uses XZ, Z-facing uses XY.
+          // Add small per-plane phase offsets (BGolus-style) to decorrelate samples and hide seams.
+          vec2 uvX = worldPos.zy * uTriplanarScale + flowOffset;
+          vec2 uvY = worldPos.xz * uTriplanarScale + flowOffset + vec2(0.33, 0.33);
+          vec2 uvZ = worldPos.xy * uTriplanarScale + flowOffset + vec2(0.67, 0.67);
+
+          // Flip UVs to correct for mirroring based on axis sign
+          uvX.x *= axisSign.x;
+          uvY.x *= axisSign.y;
+          uvZ.x *= -axisSign.z;
+
+          // Sample and unpack normals (0-1 to -1 to 1) in tangent space
           vec3 tnormalX = texture2D(uWaterNormalMap, uvX).xyz * 2.0 - 1.0;
           vec3 tnormalY = texture2D(uWaterNormalMap, uvY).xyz * 2.0 - 1.0;
           vec3 tnormalZ = texture2D(uWaterNormalMap, uvZ).xyz * 2.0 - 1.0;
-          
-          // Swizzle to correct axes for each projection plane
-          // X projection (YZ plane): map texture XY to world YZ
-          vec3 normalX = vec3(0.0, tnormalX.x, tnormalX.y);
-          // Y projection (XZ plane): map texture XY to world XZ
-          vec3 normalY = vec3(tnormalY.x, 0.0, tnormalY.y);
-          // Z projection (XY plane): map texture XY to world XY
-          vec3 normalZ = vec3(tnormalZ.x, tnormalZ.y, 0.0);
-          
-          // Blend the three projections
-          vec3 blendedNormal = normalX * blendWeights.x + 
-                               normalY * blendWeights.y + 
-                               normalZ * blendWeights.z;
-          
-          // Apply strength and normalize
-          blendedNormal.xy *= uNormalStrength;
-          blendedNormal.z = sqrt(1.0 - dot(blendedNormal.xy, blendedNormal.xy));
-          
-          return normalize(blendedNormal);
+
+          // Flip tangent-space normals to match the flipped UVs
+          tnormalX.x *= axisSign.x;
+          tnormalY.x *= axisSign.y;
+          tnormalZ.x *= -axisSign.z;
+
+          // Build per-axis world-space normals from tangent-space samples.
+          // For each plane, define tangent (u), bitangent (v), and normal (n) in world space:
+          //  - X plane:   u = +Z, v = +Y, n = +/-X
+          //  - Y plane:   u = +X, v = +Z, n = +/-Y
+          //  - Z plane:   u = +X, v = +Y, n = +/-Z
+          vec3 normalX = normalize(
+            tnormalX.x * vec3(0.0, 0.0, 1.0) +  // u: +Z
+            tnormalX.y * vec3(0.0, 1.0, 0.0) +  // v: +Y
+            tnormalX.z * vec3(axisSign.x, 0.0, 0.0) // n: +/-X
+          );
+
+          vec3 normalY = normalize(
+            tnormalY.x * vec3(1.0, 0.0, 0.0) +  // u: +X
+            tnormalY.y * vec3(0.0, 0.0, 1.0) +  // v: +Z
+            tnormalY.z * vec3(0.0, axisSign.y, 0.0) // n: +/-Y
+          );
+
+          vec3 normalZ = normalize(
+            tnormalZ.x * vec3(1.0, 0.0, 0.0) +  // u: +X
+            tnormalZ.y * vec3(0.0, 1.0, 0.0) +  // v: +Y
+            tnormalZ.z * vec3(0.0, 0.0, axisSign.z) // n: +/-Z
+          );
+
+          // Whiteout-style blend between the three axis normals
+          vec3 blendedNormal = normalize(
+            normalX * blendWeights.x +
+            normalY * blendWeights.y +
+            normalZ * blendWeights.z
+          );
+
+          // Mix between geometric normal and blended map normal for stability
+          float strength = clamp(uNormalStrength, 0.0, 1.0);
+          return normalize(mix(worldGeomNormal, blendedNormal, strength));
         }
         
         ${shader.fragmentShader}
       `
 
-      // Replace normal map calculation with triplanar version
+      // Replace normal map calculation with triplanar version working in world space
       // MeshPhysicalMaterial with transmission provides vWorldPosition
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <normal_fragment_maps>',
         `
-        #ifdef USE_NORMALMAP_OBJECTSPACE
-          normal = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
-          #ifdef FLIP_SIDED
-            normal = - normal;
-          #endif
-          #ifdef DOUBLE_SIDED
-            normal = normal * faceDirection;
-          #endif
-          normal = normalize( normalMatrix * normal );
-        #elif defined( USE_NORMALMAP_TANGENTSPACE )
-          // Use triplanar mapping - no UV seams possible
-          vec3 mapN = triplanarNormal(vWorldPosition, normalize(vNormal));
+        // Derive geometric world-space normal from view-space normal
+        // "normal" is in view space at this point; convert it back to world space
+        vec3 worldGeomNormal = inverseTransformDirection( normal, viewMatrix );
+        worldGeomNormal = normalize( worldGeomNormal );
 
-          #ifdef USE_TANGENT
-            normal = normalize( vTBN * mapN );
-          #else
-            // Manual TBN construction when tangents not available
-            vec3 pos_dx = dFdx( vViewPosition );
-            vec3 pos_dy = dFdy( vViewPosition );
-            vec3 surfaceNormal = normalize( vNormal );
+        // Triplanar normal in world space
+        vec3 worldNormal = triplanarNormal(vWorldPosition, worldGeomNormal);
 
-            // Construct tangent space basis
-            vec3 tangent = normalize( pos_dx );
-            vec3 bitangent = normalize( cross( surfaceNormal, tangent ) );
-            mat3 vTBN = mat3( tangent, bitangent, surfaceNormal );
-
-            normal = normalize( vTBN * mapN );
-          #endif
-        #endif
-
-        // Apply ripple normal perturbation to the final normal
+        // Apply ripple normal perturbation in world space
         vec3 ripplePerturbation = calculateRippleNormal(vWorldPosition, uTime);
-        normal += ripplePerturbation;
-        normal = normalize(normal);
+        worldNormal = normalize(worldNormal + ripplePerturbation);
+
+        // Transform back to view space for lighting
+        normal = transformDirection( worldNormal, viewMatrix );
         `
       )
     }
@@ -370,11 +421,25 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       if (shaderUniformsRef.current.uBlendSharpness) {
         shaderUniformsRef.current.uBlendSharpness.value = controls.blendSharpness
       }
-      if (shaderUniformsRef.current.uDisplacementStrength) {
-        shaderUniformsRef.current.uDisplacementStrength.value = controls.displacementStrength
+      if (shaderUniformsRef.current.uDistortAmount) {
+        shaderUniformsRef.current.uDistortAmount.value = controls.distortAmount
+      }
+      if (shaderUniformsRef.current.uDistortRadius) {
+        shaderUniformsRef.current.uDistortRadius.value = controls.distortRadius
+      }
+      if (shaderUniformsRef.current.uDistortSpeed) {
+        shaderUniformsRef.current.uDistortSpeed.value = controls.distortSpeed
       }
     }
-  }, [controls.triplanarScale, controls.normalStrength, controls.flowSpeed, controls.blendSharpness, controls.displacementStrength])
+  }, [
+    controls.triplanarScale,
+    controls.normalStrength,
+    controls.flowSpeed,
+    controls.blendSharpness,
+    controls.distortAmount,
+    controls.distortRadius,
+    controls.distortSpeed
+  ])
 
   // Animate time uniform and manage ripples
   useFrame((_, delta) => {

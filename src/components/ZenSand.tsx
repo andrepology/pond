@@ -36,7 +36,7 @@ export default function ZenSand({
   driftSpeed = 0.6,
   centers = [[0, 0]],
   position = [0, 0, 0],
-  bgColor = '#000000',
+  bgColor = '#F6F5F3',
   edgeFadeStart = 0.8,
   edgeFadeEnd = 1.0
 }: ZenSandProps) {

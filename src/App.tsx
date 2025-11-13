@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useState, forwardRef, useMemo, useRef, useEffect, memo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats, Backdrop } from '@react-three/drei'
+import { Preload, AccumulativeShadows, RandomizedLight, Icosahedron, Environment, Box, useGLTF, Center, useTexture, Stats, Backdrop, Lightformer } from '@react-three/drei'
 import { Leva, useControls } from 'leva'
 import { signal } from '@preact/signals-core'
 // import { Focusable } from './components/focusable' // Kept for potential reversion
@@ -172,11 +172,12 @@ export default function App() {
         <Environment
           //  files={['/rogland_clear_night_2k.hdr']}
            preset='sunset'
-           backgroundBlurriness={0}
+           backgroundBlurriness={0.0}
            environmentIntensity={1.0}
-
-
+           
+           resolution={128}
           />
+        
 
 
         {/* Main Scene Content */}

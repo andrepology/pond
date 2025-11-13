@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import React, { forwardRef, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import SphericalSky from './SphericalSky'
 import Starfield, { type StarfieldHandle } from './Starfield'
 import Fish from './fish/Fish'
@@ -23,6 +24,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
 
   const starfieldRef = useRef<StarfieldHandle>(null)
   const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
+  const groupRef = useRef<THREE.Group>(null)
 
   // Update starfield and water opacity based on fade
   React.useEffect(() => {
@@ -35,8 +37,43 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
     }
   }, [fade])
 
+  // Subtle mouse following for the entire pond group
+  useFrame((state) => {
+    if (!groupRef.current) return
+
+    const { pointer } = state
+    const group = groupRef.current
+
+    // Reduce following intensity during crossfade transitions
+    const followingIntensity = 1 - fade * 0.8 // Reduce following when fading
+
+    // Responsive horizontal following
+    group.position.x = THREE.MathUtils.lerp(
+      group.position.x,
+      pointer.x * 0.1 * followingIntensity, // Horizontal movement
+      0.005
+    )
+
+    // Responsive vertical following
+    group.position.y = THREE.MathUtils.lerp(
+      group.position.y,
+      pointer.y * 0.1 * followingIntensity, // Vertical movement
+      0.005
+    )
+  })
+
   return (
-    <group  {...props} ref={ref}>
+    <group  {...props} ref={(node) => {
+      // Handle both the forwarded ref and our internal groupRef
+      if (ref) {
+        if (typeof ref === 'function') {
+          ref(node)
+        } else {
+          ref.current = node
+        }
+      }
+      groupRef.current = node
+    }}>
       {/* Background elements - render first */}
       <group renderOrder={-3}>
         <SphericalSky
