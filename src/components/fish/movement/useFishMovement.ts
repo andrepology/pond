@@ -190,8 +190,8 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     applyDrag(velocity.current, delta, PHYSICS)
     clampSpeed(velocity.current, params.maxSpeed * 0.3, params.maxSpeed)
 
-    // Integrate position
-    headRef.current.position.add(velocity.current)
+    // Integrate position (delta-scaled for framerate independence)
+    headRef.current.position.addScaledVector(velocity.current, delta)
     // Bounds clamp
     const p = headRef.current.position
     p.x = THREE.MathUtils.clamp(p.x, params.bounds.min, params.bounds.max)
@@ -212,8 +212,8 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     const time = performance.now() / 1000
     const speed = velocity.current.length()
     
-    // Accumulate distance traveled (this couples wave to actual motion)
-    distanceTraveled.current += speed
+    // Accumulate distance traveled (delta-scaled for framerate independence)
+    distanceTraveled.current += speed * delta
     
     // Body length estimate for calculating propulsion
     const bodyLength = spine.points.length * spine.spacing

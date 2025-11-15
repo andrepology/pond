@@ -1,6 +1,6 @@
 export const MOVEMENT_DEFAULTS = {
-  maxSpeed: 0.008,
-  maxSteer: 0.002,
+  maxSpeed: 0.5,
+  maxSteer: 4.0,
   slowingRadius: 2.0,
   visionDistance: 4.0,
   forwardDistance: 1.5,
