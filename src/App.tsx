@@ -15,6 +15,7 @@ import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
 import { JournalBrowser } from './components/JournalBrowser'
 import { SceneInitializer } from './components/SceneInitializer'
+import { useAppUpdater } from './hooks/useAppUpdater'
 
 import MindBody from './components/MindBody'
 import ZenSand from './components/ZenSand'
@@ -33,6 +34,17 @@ export default function App() {
   const markersVisibleRef = useRef(false)
   const hasInputSignal = useMemo(() => signal(false), [])
   const isMobile = isMobileDevice()
+  
+  // Auto-updater for Tauri builds
+  // useAppUpdater()
+
+  // Detect Tauri environment and add class to root for CSS
+  useEffect(() => {
+    if (typeof window !== 'undefined' && '__TAURI__' in window && window.__TAURI__) {
+      document.getElementById('root')?.classList.add('tauri-app')
+      document.body.classList.add('tauri-app')
+    }
+  }, [])
 
   // Sync signal to ref for RadialMarkers (inverted: visible when no input)
   useEffect(() => {
@@ -150,9 +162,14 @@ export default function App() {
         gl={{
           antialias: true,
           powerPreference: "high-performance",
-          localClippingEnabled: true
+          localClippingEnabled: true,
+          alpha: true
         }}
         dpr={isMobile ? [1.0, 1.3] : [1.0, 1.5]}
+        // onCreated={({ gl, scene }) => {
+        //   gl.setClearColor(0x000000, 0) // Transparent clear
+        //   scene.background = null
+        // }}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         {/* <Stats /> */}
@@ -161,13 +178,13 @@ export default function App() {
         <SceneInitializer onReady={() => setSceneReady(true)}>
         <CameraRig isJournalDocked={isJournalDocked} />
 
-        <color attach="background" args={['#F6F5F3']} />
+        <color attach="background" args={['rgba(246, 245, 243, 0.05)']} />
         <AdaptiveFog
           color="#F6F5F3"
           defaultFog={{ near: 7, far: 22 }}
           focusedFog={{ near: 7, far: 22 }}
           animationDuration={1.2}
-        />
+        /> 
 
         <Environment
            // files={['/envmaps/qwantani_sunset_puresky_1k.hdr']}
@@ -301,7 +318,7 @@ const PostProcessingEffects = memo(function PostProcessingEffects({
   const blendFunction = useMemo(() => BlendFunction[toneMappingBlendFunction as keyof typeof BlendFunction], [toneMappingBlendFunction])
 
   return (
-    <EffectComposer autoClear={false} multisampling={0} resolutionScale={0.5}>
+    <EffectComposer autoClear={true} multisampling={0} resolutionScale={0.5}>
 
       <Bloom
         intensity={bloomIntensity}

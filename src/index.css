@@ -2,17 +2,16 @@
 
 html,
 body {
-  width: 100vw;
-  height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #F6F5F3;
-  position: relative;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  background-color: rgba(246, 245, 243, 0.1n0);
+  backdrop-filter: blur(10px);
+}
+
+/* Tauri transparent window support */
+body.tauri-app {
+  background: transparent;
 }
 
 #root {
@@ -21,9 +20,9 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #F6F5F3;
   position: relative;
 }
+
 
 canvas {
   display: block;

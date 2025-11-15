@@ -1,13 +1,13 @@
 export const MOVEMENT_DEFAULTS = {
-  maxSpeed: 0.01,
-  maxSteer: 0.001,
+  maxSpeed: 0.008,
+  maxSteer: 0.002,
   slowingRadius: 2.0,
-  visionDistance: 5.0,
-  forwardDistance: 2.5,
+  visionDistance: 4.0,
+  forwardDistance: 1.5,
   wanderRadius: 1.0,
   updateInterval: 0.8,
   arrivalThreshold: 0.3,
-  bounds: { min: -20, max: 20, buffer: 3 },
+  bounds: { min: 30, max:30, buffer: 3 },
 }
 
 export const REST_DEFAULTS = {

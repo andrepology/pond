@@ -6,7 +6,6 @@ export interface FishBodyShaderUniforms {
   opacity: { value: number }
   headConcentration: { value: number }
   fresnelStrength: { value: number }
-  pulseSpeed: { value: number }
   pulseWidth: { value: number }
   pulseStrength: { value: number }
   [key: string]: any
@@ -33,7 +32,6 @@ uniform vec3 baseColor;
 uniform float opacity;
 uniform float headConcentration;
 uniform float fresnelStrength;
-uniform float pulseSpeed;
 uniform float pulseWidth;
 uniform float pulseStrength;
 
@@ -54,19 +52,12 @@ void main() {
   float gradient = pow(1.0 - spineT, headConcentration);
   float baseFactor = gradient * 0.1;
 
-  // Time-based pulse of concentrated color that travels from head → tail
-  float phase = fract(time * pulseSpeed);
-  float pulseCenter = phase;                 // 0 → 1 along the body
-  float width = max(0.001, pulseWidth);      // avoid divide-by-zero
+  // Static concentration at the head that tapers off toward the tail
+  float width = max(0.001, pulseWidth);      // controls falloff rate
+  float headIntensity = exp(-spineT / width); // exponential falloff from head to tail
+  float pulseFactor = pulseStrength * headIntensity;
 
-  // Circular distance along the spine so the pulse wraps smoothly head ↔ tail
-  float rawDelta = abs(spineT - pulseCenter);
-  float d = min(rawDelta, 1.0 - rawDelta);
-
-  float pulse = max(0.0, 1.0 - d / width);   // triangular pulse profile
-  float pulseFactor = pulseStrength * pulse;
-
-  // Combined longitudinal factor: faint body + bright traveling band
+  // Combined longitudinal factor: faint body + head concentration
   float longitudinalFactor = clamp(baseFactor + pulseFactor, 0.0, 1.0);
 
   // Radial coordinate across the ring (0 = center line, 1 = outer edge)
@@ -105,7 +96,6 @@ export function createFishBodyShaderMaterial(): THREE.ShaderMaterial {
     opacity: { value: 0.5 },
     headConcentration: { value: 2.0 },
     fresnelStrength: { value: 0.3 },
-    pulseSpeed: { value: 0.12 },
     pulseWidth: { value: 0.3 },
     pulseStrength: { value: 1.0 },
   }

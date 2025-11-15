@@ -8,6 +8,7 @@ import { usePointerGestures } from './interaction/usePointerGestures'
 import { useFoodSystem } from '../../fish/hooks/useFoodSystem'
 import { FoodVisuals } from '../../fish/components/FoodVisuals'
 import { useMemo, useRef, useState } from 'react'
+import { useControls, folder } from 'leva'
 
 
 export interface FishProps {
@@ -21,6 +22,21 @@ export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
   const GROUND_Y = 0
   // Interaction sphere radius should match movement bounds
   const INTERACTION_RADIUS = 6
+
+  // Spine undulation controls
+  const undulationControls = useControls('Fish Undulation', {
+    wave: folder({
+      headAmplitude: { value: 0.02, min: 0.01, max: 0.2, step: 0.01, label: 'Head Amplitude' },
+      tailAmplitude: { value: 0.03, min: 0.00, max: 0.2, step: 0.01, label: 'Tail Amplitude' },
+      bodyWavelength: { value: 1.15, min: 0.3, max: 2.0, step: 0.05, label: 'Body Wavelength' },
+      propulsionRatio: { value: 1.45, min: 0.8, max: 1.5, step: 0.05, label: 'Propulsion Ratio' },
+      idleFrequency: { value: 1.0, min: 0.0, max: 3.0, step: 0.1, label: 'Idle Frequency' },
+    }),
+    spine: folder({
+      responsiveness: { value: 0.06, min: 0.05, max: 0.5, step: 0.01, label: 'Responsiveness' },
+      stiffness: { value: 2.4, min: 0.5, max: 4.0, step: 0.1, label: 'Stiffness' },
+    }),
+  }, { collapsed: true })
   const movement = useFishMovement({
     maxSpeed: MOVEMENT_DEFAULTS.maxSpeed,
     maxSteer: MOVEMENT_DEFAULTS.maxSteer,
@@ -32,6 +48,15 @@ export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
     arrivalThreshold: MOVEMENT_DEFAULTS.arrivalThreshold,
     // Bound fish within PondSphere via innio-container scale (≈0.15). World radius ~1.01 → local bounds ~±6.5. Use conservative ±6.
     bounds: { min: -6, max: 6, buffer: 0.8 },
+    undulation: {
+      headAmplitude: undulationControls.headAmplitude,
+      tailAmplitude: undulationControls.tailAmplitude,
+      bodyWavelength: undulationControls.bodyWavelength,
+      propulsionRatio: undulationControls.propulsionRatio,
+      idleFrequency: undulationControls.idleFrequency,
+      spineResponsiveness: undulationControls.responsiveness,
+      spineStiffness: undulationControls.stiffness,
+    },
   })
 
   const planeRef = useRef<THREE.Mesh>(null)

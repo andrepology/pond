@@ -15,6 +15,15 @@ export interface MovementParams {
   updateInterval: number
   arrivalThreshold: number
   bounds: { min: number; max: number; buffer: number }
+  undulation: {
+    headAmplitude: number
+    tailAmplitude: number
+    bodyWavelength: number
+    propulsionRatio: number
+    idleFrequency: number
+    spineResponsiveness: number
+    spineStiffness: number
+  }
 }
 
 export interface MovementOutputs {
@@ -45,6 +54,7 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
   const swimDuration = useRef(1)
   const foodTarget = useRef<THREE.Vector3 | null>(null)
   const approachSwayTime = useRef(0)
+  const distanceTraveled = useRef(0)
 
   // Minimal per-frame API; caller wires into useFrame externally
   useEffect(() => {
@@ -198,10 +208,47 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     const bank = THREE.MathUtils.lerp(bankRadians.current, -Math.sign(turnAxis.y) * turnMag * 0.35, 0.2)
     bankRadians.current = bank
 
-    // Spine update with simple wave offset
-    const t = performance.now() / 1000
-    const wave = (i: number) => Math.sin(t * 3 + i * 0.5) * 0.05 * THREE.MathUtils.clamp(velocity.current.length() * 20, 0.2, 1)
-    updateSpineFollow(spine, headRef.current.position, headDirection.current, wave)
+    // Spine update with distance-based propulsive undulation
+    const time = performance.now() / 1000
+    const speed = velocity.current.length()
+    
+    // Accumulate distance traveled (this couples wave to actual motion)
+    distanceTraveled.current += speed
+    
+    // Body length estimate for calculating propulsion
+    const bodyLength = spine.points.length * spine.spacing
+    
+    const wave = (i: number) => {
+      if (spine.points.length <= 1) return 0
+      const spinePos = i / (spine.points.length - 1) // 0 at head, 1 at tail
+      
+      // Smooth amplitude growth from head to tail using smoothstep
+      const smoothGrowth = spinePos * spinePos * (3 - 2 * spinePos)
+      const amplitude = THREE.MathUtils.lerp(
+        params.undulation.headAmplitude,
+        params.undulation.tailAmplitude,
+        smoothGrowth
+      )
+      
+      // Pure distance-based traveling wave (couples to actual velocity)
+      // Burst → faster velocity → wave advances faster naturally
+      const waveTravel = distanceTraveled.current * params.undulation.propulsionRatio
+      const distancePhase = (waveTravel / (bodyLength * params.undulation.bodyWavelength)) * Math.PI * 2
+      const spinePhase = spinePos * Math.PI * 2 / params.undulation.bodyWavelength
+      
+      // Gentle idle breathing when nearly stopped
+      const idlePhase = time * params.undulation.idleFrequency
+      const idleWeight = THREE.MathUtils.clamp(1.0 - speed / (params.maxSpeed * 0.3), 0, 1)
+      
+      // Blend distance-based (propulsive) and time-based (idle) waves
+      const phase = THREE.MathUtils.lerp(distancePhase - spinePhase, idlePhase - spinePhase * 0.5, idleWeight)
+      
+      return Math.sin(phase) * amplitude
+    }
+    
+    // Stiffer spine = more constraint enforcement
+    const constraintIterations = Math.floor(params.undulation.spineStiffness)
+    updateSpineFollow(spine, headRef.current.position, headDirection.current, wave, params.undulation.spineResponsiveness, constraintIterations)
 
     // Do not auto-clear food target here; consumption is managed externally
   }

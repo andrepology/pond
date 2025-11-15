@@ -78,7 +78,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
     updateWidth()
     window.addEventListener('resize', updateWidth)
     return () => window.removeEventListener('resize', updateWidth)
-  }, [viewsContainerWidth])
+  }, [])
 
   const handleTabChange = (tabId: TabId) => {
     if (activeTab === tabId && !isDocked) {

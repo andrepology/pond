@@ -31,9 +31,8 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
       opacity: { value: 0.1, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
       headConcentration: { value: 2.5, min: 0.5, max: 4.0, step: 0.1, label: 'Head Concentration' },
       fresnelStrength: { value: 0.3, min: 0.0, max: 1.0, step: 0.05, label: 'Edge Fresnel' },
-      pulseSpeed: { value: 0.10, min: 0.01, max: 0.8, step: 0.01, label: 'Pulse Speed' },
-      pulseWidth: { value: 0.35, min: 0.05, max: 0.8, step: 0.05, label: 'Pulse Width' },
-      pulseStrength: { value: 0.6, min: 0.0, max: 2.0, step: 0.05, label: 'Pulse Strength' },
+      pulseWidth: { value: 0.35, min: 0.05, max: 0.8, step: 0.05, label: 'Head Fade Width' },
+      pulseStrength: { value: 0.6, min: 0.0, max: 2.0, step: 0.05, label: 'Head Pulse Strength' },
     }),
     geometry: folder({
       samplesPerSegment: { value: 8, min: 4, max: 16, step: 1, label: 'Samples/Segment' },
@@ -158,7 +157,6 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
       shaderMat.uniforms.opacity.value = bodyControls.opacity
       shaderMat.uniforms.headConcentration.value = bodyControls.headConcentration
       shaderMat.uniforms.fresnelStrength.value = bodyControls.fresnelStrength
-      shaderMat.uniforms.pulseSpeed.value = bodyControls.pulseSpeed
       shaderMat.uniforms.pulseWidth.value = bodyControls.pulseWidth
       shaderMat.uniforms.pulseStrength.value = bodyControls.pulseStrength
     }

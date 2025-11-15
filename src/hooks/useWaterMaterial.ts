@@ -120,15 +120,15 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     flowSpeed: { value: 0.01, min: 0, max: 0.1, step: 0.001 },
     blendSharpness: { value: 1.5, min: 1, max: 10, step: 0.5 },
   Distortion: folder({
-    distortAmount: { value: 0.12, min: 0, max: 1, step: 0.01 },
-    distortRadius: { value: 1.02, min: 0.5, max: 1.5, step: 0.01 },
+    distortAmount: { value: 0.16, min: 0, max: 1, step: 0.01 },
+    distortRadius: { value: 1.03, min: 0.5, max: 1.5, step: 0.01 },
     distortSpeed: { value: 0.06, min: 0.0, max: 0.14, step: 0.01 }
   }),
     Ripples: folder({
       ripplesEnabled: true,
       rippleIntensity: { value: 1.0, min: 0, max: 1, step: 0.05 },
-      rippleSpeed: { value: 0.4, min: 0.1, max: 3, step: 0.1 },
-      rippleDecay: { value: 1.5, min: 0.1, max: 5, step: 0.1 },
+      rippleSpeed: { value: 0.2, min: 0.1, max: 3, step: 0.1 },
+      rippleDecay: { value: 0.5, min: 0.1, max: 5, step: 0.1 },
       rippleMaxRadius: { value: 1.0, min: 0.1, max: 1.0, step: 0.05 }
     })
   }, { collapsed: true })
