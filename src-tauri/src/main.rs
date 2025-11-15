@@ -70,20 +70,25 @@ fn main() {
                     // Set background color to match your cream color #f6f5f3
                     let bg_color = NSColor::colorWithRed_green_blue_alpha_(
                         nil,
-                        246.0 / 255.0,  // #F6F5F3 red component
-                        245.0 / 255.0,  // #F6F5F3 green component
-                        243.0 / 255.0,  // #F6F5F3 blue component
+                        237.0 / 255.0,  // #F6F5F3 red component
+                        238.0 / 255.0,  // #F6F5F3 green component
+                        238.0 / 255.0,  // #F6F5F3 blue component
                         1.0,            // Fully opaque
                     );
                     ns_window.setBackgroundColor_(bg_color);
 
-                    // Ensure window has shadow
+                    // Disable window shadow
                     let _: () = msg_send![ns_window, setHasShadow: true];
                 }
             }
 
             // Show window after setup to avoid flash
             window.show().unwrap();
+
+            // // Disable shadows cross-platform (effective on macOS, limited on Windows)
+            // if let Err(e) = window.set_shadow(false) {
+            //     eprintln!("Failed to disable window shadow: {}", e);
+            // }
 
             // Apply native blur effects to the window
             #[cfg(target_os = "windows")]
@@ -102,7 +107,7 @@ fn main() {
             {
                 if let Err(e) = window.set_effects(
                     EffectsBuilder::new()
-                        .effect(Effect::Tooltip)
+                        .effect(Effect::Popover)
                         .state(EffectState::Active)
                         .build(),
                 ) {

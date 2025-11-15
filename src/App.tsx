@@ -175,13 +175,13 @@ export default function App() {
         <SceneInitializer onReady={() => setSceneReady(true)}>
         <CameraRig isJournalDocked={isJournalDocked} />
 
-        <color attach="background" args={['rgba(246, 245, 243, 0.05)']} />
+        {/* <color attach="background" args={['rgba(246, 245, 243, 0.05)']} />
         <AdaptiveFog
           color="#F6F5F3"
           defaultFog={{ near: 7, far: 22 }}
           focusedFog={{ near: 7, far: 22 }}
           animationDuration={1.2}
-        /> 
+        />  */}
 
         <Environment
            files={['/envmaps/qwantani_sunset_puresky_1k.hdr']}
