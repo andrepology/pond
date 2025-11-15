@@ -7,10 +7,3 @@ declare global {
 }
 
 declare const __IS_DEV__: boolean
-
-// CSS properties for Tauri window dragging
-declare module 'react' {
-  interface CSSProperties {
-    WebkitAppRegion?: 'drag' | 'no-drag'
-  }
-}
