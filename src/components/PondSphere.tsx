@@ -102,7 +102,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Fish inside sphere - render before water */}
-      <group name="innio-container" scale={0.20} renderOrder={-1}>
+      <group name="innio-container" scale={0.40} renderOrder={-1}>
         <Fish onHeadPositionUpdate={(worldPos) => { fishWorldPositionRef.current.copy(worldPos) }} />
       </group>
 
@@ -132,11 +132,11 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           attenuationColor={waterControls.attenuationColor as unknown as THREE.ColorRepresentation}
           attenuationDistance={waterControls.attenuationDistance}
           specularIntensity={waterControls.specularIntensity}
-          metalness={0}
-          clearcoat={0.0}
+          metalness={waterControls.metalness}
+          clearcoat={waterControls.clearcoat}
           normalMap={waterNormals as unknown as THREE.Texture}
           normalScale={new THREE.Vector2(waterControls.normalStrength, waterControls.normalStrength)}
-          transparent
+          transparent={true}
           opacity={1.0}
           depthWrite={false}
         />

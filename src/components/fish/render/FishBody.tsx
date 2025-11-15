@@ -218,7 +218,7 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
       headBoost: { value: 1.0, min: 0.0, max: 1.0, step: 0.1, label: 'Head Boost' },
     }),
     size: folder({
-      baseSize: { value: 0.3, min: 0.1, max: 1.0, step: 0.05, label: 'Base Size' },
+      baseSize: { value: 0.6, min: 0.1, max: 1.0, step: 0.05, label: 'Base Size' },
       sizeVariation: { value: 0.0, min: 0.0, max: 0.5, step: 0.01, label: 'Size Variation' },
       minSize: { value: 0.5, min: 0.5, max: 5.0, step: 0.1, label: 'Min Size' },
     }),

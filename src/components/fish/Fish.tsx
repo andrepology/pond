@@ -47,7 +47,7 @@ export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
     updateInterval: MOVEMENT_DEFAULTS.updateInterval,
     arrivalThreshold: MOVEMENT_DEFAULTS.arrivalThreshold,
     // Bound fish within PondSphere via innio-container scale (≈0.15). World radius ~1.01 → local bounds ~±6.5. Use conservative ±6.
-    bounds: { min: -6, max: 6, buffer: 0.8 },
+    bounds: { min: -5, max: 5, buffer: 0.8 },
     undulation: {
       headAmplitude: undulationControls.headAmplitude,
       tailAmplitude: undulationControls.tailAmplitude,

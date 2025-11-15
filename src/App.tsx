@@ -126,18 +126,15 @@ export default function App() {
     }, { collapsed: true })
   })
 
-  const { lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls({
-    'Light Settings': folder({
-      lightRadius: { label: 'Radius', value: 11, min: 1, max: 20, step: 0.1 },
-      lightAmbient: { label: 'Ambient', value: 0.35, min: 0, max: 1, step: 0.01 },
-      lightIntensity: { label: 'Intensity', value: 2.1, min: 0, max: Math.PI * 2, step: 0.01 },
-      lightPosition: { label: 'Position', value: [0, 17.5, -1.5], step: 0.1 },
-      lightBias: { label: 'Bias', value: 0.001, min: 0, max: 0.01, step: 0.0001 },
-    }, { collapsed: true })
-  })
-
-  const { shadowFrames, shadowBlend, shadowAlphaTest, shadowColor, shadowColorBlend, shadowOpacity, shadowScale } = useControls({
+  const { shadowFrames, shadowBlend, shadowAlphaTest, shadowColor, shadowColorBlend, shadowOpacity, shadowScale, lightRadius, lightAmbient, lightIntensity, lightPosition, lightBias } = useControls({
     'Shadow Settings': folder({
+      'Light Settings': folder({
+        lightRadius: { label: 'Radius', value: 11, min: 1, max: 20, step: 0.1 },
+        lightAmbient: { label: 'Ambient', value: 0.35, min: 0, max: 1, step: 0.01 },
+        lightIntensity: { label: 'Intensity', value: 2.1, min: 0, max: Math.PI * 2, step: 0.01 },
+        lightPosition: { label: 'Position', value: [0, 17.5, -1.5], step: 0.1 },
+        lightBias: { label: 'Bias', value: 0.001, min: 0, max: 0.01, step: 0.0001 },
+      }, { collapsed: true }),
       shadowFrames: { label: 'Frames', value: 30, min: 1, max: 300, step: 1 },
       shadowBlend: { label: 'Blend', value: 1.5, min: 0, max: 2, step: 0.01 },
       shadowAlphaTest: { label: 'Alpha Test', value: 0.6, min: 0, max: 1, step: 0.01 },
@@ -187,12 +184,11 @@ export default function App() {
         /> 
 
         <Environment
-           // files={['/envmaps/qwantani_sunset_puresky_1k.hdr']}
-           preset="sunset"
+           files={['/envmaps/qwantani_sunset_puresky_1k.hdr']}
+           // preset="sunset"
            backgroundBlurriness={0.0}
            environmentIntensity={1.0}
-           
-           // resolution={10}
+           resolution={56}
           />
         
 

@@ -6,6 +6,7 @@ import { PondAccount, Intention, Conversation, FieldNote } from '../schema'
 import { CallButton } from '../VoiceChat'
 import { useVoice } from '../VoiceChat/VoiceProvider'
 import { useAuthFlow } from '../hooks/useAuthFlow'
+import { getDeviceType } from '../helpers/deviceDetection'
 
 type TabId = 'call' | 'intentions' | 'fieldNotes'
 
@@ -708,9 +709,10 @@ const View = ({
     [0, 1, 0]
   )
 
-  const blur = useTransform(xVelocity, [-1000, 0, 1000], [4, 0, 4], {
+  const isDesktop = getDeviceType() === 'desktop'
+  const blur = isDesktop ? useTransform(xVelocity, [-1000, 0, 1000], [4, 0, 4], {
     clamp: false,
-  })
+  }) : undefined
 
   useEffect(() => {
     const newDifference = activeIndex - viewIndex
@@ -733,7 +735,7 @@ const View = ({
         isolation: 'isolate',
         x,
         opacity,
-        filter: useMotionTemplate`blur(${blur}px)`,
+        ...(blur && { filter: useMotionTemplate`blur(${blur}px)` }),
         pointerEvents: isActive ? 'auto' : 'none',
       }}
     >

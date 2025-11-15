@@ -68,6 +68,8 @@ interface WaterMaterialControls {
   attenuationDistance: number
   attenuationColor: string
   specularIntensity: number
+  metalness: number
+  clearcoat: number
   normalStrength: number
   triplanarScale: number
   flowSpeed: number
@@ -115,6 +117,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
     attenuationColor: '#ffffff',
     specularIntensity: { value: 0.92, min: 0, max: 1, step: 0.01 },
+    metalness: { value: 0.00, min: 0, max: 1, step: 0.01 },
+    clearcoat: { value: 1.00, min: 0, max: 1, step: 0.01 },
     normalStrength: { value: 0.20, min: 0, max: 2, step: 0.01 },
     triplanarScale: { value: 0.07, min: 0, max: 0.3, step: 0.01 },
     flowSpeed: { value: 0.01, min: 0, max: 0.1, step: 0.001 },
@@ -126,10 +130,10 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
   }),
     Ripples: folder({
       ripplesEnabled: true,
-      rippleIntensity: { value: 1.0, min: 0, max: 1, step: 0.05 },
-      rippleSpeed: { value: 0.2, min: 0.1, max: 3, step: 0.1 },
-      rippleDecay: { value: 0.5, min: 0.1, max: 5, step: 0.1 },
-      rippleMaxRadius: { value: 1.0, min: 0.1, max: 1.0, step: 0.05 }
+      rippleIntensity: { value: 1.0, min: 0, max: 2, step: 0.05 },
+      rippleSpeed: { value: 0.4, min: 0.1, max: 3, step: 0.1 },
+      rippleDecay: { value: 0.1, min: 0.1, max: 5, step: 0.1 },
+      rippleMaxRadius: { value: 1.5, min: 0.1, max: 2.0, step: 0.05 }
     })
   }, { collapsed: true })
 })

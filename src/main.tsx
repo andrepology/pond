@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { JazzReactProvider } from "jazz-tools/react"
 import { AuthProvider } from "jazz-tools/better-auth/auth/react"
+import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import App from './App.tsx'
 import { PondAccount } from './schema'
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider betterAuthClient={betterAuthClient}>
       <VoiceProvider config={{ agentId: import.meta.env.VITE_ELEVENLABS_AGENT_ID }}>
         <App />
+        <Analytics />
       </VoiceProvider>
     </AuthProvider>
   </JazzReactProvider>

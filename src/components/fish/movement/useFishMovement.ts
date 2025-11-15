@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { createVectorPool } from '../core/VectorPool'
 import { clampSpeed, applyDrag } from '../core/Integrator'
 import { createSpine, updateSpineFollow } from '../core/Spine'
-import { PHYSICS, SPINE } from '../config/Constants'
+import { PHYSICS, SPINE, REST_DEFAULTS } from '../config/Constants'
 
 export interface MovementParams {
   maxSpeed: number
@@ -55,6 +55,12 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
   const foodTarget = useRef<THREE.Vector3 | null>(null)
   const approachSwayTime = useRef(0)
   const distanceTraveled = useRef(0)
+  
+  // Rest state management
+  const restState = useRef<'active' | 'resting'>('active')
+  const restTimer = useRef(0)
+  const restDuration = useRef(0)
+  const restCheckTimer = useRef(0)
 
   // Minimal per-frame API; caller wires into useFrame externally
   useEffect(() => {
@@ -73,6 +79,28 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     // Initialize slight motion if fully stopped
     if (velocity.current.lengthSq() < 1e-6) {
       velocity.current.set(0, 0, params.maxSpeed * 0.5)
+    }
+
+    // Rest state management: probabilistic trigger every N seconds
+    restCheckTimer.current += delta
+    if (restState.current === 'active') {
+      if (restCheckTimer.current >= REST_DEFAULTS.restCheckInterval) {
+        restCheckTimer.current = 0
+        // Only rest when wandering (not feeding)
+        if (Math.random() < 0.3 && !foodTarget.current) {
+          restState.current = 'resting'
+          restTimer.current = 0
+          restDuration.current = THREE.MathUtils.lerp(5.0, 10.0, Math.random())
+        }
+      }
+    } else {
+      // Resting - check if duration expired
+      restTimer.current += delta
+      if (restTimer.current >= restDuration.current) {
+        restState.current = 'active'
+        restTimer.current = 0
+        restCheckTimer.current = 0
+      }
     }
 
     // Determine forward vector
@@ -159,7 +187,18 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
         swimDuration.current = THREE.MathUtils.lerp(0.5, 1.5, Math.random())
       }
     }
-    const speedScale = swimPhase.current === 'burst' ? THREE.MathUtils.lerp(1.0, 1.2, Math.random() * 0.2) : THREE.MathUtils.lerp(0.6, 0.9, Math.random() * 0.2)
+    
+    // Speed calculation with rest override
+    let speedScale: number
+    if (restState.current === 'resting') {
+      // VERY slow drift during rest - lazy hovering
+      speedScale = THREE.MathUtils.lerp(0.01, 0.03, Math.random() * 0.2)
+    } else {
+      // Active: normal burst/glide cycle
+      speedScale = swimPhase.current === 'burst' 
+        ? THREE.MathUtils.lerp(1.0, 1.2, Math.random() * 0.2)
+        : THREE.MathUtils.lerp(0.6, 0.9, Math.random() * 0.2)
+    }
 
     // Steering toward target with arrive behavior
     const desired = currentTarget.clone().sub(pos)
@@ -183,12 +222,18 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
 
     const steer = desired.clone().sub(velocity.current)
     const steerLen = steer.length()
-    if (steerLen > params.maxSteer) steer.multiplyScalar(params.maxSteer / (steerLen || 1))
+    const maxSteerAdjusted = restState.current === 'resting' 
+      ? params.maxSteer * 0.25  // Very lazy turns during rest
+      : params.maxSteer
+    if (steerLen > maxSteerAdjusted) steer.multiplyScalar(maxSteerAdjusted / (steerLen || 1))
     velocity.current.add(steer)
 
     // Drag + clamp
     applyDrag(velocity.current, delta, PHYSICS)
-    clampSpeed(velocity.current, params.maxSpeed * 0.3, params.maxSpeed)
+    
+    // Clamp speed: allow very slow drift during rest
+    const minSpeed = restState.current === 'resting' ? 0.0 : params.maxSpeed * 0.3
+    clampSpeed(velocity.current, minSpeed, params.maxSpeed)
 
     // Integrate position (delta-scaled for framerate independence)
     headRef.current.position.addScaledVector(velocity.current, delta)
@@ -238,7 +283,12 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
       
       // Gentle idle breathing when nearly stopped
       const idlePhase = time * params.undulation.idleFrequency
-      const idleWeight = THREE.MathUtils.clamp(1.0 - speed / (params.maxSpeed * 0.3), 0, 1)
+      let idleWeight = THREE.MathUtils.clamp(1.0 - speed / (params.maxSpeed * 0.3), 0, 1)
+      
+      // Boost idle breathing during rest for gentle tail sway
+      if (restState.current === 'resting') {
+        idleWeight = Math.max(idleWeight, 0.85) // Strong idle breathing during rest
+      }
       
       // Blend distance-based (propulsive) and time-based (idle) waves
       const phase = THREE.MathUtils.lerp(distancePhase - spinePhase, idlePhase - spinePhase * 0.5, idleWeight)
