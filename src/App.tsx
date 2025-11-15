@@ -184,7 +184,7 @@ export default function App() {
         />  */}
 
         <Environment
-           files={['/envmaps/qwantani_sunset_puresky_1k.hdr']}
+           files={['/envmaps/autumn_field_puresky_1k.hdr']}
            // preset="sunset"
            backgroundBlurriness={0.0}
            environmentIntensity={1.0}
