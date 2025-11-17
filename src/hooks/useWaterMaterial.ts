@@ -170,6 +170,13 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     const material = materialRef.current
     if (!material || !waterNormals) return
 
+    // CRITICAL: Clear built-in normal map to prevent double images
+    material.normalMap = null
+    material.normalScale.set(0, 0)
+    
+    // Use custom cache key to ensure our shader is distinct from default MeshPhysicalMaterial
+    material.customProgramCacheKey = () => 'water-triplanar-clearcoat-v2'
+
     material.onBeforeCompile = (shader) => {
       // Add custom uniforms
       shader.uniforms.uTime = { value: 0 }
@@ -402,6 +409,22 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
 
         // Transform back to view space for lighting
         normal = transformDirection( worldNormal, viewMatrix );
+        `
+      )
+
+      // Apply same triplanar normals to clearcoat layer for unified appearance
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <clearcoat_normal_fragment_maps>',
+        `
+        // Use the same world-space triplanar normal for clearcoat
+        // This ensures clearcoat reflections animate with the water surface
+        vec3 clearcoatWorldNormal = triplanarNormal(vWorldPosition, worldGeomNormal);
+        
+        // Apply same ripple perturbation
+        clearcoatWorldNormal = normalize(clearcoatWorldNormal + ripplePerturbation);
+        
+        // Transform to view space for clearcoat lighting (assign to existing variable)
+        clearcoatNormal = transformDirection( clearcoatWorldNormal, viewMatrix );
         `
       )
     }

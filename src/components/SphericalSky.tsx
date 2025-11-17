@@ -48,7 +48,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   displayRadius = 1000, // Default to a large radius for the visual effect
   segments = 16, // Lower segment count for better performance
   updateFrequency = 20, // Only update every 10 frames
-  lowQuality = false,
+  lowQuality = true,
   initialTimeScale = 0.01,
   initialEnableTimeAnimation = true,
   opacity = 1.0
@@ -253,11 +253,11 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           
           // Apply horizon offset using uniform controls
           // localPos.x += horizonOffset.x;
-          localPos.y += horizonOffset.y + 0.2;
+          localPos.y += horizonOffset.y + 0.6;
           // localPos.z += horizonOffset.z;
           // localPos = normalize(localPos);
           
-          direction = normalize(mix(direction, localPos, 0.3));
+          direction = normalize(mix(direction, localPos, 0.50));
 
           // optical length
           // cutoff angle at 90 to avoid singularity in next formula.
