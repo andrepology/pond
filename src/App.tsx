@@ -20,8 +20,7 @@ import { useAppUpdater } from './hooks/useAppUpdater'
 import MindBody from './components/MindBody'
 import ZenSand from './components/ZenSand'
 import { Perf } from 'r3f-perf'
-import { EffectComposer, Bloom, HueSaturation, ToneMapping, DepthOfField } from '@react-three/postprocessing'
-import { ToneMappingMode, BlendFunction } from 'postprocessing'
+import { PostProcessingEffects } from './components/PostProcessingEffects'
 
 //useGLTF.preload('/models/mindbody.glb')
 //useGLTF.preload('/models/wellstone.glb')
@@ -45,6 +44,8 @@ export default function App() {
       document.body.classList.add('tauri-app')
     }
   }, [])
+
+
 
   // Sync signal to ref for RadialMarkers (inverted: visible when no input)
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function App() {
   }, [])
 
 
-  const { toneMappingEnabled, toneMappingMode, toneMappingBlendFunction, toneMappingAdaptive, toneMappingResolution, toneMappingMiddleGrey, toneMappingMaxLuminance, toneMappingAverageLuminance, toneMappingAdaptationRate, bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize, saturation, hue, dofFocusDistance, dofFocalLength, dofBokehScale } = useControls({
+  const { toneMappingEnabled, toneMappingMode, toneMappingBlendFunction, toneMappingAdaptive, toneMappingResolution, toneMappingMiddleGrey, toneMappingMaxLuminance, toneMappingAverageLuminance, toneMappingAdaptationRate, bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize, saturation, hue, filmGrainIntensity, filmGrainGrayscale } = useControls({
     'Post Processing': folder({
       'Tone Mapping': folder({
         toneMappingEnabled: { label: 'Enabled', value: false },
@@ -118,10 +119,9 @@ export default function App() {
         saturation: { value: 0, min: -1, max: 1, step: 0.01 },
         hue: { value: 0, min: -Math.PI, max: Math.PI, step: 0.01 },
       }, { collapsed: true }),
-      'Depth of Field': folder({
-        dofFocusDistance: { label: 'Focus Dist', value: 17.5, min: 1, max: 30, step: 0.1 },
-        dofFocalLength: { label: 'Focal Len', value: 0.025, min: 0.01, max: 1.0, step: 0.001 },
-        dofBokehScale: { label: 'Bokeh', value: 1.5, min: 0.1, max: 20, step: 0.1 },
+      'Film Grain': folder({
+        filmGrainIntensity: { label: 'Intensity', value: 0, min: 0, max: 1, step: 0.01 },
+        filmGrainGrayscale: { label: 'Grayscale', value: false },
       }, { collapsed: true }),
     }, { collapsed: true })
   })
@@ -184,8 +184,8 @@ export default function App() {
         />  */}
 
         <Environment
-           files={['/envmaps/autumn_field_puresky_1k.hdr']}
-           // preset="sunset"
+           //files={['/envmaps/rosendal_park_sunset_puresky_1k.hdr']}
+          preset="sunset"
            backgroundBlurriness={0.0}
            environmentIntensity={1.0}
            resolution={56}
@@ -246,9 +246,8 @@ export default function App() {
             toneMappingMaxLuminance={toneMappingMaxLuminance}
             toneMappingAverageLuminance={toneMappingAverageLuminance}
             toneMappingAdaptationRate={toneMappingAdaptationRate}
-            dofFocusDistance={dofFocusDistance}
-            dofFocalLength={dofFocalLength}
-            dofBokehScale={dofBokehScale}
+            filmGrainIntensity={filmGrainIntensity}
+            filmGrainGrayscale={filmGrainGrayscale}
           />
         )}
         </SceneInitializer>
@@ -271,75 +270,3 @@ export default function App() {
 }
 
 
-const PostProcessingEffects = memo(function PostProcessingEffects({
-  bloomIntensity,
-  bloomThreshold,
-  bloomSmoothing,
-  bloomKernelSize,
-  saturation,
-  hue,
-  toneMappingEnabled,
-  toneMappingMode,
-  toneMappingBlendFunction,
-  toneMappingAdaptive,
-  toneMappingResolution,
-  toneMappingMiddleGrey,
-  toneMappingMaxLuminance,
-  toneMappingAverageLuminance,
-  toneMappingAdaptationRate,
-  dofFocusDistance,
-  dofFocalLength,
-  dofBokehScale,
-}: {
-  bloomIntensity: number
-  bloomThreshold: number
-  bloomSmoothing: number
-  bloomKernelSize: number
-  saturation: number
-  hue: number
-  toneMappingEnabled: boolean
-  toneMappingMode: string
-  toneMappingBlendFunction: string
-  toneMappingAdaptive: boolean
-  toneMappingResolution: number
-  toneMappingMiddleGrey: number
-  toneMappingMaxLuminance: number
-  toneMappingAverageLuminance: number
-  toneMappingAdaptationRate: number
-  dofFocusDistance: number
-  dofFocalLength: number
-  dofBokehScale: number
-}) {
-  const mode = useMemo(() => ToneMappingMode[toneMappingMode as keyof typeof ToneMappingMode], [toneMappingMode])
-  const blendFunction = useMemo(() => BlendFunction[toneMappingBlendFunction as keyof typeof BlendFunction], [toneMappingBlendFunction])
-
-  return (
-    <EffectComposer autoClear={true} multisampling={0} resolutionScale={0.5}>
-
-      <Bloom
-        intensity={bloomIntensity}
-        luminanceThreshold={bloomThreshold}
-        luminanceSmoothing={bloomSmoothing}
-        kernelSize={bloomKernelSize}
-      />
-      <HueSaturation saturation={saturation} hue={hue} />
-      {/* <DepthOfField
-        focusDistance={dofFocusDistance}
-        focalLength={dofFocalLength}
-        bokehScale={dofBokehScale}
-      /> */}
-      {toneMappingEnabled && (
-        <ToneMapping
-          mode={mode}
-          blendFunction={blendFunction}
-          adaptive={toneMappingAdaptive}
-          resolution={toneMappingResolution}
-          middleGrey={toneMappingMiddleGrey}
-          maxLuminance={toneMappingMaxLuminance}
-          averageLuminance={toneMappingAverageLuminance}
-          adaptationRate={toneMappingAdaptationRate}
-        />
-      )}
-    </EffectComposer>
-  )
-})

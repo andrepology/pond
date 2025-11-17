@@ -3,6 +3,7 @@ import { useAccount } from "jazz-tools/react";
 import { useIsAuthenticated } from "jazz-tools/react-core";
 import { PondAccount } from "../schema";
 import { betterAuthClient } from "../lib/auth-client";
+import { getApiUrl } from "../helpers/getApiUrl";
 
 /**
  * Custom hook for authentication flow logic
@@ -34,7 +35,7 @@ export function useAuthFlow() {
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/check-email?email=${encodeURIComponent(emailToCheck)}`);
+      const response = await fetch(`${getApiUrl()}/api/check-email?email=${encodeURIComponent(emailToCheck)}`);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -67,7 +68,7 @@ export function useAuthFlow() {
     setError(null);
 
     console.log("🔐 Attempting sign in...");
-    console.log("📡 API URL:", import.meta.env.VITE_API_URL || "http://localhost:3000");
+    console.log("📡 API URL:", getApiUrl());
 
     try {
       const result = await betterAuthClient.signIn.email({
@@ -97,7 +98,7 @@ export function useAuthFlow() {
     setError(null);
 
     console.log("📝 Attempting sign up...");
-    console.log("📡 API URL:", import.meta.env.VITE_API_URL || "http://localhost:3000");
+    console.log("📡 API URL:", getApiUrl());
 
     try {
       const result = await betterAuthClient.signUp.email(

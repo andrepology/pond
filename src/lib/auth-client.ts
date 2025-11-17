@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/client";
 import { jazzPluginClient } from "jazz-tools/better-auth/auth/client";
+import { getApiUrl } from "../helpers/getApiUrl";
 
 /**
  * Better Auth client with Jazz plugin
@@ -10,7 +11,7 @@ import { jazzPluginClient } from "jazz-tools/better-auth/auth/client";
  * - Syncs Jazz authentication state with Better Auth
  */
 export const betterAuthClient = createAuthClient({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+  baseURL: getApiUrl(),
   plugins: [
     jazzPluginClient(),
     // Add other Better Auth client plugins here (e.g., for social auth)

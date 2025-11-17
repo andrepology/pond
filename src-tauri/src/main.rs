@@ -5,6 +5,17 @@ use tauri::{Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder, window::{E
 use tauri_plugin_updater::UpdaterExt;
 
 #[tauri::command]
+#[cfg(any(debug_assertions, feature = "devtools"))] // only include this code on debug builds or with devtools feature
+fn toggle_devtools(app: tauri::AppHandle) {
+    // In Tauri v2, open_devtools() is on WebviewWindow
+    if let Some(window) = app.get_webview_window("main") {
+        window.open_devtools();
+    } else {
+        eprintln!("Failed to get webview window for devtools");
+    }
+}
+
+#[tauri::command]
 fn check_for_updates(app: tauri::AppHandle) {
     tauri::async_runtime::spawn(async move {
         match app.updater_builder().build() {
@@ -40,7 +51,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // Create main window programmatically for proper macOS transparency
-            let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+            let mut win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(300.0, 300.0)
@@ -49,8 +60,13 @@ fn main() {
                 .transparent(true)
                 .decorations(true)
                 .center()
-                .visible(false)
-                .devtools(true);
+                .visible(false);
+            
+            // Enable devtools in debug builds or when devtools feature is enabled
+            #[cfg(any(debug_assertions, feature = "devtools"))]
+            {
+                win_builder = win_builder.devtools(true);
+            }
 
             // Set transparent titlebar for macOS
             #[cfg(target_os = "macos")]
@@ -62,14 +78,15 @@ fn main() {
             #[cfg(target_os = "macos")]
             {
                 use cocoa::appkit::{NSColor, NSWindow};
-                use cocoa::base::{id, nil};
+                use cocoa::base::id;
                 use objc::{msg_send, sel, sel_impl};
+                use std::ptr;
 
                 let ns_window = window.ns_window().unwrap() as id;
                 unsafe {
                     // Set background color to match your cream color #f6f5f3
                     let bg_color = NSColor::colorWithRed_green_blue_alpha_(
-                        nil,
+                        ptr::null_mut(),
                         237.0 / 255.0,  // #F6F5F3 red component
                         238.0 / 255.0,  // #F6F5F3 green component
                         238.0 / 255.0,  // #F6F5F3 blue component
@@ -127,7 +144,16 @@ fn main() {
             
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![check_for_updates])
+        .invoke_handler({
+            #[cfg(any(debug_assertions, feature = "devtools"))]
+            {
+                tauri::generate_handler![toggle_devtools, check_for_updates]
+            }
+            #[cfg(not(any(debug_assertions, feature = "devtools")))]
+            {
+                tauri::generate_handler![check_for_updates]
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
