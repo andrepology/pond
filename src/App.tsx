@@ -50,10 +50,10 @@ export default function App() {
   // Sync signal to ref for RadialMarkers (inverted: visible when no input)
   useEffect(() => {
     const unsubscribe = hasInputSignal.subscribe(() => {
-      markersVisibleRef.current = !hasInputSignal.value
+      markersVisibleRef.current = hasInputSignal.value
     })
     // Initial sync
-    markersVisibleRef.current = !hasInputSignal.value
+    markersVisibleRef.current = hasInputSignal.value
     return unsubscribe
   }, [hasInputSignal])
 
@@ -163,32 +163,31 @@ export default function App() {
           alpha: true
         }}
         dpr={isMobile ? [1.0, 1.3] : [1.0, 1.5]}
-        // onCreated={({ gl, scene }) => {
-        //   gl.setClearColor(0x000000, 0) // Transparent clear
-        //   scene.background = null
-        // }}
+        onCreated={({ gl, scene }) => {
+          gl.setClearColor(0x000000, 0) // Transparent clear
+          scene.background = null
+        }}
       >
         {/* <Perf deepAnalyze position="top-left" /> */}
         {/* <Stats /> */}
         <Preload all />
 
         <SceneInitializer onReady={() => setSceneReady(true)}>
-        <CameraRig isJournalDocked={isJournalDocked} />
+        <CameraRig markersVisible={markersVisibleRef.current} />
 
-        {/* <color attach="background" args={['rgba(246, 245, 243, 0.05)']} />
+        <color attach="background" args={['rgba(246, 245, 243, 0.05)']} />
         <AdaptiveFog
           color="#F6F5F3"
-          defaultFog={{ near: 7, far: 22 }}
-          focusedFog={{ near: 7, far: 22 }}
+          defaultFog={{ near: 3, far: 22 }}
+          focusedFog={{ near: 3, far: 22 }}
           animationDuration={1.2}
-        />  */}
+        /> 
 
         <Environment
-           //files={['/envmaps/rosendal_park_sunset_puresky_1k.hdr']}
-          preset="sunset"
+           files={['/envmaps/rogland_moonlit_night_1k.hdr']}
            backgroundBlurriness={0.0}
            environmentIntensity={1.0}
-           resolution={56}
+           
           />
         
 

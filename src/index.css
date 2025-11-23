@@ -57,6 +57,38 @@ canvas {
   --color-brand-900: oklch(0.35 0.15 247.84);
 }
 
+:root {
+  /* Glass System - White Scale */
+  --glass-text-primary: rgba(255, 255, 255, 0.95);
+  --glass-text-secondary: rgba(255, 255, 255, 0.7);
+  --glass-text-muted: rgba(255, 255, 255, 0.4);
+  
+  --glass-surface-0: rgba(255, 255, 255, 0.03);
+  --glass-surface-10: rgba(255, 255, 255, 0.1);
+  --glass-surface-20: rgba(255, 255, 255, 0.2);
+  
+  --glass-border-5: rgba(255, 255, 255, 0.05);
+  --glass-border-10: rgba(255, 255, 255, 0.1);
+  --glass-border-20: rgba(255, 255, 255, 0.2);
+
+  /* Functional Tints (Translucent) */
+  /* Sand - Warm/Auth/Notes - Shifted to be lighter on dark bg */
+  --glass-sand-bg: rgba(225, 210, 190, 0.15);
+  --glass-sand-border: rgba(225, 210, 190, 0.3);
+  
+  /* Leaf - Active/Growth */
+  --glass-leaf-bg: rgba(160, 200, 180, 0.2);
+  --glass-leaf-border: rgba(160, 200, 180, 0.4);
+  --glass-leaf-text: rgba(210, 255, 230, 0.95);
+  
+  /* Clay/Purple - Completed/Archive */
+  --glass-clay-bg: rgba(180, 160, 190, 0.1);
+  --glass-clay-border: rgba(180, 160, 190, 0.2);
+
+  /* Standard Blur */
+  --glass-blur: 12px;
+}
+
 .scroller {
   animation: scroll-fade;
   animation-timeline: scroll(self);

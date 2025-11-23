@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import React, { forwardRef, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { useControls, folder } from 'leva'
 import SphericalSky from './SphericalSky'
 import Starfield, { type StarfieldHandle } from './Starfield'
 import Fish from './fish/Fish'
@@ -25,6 +26,37 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   const starfieldRef = useRef<StarfieldHandle>(null)
   const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
   const groupRef = useRef<THREE.Group>(null)
+
+  const {
+    skyTurbidityMin,
+    skyTurbidityMax,
+    skyRayleighMin,
+    skyRayleighMax,
+    skyMieCoefficientMin,
+    skyMieCoefficientMax,
+    skyMieDirectionalGMin,
+    skyMieDirectionalGMax,
+    skyOpacity,
+    skyDisplayRadius,
+    skyAnimate,
+  } = useControls({
+    Sky: folder(
+      {
+        skyTurbidityMin: { label: 'Turbidity Min', value: 4, min: 0, max: 20, step: 0.1 },
+        skyTurbidityMax: { label: 'Turbidity Max', value: 16, min: 0, max: 30, step: 0.1 },
+        skyRayleighMin: { label: 'Rayleigh Min', value: 0.8, min: 0, max: 4, step: 0.01 },
+        skyRayleighMax: { label: 'Rayleigh Max', value: 3.24, min: 0, max: 6, step: 0.01 },
+        skyMieCoefficientMin: { label: 'Mie Coeff Min', value: 0.16, min: 0, max: 0.5, step: 0.001 },
+        skyMieCoefficientMax: { label: 'Mie Coeff Max', value: 0.21, min: 0, max: 0.5, step: 0.001 },
+        skyMieDirectionalGMin: { label: 'Mie g Min', value: 0.44, min: 0, max: 1, step: 0.01 },
+        skyMieDirectionalGMax: { label: 'Mie g Max', value: 0.62, min: 0, max: 1, step: 0.01 },
+        skyDisplayRadius: { label: 'Display Radius', value: 1000, min: 100, max: 3000, step: 10 },
+        skyOpacity: { label: 'Opacity', value: 1.00, min: 0, max: 2, step: 0.01 },
+        skyAnimate: { label: 'Animate Day/Night', value: true },
+      },
+      { collapsed: true }
+    ),
+  })
 
   // Update starfield and water opacity based on fade
   React.useEffect(() => {
@@ -78,10 +110,19 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       <group renderOrder={-3}>
         <SphericalSky
           radius={1.01}
-          displayRadius={1000}
+          displayRadius={skyDisplayRadius}
           segments={48}
           lowQuality={true}
-          opacity={1.05}
+          turbidityMin={skyTurbidityMin}
+          turbidityMax={skyTurbidityMax}
+          rayleighMin={skyRayleighMin}
+          rayleighMax={skyRayleighMax}
+          mieCoefficientMin={skyMieCoefficientMin}
+          mieCoefficientMax={skyMieCoefficientMax}
+          mieDirectionalGMin={skyMieDirectionalGMin}
+          mieDirectionalGMax={skyMieDirectionalGMax}
+          initialEnableTimeAnimation={skyAnimate}
+          opacity={skyOpacity}
         />
       </group>
 
@@ -102,7 +143,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       </group>
 
       {/* Fish inside sphere - render before water */}
-      <group name="innio-container" scale={0.40} renderOrder={-1}>
+      <group name="innio-container" scale={0.30} renderOrder={-1}>
         <Fish onHeadPositionUpdate={(worldPos) => { fishWorldPositionRef.current.copy(worldPos) }} />
       </group>
 

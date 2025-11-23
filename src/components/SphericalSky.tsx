@@ -17,12 +17,19 @@ const _sunPosition = new THREE.Vector3()
 const _up = new THREE.Vector3(0, 1, 0)
 const _tempVec = new THREE.Vector3()
 
-// Define props interface matching original Sky
 interface SphericalSkyProps {
   turbidity?: number
   rayleigh?: number
   mieCoefficient?: number
   mieDirectionalG?: number
+  turbidityMin?: number
+  turbidityMax?: number
+  rayleighMin?: number
+  rayleighMax?: number
+  mieCoefficientMin?: number
+  mieCoefficientMax?: number
+  mieDirectionalGMin?: number
+  mieDirectionalGMax?: number
   sunPosition?: [number, number, number]
   up?: [number, number, number]
   radius?: number
@@ -42,6 +49,14 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   rayleigh = 1,
   mieCoefficient = 0.07,
   mieDirectionalG = 0.35,
+  turbidityMin = 0.0,
+  turbidityMax = 8.0,
+  rayleighMin = 0.5,
+  rayleighMax = 3.0,
+  mieCoefficientMin = 0.02,
+  mieCoefficientMax = 0.2,
+  mieDirectionalGMin = 0.82,
+  mieDirectionalGMax = 0.90,
   sunPosition: initialSunPosition = [0, 1, 0],
   up: initialUp = [0, 1, 0],
   radius = 1000,
@@ -226,7 +241,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 		const float rayleighZenithLength = 8.4E3;
 		const float mieZenithLength = 1.25E3;
 		// 66 arc seconds -> degrees, and the cosine of that (enlarged for visibility)
-		const float sunAngularDiameterCos = 0.9999;
+		const float sunAngularDiameterCos = 0.99999;
 
 		// 3.0 / ( 16.0 * pi )
 		const float THREE_OVER_SIXTEENPI = 0.05968310365946075;
@@ -288,7 +303,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           vec3 L0 = vec3( 0.1 ) * Fex;
 
           // composition + solar disc
-          float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00008, cosTheta );
+          float sundisk = smoothstep( sunAngularDiameterCos, sunAngularDiameterCos + 0.00002, cosTheta );
           // Make the sun disc larger and avoid atmospheric extinction on the disc
           L0 += ( vSunE * 10.0 ) * sundisk;
           vec3 texColor = ( Lin + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
@@ -326,17 +341,21 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
   // Update material uniforms on prop changes
   useEffect(() => {
     if (materialRef.current) {
-      materialRef.current.uniforms.turbidity.value = turbidity
-      materialRef.current.uniforms.rayleigh.value = rayleigh
-      materialRef.current.uniforms.mieCoefficient.value = mieCoefficient
-      materialRef.current.uniforms.mieDirectionalG.value = mieDirectionalG
+      // When animation is disabled, drive scattering directly from props.
+      // When animation is enabled, the time-based frame loop will manage these uniforms.
+      if (!enableTimeAnimation) {
+        materialRef.current.uniforms.turbidity.value = turbidity
+        materialRef.current.uniforms.rayleigh.value = rayleigh
+        materialRef.current.uniforms.mieCoefficient.value = mieCoefficient
+        materialRef.current.uniforms.mieDirectionalG.value = mieDirectionalG
+      }
       materialRef.current.uniforms.sunPosition.value.set(...sunPositionArray)
       materialRef.current.uniforms.cameraForward.value.set(...directionOverride)
       materialRef.current.uniforms.displayRadius.value = displayRadius
       materialRef.current.uniforms.horizonOffset.value.set(horizonOffset.x, horizonOffset.y, horizonOffset.z)
       materialRef.current.uniforms.opacity.value = opacity
     }
-  }, [turbidity, rayleigh, mieCoefficient, mieDirectionalG, sunPositionArray, directionOverride, displayRadius, horizonOffset, opacity])
+  }, [turbidity, rayleigh, mieCoefficient, mieDirectionalG, sunPositionArray, directionOverride, displayRadius, horizonOffset, opacity, enableTimeAnimation])
 
   // Update camera direction in the shader
   useFrame(() => {
@@ -373,14 +392,16 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 
     materialRef.current.uniforms.sunPosition.value.set(x, y, z)
 
-    // Dramatic diurnal parameter variation
+    // Dramatic diurnal parameter variation, driven by configurable ranges.
     const maxAltSin = Math.sin(THREE.MathUtils.degToRad(maxElevationDeg))
     const horizonProximity = 1 - THREE.MathUtils.clamp(Math.abs(y) / maxAltSin, 0, 1) // 1 near horizon, 0 near noon
 
-    const turbidityAnim = 10 + 10 * horizonProximity         // 2 (noon) → 12 (sunrise/sunset)
-    const rayleighAnim = 0.1 + 2.4 * (1 - horizonProximity) // ~1.6 (sunrise) → 4.0 (noon)
-    const mieCoeffAnim = 0.015 + 0.20 * horizonProximity     // 0.015 (noon) → 0.215 (hazy horizon)
-    const mieGAnim = 0.2 + 0.25 * horizonProximity           // 0.6 (noon) → 0.85 (glare near horizon)
+    // Near horizon → use "max" values for hazier, warmer look.
+    // Near zenith  → use "min" values for clearer, crisper sky.
+    const turbidityAnim = THREE.MathUtils.lerp(turbidityMin, turbidityMax, horizonProximity)
+    const rayleighAnim = THREE.MathUtils.lerp(rayleighMax, rayleighMin, horizonProximity)
+    const mieCoeffAnim = THREE.MathUtils.lerp(mieCoefficientMin, mieCoefficientMax, horizonProximity)
+    const mieGAnim = THREE.MathUtils.lerp(mieDirectionalGMin, mieDirectionalGMax, horizonProximity)
 
     materialRef.current.uniforms.turbidity.value = turbidityAnim
     materialRef.current.uniforms.rayleigh.value = rayleighAnim

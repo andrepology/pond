@@ -6,102 +6,141 @@ import { useRoute } from 'wouter'
 import CameraControlsImpl from 'camera-controls'
 import ACTION from 'camera-controls'
 import { isMobileDevice } from '../helpers/deviceDetection'
-import { useDebouncedValue } from '../hooks/useDebouncedValue'
-
-// Debounce camera animations to prevent blocking UI transitions
-const CAMERA_DEBOUNCE_MS = 500
 
 CameraControlsImpl.install({ THREE })
 
 interface CameraRigProps {
-  isJournalDocked: boolean;
+  markersVisible: boolean;
 }
 
-export function CameraRig({ isJournalDocked }: CameraRigProps) {
+export function CameraRig({ markersVisible }: CameraRigProps) {
   const { controls, scene, viewport } = useThree()
   const [routeMatch, paramsRaw] = useRoute('/item/:id')
   const params: Record<string, string> = paramsRaw || {}
   const targetPositionRef = useRef(new THREE.Vector3())
   const savedCameraPosition = useRef(new THREE.Vector3())
   const wasActiveRef = useRef(false)
-  
-  // Debounce journal dock state to let UI animations complete before moving camera
-  const debouncedDocked = useDebouncedValue(isJournalDocked, CAMERA_DEBOUNCE_MS)
-
-  // Reset CameraControls state when journal state changes to prevent stuck interactions
-  // useEffect(() => {
-  //   const cameraControls = controls as CameraControlsImpl | null
-  //   if (cameraControls) {
-  //     // Cancel any active drag/zoom operations that might be stuck
-  //     cameraControls.cancel()
-  //   }
-  // }, [isJournalDocked, controls])
 
   useEffect(() => {
-      const cameraControls = controls as CameraControlsImpl | null
-      // Fallback to "pond" if no route match, otherwise use route param
-      const active = routeMatch && params.id
-        ? scene.getObjectByName(params.id)
-        : scene.getObjectByName('pond')
-      const isActive = !!active
+    const cameraControls = controls as CameraControlsImpl | null
 
-      // This factor controls how much the camera moves up when the journal is undocked.
-      const verticalShiftFactor = isMobileDevice() ? -1.0 : -1.8
-      const yOffset = debouncedDocked ? 0.0 : verticalShiftFactor
+    // Fallback to "pond" if no route match, otherwise use route param
+    const active = routeMatch && params.id
+      ? scene.getObjectByName(params.id)
+      : scene.getObjectByName('pond')
 
-      if (isActive) {
-        // Save current camera position before moving to active item
-        if (!wasActiveRef.current && cameraControls) {
-          cameraControls.getPosition(savedCameraPosition.current)
-        }
+    const isActive = !!active
 
-        // If the object is inspectable, allow closer zoom.
-        const inspectable = active.userData.inspectable
+    if (isActive && active) {
+      // Save current camera position before moving to active item
+      if (!wasActiveRef.current && cameraControls) {
+        cameraControls.getPosition(savedCameraPosition.current)
+      }
 
-        if (cameraControls) {
-          cameraControls.minDistance = inspectable ? 1.0 : 5
-          cameraControls.maxDistance = 20
-          cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
-        }
+      // If the object is inspectable, allow closer zoom.
+      const inspectable = active.userData.inspectable
 
-        // Reuse existing Vector3 instance
-        active.getWorldPosition(targetPositionRef.current)
-        const { x, y, z } = targetPositionRef.current
+      if (cameraControls) {
+        cameraControls.minDistance = inspectable ? 1.0 : 5
+        cameraControls.maxDistance = 20
+        cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
+      }
 
-        // Adjust distance based on aspect ratio
-        const distance = 6 / Math.min(viewport.aspect < 1 ? 0.9 : viewport.aspect, 1)
+      // Reuse existing Vector3 instance
+      active.getWorldPosition(targetPositionRef.current)
+      const { x, y, z } = targetPositionRef.current
 
-        // Set camera to look at the object from an offset, adjusted for the sheet
-        cameraControls?.setLookAt(x, y + 0.5 + yOffset, z + distance , x, y + yOffset, z, true)
-      } else {
-        // Reset zoom limits for the default view
-        if (cameraControls) {
-          cameraControls.minDistance = 5
-          cameraControls.maxDistance = 20
-          // not working
-          cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
-        }
+      const isPond = active.name === 'pond'
+      const insideMode = isPond && !markersVisible
 
-        // Restore saved position if we had one, otherwise use default
-        if (wasActiveRef.current && savedCameraPosition.current.length() > 0) {
-          // Restore to saved position, but adjust for sheet offset
-          cameraControls?.setLookAt(
-            savedCameraPosition.current.x,
-            savedCameraPosition.current.y + yOffset,
-            savedCameraPosition.current.z,
-            0, 0, 0,
+      if (isPond && cameraControls) {
+        // Shared target for both overview and inside poses
+        const targetX = x
+        const targetY = y
+        const targetZ = z
+
+        // Overview pose: outside and above, looking down towards pond center
+        const overviewHeight = isMobileDevice() ? 7 : 8
+        const overviewDistance = 4
+        const overviewX = targetX
+        const overviewY = targetY + overviewHeight
+        const overviewZ = targetZ + overviewDistance
+
+        // Inside pose: close to pond center, slightly above
+        const insideDistance = 0.8
+        const insideX = targetX
+        const insideY = targetY + 0.5
+        const insideZ = targetZ + insideDistance
+
+        if (insideMode) {
+          cameraControls.setLookAt(
+            insideX,
+            insideY,
+            insideZ,
+            targetX,
+            targetY,
+            targetZ,
             true
           )
         } else {
-          // Fallback to default position
-          const distance = 10 / Math.max(viewport.aspect, 2)
-          cameraControls?.setLookAt(0, 6 + yOffset, 10, 0, 0, 0, true)
+          // Overview mode: stay outside and above, looking down
+          cameraControls.setLookAt(
+            overviewX,
+            overviewY,
+            overviewZ,
+            targetX,
+            targetY,
+            targetZ,
+            true
+          )
         }
+      } else {
+        // Non-pond active object: simple inspectable view similar to original behavior
+        const distance = 6 / Math.min(viewport.aspect < 1 ? 0.9 : viewport.aspect, 1)
+        cameraControls?.setLookAt(
+          x,
+          y + 0.5,
+          z + distance,
+          x,
+          y,
+          z,
+          true
+        )
+      }
+    } else {
+      // No active object: fall back to a simple top-down-ish overview of the origin
+      if (cameraControls) {
+        cameraControls.minDistance = 5
+        cameraControls.maxDistance = 20
+        cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
       }
 
-      wasActiveRef.current = isActive
-  }, [params.id, controls, scene, viewport.aspect, debouncedDocked])
+      if (wasActiveRef.current && savedCameraPosition.current.length() > 0) {
+        cameraControls?.setLookAt(
+          savedCameraPosition.current.x,
+          savedCameraPosition.current.y,
+          savedCameraPosition.current.z,
+          0,
+          0,
+          0,
+          true
+        )
+      } else {
+        const overviewHeight = isMobileDevice() ? 7 : 8
+        cameraControls?.setLookAt(
+          0,
+          overviewHeight,
+          0.001,
+          0,
+          0,
+          0,
+          true
+        )
+      }
+    }
 
+    wasActiveRef.current = isActive
+  }, [params.id, controls, scene, viewport.aspect, markersVisible])
 
   return (
     <CameraControls
@@ -113,13 +152,11 @@ export function CameraRig({ isJournalDocked }: CameraRigProps) {
       enabled={true}
       dollySpeed={isMobileDevice() ? 0.6 : 0.5}
       truckSpeed={isMobileDevice() ? 0.6 : 0.5}
-      
       touches={{
         one: ACTION.ACTION.TOUCH_ROTATE,
         two: ACTION.ACTION.TOUCH_DOLLY,
         three: ACTION.ACTION.NONE
       }}
-      
     />
   )
-} 
+}
