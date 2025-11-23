@@ -93,7 +93,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
         data-ui
         style={{
           position: 'fixed',
-          bottom: '20px',
+          bottom: getDeviceType() === 'desktop' ? '0px' : '20px',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
@@ -171,8 +171,8 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
           {/* Shared Tabs - always 90% width to avoid layout shift */}
           <div
             style={{
-              width: '90%',
-              margin: '8px auto 0'
+              width: '80%',
+              margin: '-2px auto 0'
             }}
           >
             <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} isDocked={isDocked} />
@@ -410,6 +410,9 @@ const Tabs = ({
   onTabChange: (tab: TabId) => void
   isDocked: boolean
 }) => {
+  const isMobile = getDeviceType() !== 'desktop'
+
+  
   return (
     <motion.ul
       initial={{
@@ -457,7 +460,7 @@ const Tabs = ({
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              fontSize: 32, // use single fontSize for all
+              fontSize: isMobile ? 32 : 24, // use single fontSize for all
               fontWeight: 500,
               border: 'none',
               background: 'transparent',
