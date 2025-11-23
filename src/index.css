@@ -92,7 +92,6 @@ canvas {
 .scroller {
   animation: scroll-fade;
   animation-timeline: scroll(self);
-  animation-range: 0 6rem;
   mask: linear-gradient(to bottom, black 0%, black calc(100% - 4rem), rgba(0,0,0,0.3) calc(100% - 2rem), transparent 100%);
 }
 

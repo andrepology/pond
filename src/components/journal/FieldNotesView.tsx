@@ -1,12 +1,13 @@
 import { FieldNote } from '../../schema'
 import { formatDate } from './utils'
+import { glass, text } from './theme'
 
 export const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
   const sorted = [...fieldNotes].sort((a, b) => b.createdAt - a.createdAt)
 
   if (sorted.length === 0) {
     return (
-      <div style={{ color: '#8B7355', fontSize: 14, opacity: 0.6 }}>
+      <div style={{ color: text.tertiary, fontSize: 14 }}>
         No field notes yet
       </div>
     )
@@ -27,7 +28,7 @@ export const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
                 width: '18px',
                 height: '18px',
                 borderRadius: '9px',
-                backgroundColor: '#8B7B7A',
+                backgroundColor: glass.medium,
                 marginRight: '8px',
                 marginTop: '2px',
                 flexShrink: 0,
@@ -35,14 +36,14 @@ export const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
             />
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#333' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: text.primary }}>
                   Innio
                 </div>
-                <div style={{ fontSize: 11, color: '#999' }}>
+                <div style={{ fontSize: 11, color: text.tertiary }}>
                   {formatDate(note.createdAt)}
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5, marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: text.secondary, lineHeight: 1.5, marginTop: 4 }}>
                 {note.content}
               </div>
             </div>

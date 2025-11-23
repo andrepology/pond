@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useAccount } from 'jazz-tools/react'
 import { PondAccount, Intention, Conversation } from '../../schema'
 import { formatDate } from './utils'
+import { glass, text, tint, blur } from './theme'
 
 export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
   const [expandedActiveConvs, setExpandedActiveConvs] = useState(false)
@@ -90,19 +91,20 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
         <div
           style={{
             padding: '16px',
-            backgroundColor: 'rgba(107, 142, 126, 0.15)',
+            backgroundColor: tint.sage,
+            backdropFilter: blur.medium,
             borderRadius: 10,
-            border: '1.5px solid rgba(107, 142, 126, 0.4)',
+            border: 'none',
             marginBottom: 12,
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 8 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#333', marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: text.primary, marginBottom: 4 }}>
                 {activeIntention.title}
               </div>
               {activeIntention.timerDuration && (
-                <div style={{ fontSize: 12, color: '#6B8E7E', fontWeight: 600 }}>
+                <div style={{ fontSize: 12, color: text.secondary, fontWeight: 600 }}>
                   {activeIntention.timerDuration} min session
                 </div>
               )}
@@ -112,8 +114,8 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                 fontSize: 9,
                 padding: '3px 7px',
                 borderRadius: 4,
-                backgroundColor: '#6B8E7E',
-                color: '#fff',
+                backgroundColor: tint.sageStrong,
+                color: text.primary,
                 textTransform: 'uppercase',
                 fontWeight: 700,
                 flexShrink: 0,
@@ -124,7 +126,7 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
           </div>
 
           {activeIntention.description && (
-            <div style={{ fontSize: 12, color: '#555', marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: text.secondary, marginBottom: 10 }}>
               {activeIntention.description}
             </div>
           )}
@@ -136,9 +138,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                 fontSize: 10,
                 padding: '6px 12px',
                 borderRadius: 5,
-                border: '1px solid rgba(123, 107, 142, 0.4)',
-                backgroundColor: 'rgba(123, 107, 142, 0.15)',
-                color: '#7B6B8E',
+                border: 'none',
+                backgroundColor: tint.plum,
+                backdropFilter: blur.subtle,
+                color: text.primary,
                 cursor: 'pointer',
                 fontWeight: 600,
               }}
@@ -152,9 +155,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                   fontSize: 10,
                   padding: '6px 10px',
                   borderRadius: 5,
-                  border: '1px solid rgba(139, 115, 85, 0.2)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                  color: '#666',
+                  border: 'none',
+                  backgroundColor: glass.strong,
+                  backdropFilter: blur.subtle,
+                  color: text.secondary,
                   cursor: 'pointer',
                   fontWeight: 500,
                 }}
@@ -162,7 +166,7 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                 {expandedActiveConvs ? '−' : '+'} {activeLinkedConversations.length} conversation{activeLinkedConversations.length > 1 ? 's' : ''}
               </button>
             )}
-            <div style={{ fontSize: 10, color: '#999', marginLeft: 'auto' }}>
+            <div style={{ fontSize: 10, color: text.tertiary, marginLeft: 'auto' }}>
               {formatDate(activeIntention.updatedAt)}
             </div>
           </div>
@@ -177,7 +181,7 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 style={{ overflow: 'hidden' }}
               >
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(107, 142, 126, 0.2)' }}>
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${glass.ultraLight}` }}>
                   {activeLinkedConversations
                     .sort((a, b) => b.startTime - a.startTime)
                     .map((conv, convIdx) => {
@@ -187,22 +191,23 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                           key={convIdx}
                           style={{
                             padding: '8px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                            backgroundColor: glass.light,
+                            backdropFilter: blur.subtle,
                             borderRadius: 6,
                             marginBottom: convIdx < activeLinkedConversations.length - 1 ? 6 : 0,
                           }}
                         >
                           {conv.summary && (
-                            <div style={{ fontSize: 11, color: '#555', marginBottom: 4, lineHeight: 1.4 }}>
+                            <div style={{ fontSize: 11, color: text.secondary, marginBottom: 4, lineHeight: 1.4 }}>
                               {conv.summary.slice(0, 80)}
                               {conv.summary.length > 80 ? '...' : ''}
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: 10, color: '#999' }}>
+                            <div style={{ fontSize: 10, color: text.tertiary }}>
                               {duration}min
                             </div>
-                            <div style={{ fontSize: 10, color: '#999' }}>
+                            <div style={{ fontSize: 10, color: text.tertiary }}>
                               {formatDate(conv.startTime)}
                             </div>
                           </div>
@@ -226,9 +231,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
             marginBottom: 12,
             fontSize: 11,
             fontWeight: 600,
-            color: '#8B7355',
-            backgroundColor: 'rgba(139, 115, 85, 0.08)',
-            border: '1px dashed rgba(139, 115, 85, 0.3)',
+            color: text.secondary,
+            backgroundColor: glass.ultraLight,
+            backdropFilter: blur.subtle,
+            border: 'none',
             borderRadius: 8,
             cursor: 'pointer',
           }}
@@ -240,9 +246,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
           style={{
             padding: 12,
             marginBottom: 12,
-            backgroundColor: 'rgba(255, 255, 255, 0.6)',
+            backgroundColor: glass.light,
+            backdropFilter: blur.medium,
             borderRadius: 8,
-            border: '1px solid rgba(139, 115, 85, 0.2)',
+            border: 'none',
           }}
         >
           <input
@@ -263,7 +270,7 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
               padding: '8px',
               fontSize: 13,
               fontWeight: 500,
-              color: '#333',
+              color: text.primary,
               backgroundColor: 'transparent',
               border: 'none',
               outline: 'none',
@@ -280,9 +287,9 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                 fontSize: 10,
                 padding: '4px 8px',
                 borderRadius: 4,
-                border: '1px solid rgba(139, 115, 85, 0.2)',
-                backgroundColor: 'transparent',
-                color: '#666',
+                border: 'none',
+                backgroundColor: glass.ultraLight,
+                color: text.secondary,
                 cursor: 'pointer',
                 fontWeight: 500,
               }}
@@ -296,9 +303,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                 fontSize: 10,
                 padding: '4px 8px',
                 borderRadius: 4,
-                border: '1px solid rgba(139, 115, 85, 0.3)',
-                backgroundColor: newIntentionTitle.trim() ? '#8B7355' : 'rgba(139, 115, 85, 0.2)',
-                color: newIntentionTitle.trim() ? '#fff' : '#999',
+                border: 'none',
+                backgroundColor: newIntentionTitle.trim() ? tint.earthStrong : glass.ultraLight,
+                backdropFilter: blur.subtle,
+                color: newIntentionTitle.trim() ? text.primary : text.tertiary,
                 cursor: newIntentionTitle.trim() ? 'pointer' : 'not-allowed',
                 fontWeight: 600,
               }}
@@ -310,7 +318,7 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
       )}
 
       {intentions.length === 0 && (
-        <div style={{ color: '#8B7355', fontSize: 13, opacity: 0.6, textAlign: 'center', marginTop: 20 }}>
+        <div style={{ color: text.tertiary, fontSize: 13, textAlign: 'center', marginTop: 20 }}>
           No intentions yet
         </div>
       )}
@@ -318,7 +326,7 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
       {/* Todo Intentions */}
       {todoIntentions.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: '#999', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: text.tertiary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             To Do
           </div>
           {todoIntentions.map((intention) => {
@@ -329,13 +337,14 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                 key={intention.$jazz.id}
                 style={{
                   padding: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.35)',
+                  backgroundColor: glass.light,
+                  backdropFilter: blur.subtle,
                   borderRadius: 8,
-                  border: '1px solid rgba(139, 115, 85, 0.15)',
+                  border: 'none',
                   marginBottom: 8,
                 }}
               >
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: text.primary, marginBottom: 8 }}>
                   {intention.title}
                 </div>
 
@@ -358,9 +367,11 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                         width: '90px',
                         padding: '5px 8px',
                         fontSize: 11,
-                        border: '1px solid rgba(139, 115, 85, 0.25)',
+                        border: 'none',
                         borderRadius: 4,
                         outline: 'none',
+                        backgroundColor: glass.ultraLight,
+                        color: text.primary,
                       }}
                     />
                     <button
@@ -369,9 +380,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                         fontSize: 10,
                         padding: '5px 12px',
                         borderRadius: 4,
-                        border: '1px solid rgba(107, 142, 126, 0.4)',
-                        backgroundColor: '#6B8E7E',
-                        color: '#fff',
+                        border: 'none',
+                        backgroundColor: tint.sageStrong,
+                        backdropFilter: blur.subtle,
+                        color: text.primary,
                         cursor: 'pointer',
                         fontWeight: 600,
                       }}
@@ -387,9 +399,9 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                         fontSize: 10,
                         padding: '5px 12px',
                         borderRadius: 4,
-                        border: '1px solid rgba(139, 115, 85, 0.2)',
-                        backgroundColor: 'transparent',
-                        color: '#666',
+                        border: 'none',
+                        backgroundColor: glass.ultraLight,
+                        color: text.secondary,
                         cursor: 'pointer',
                         fontWeight: 500,
                       }}
@@ -404,9 +416,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                       fontSize: 10,
                       padding: '5px 12px',
                       borderRadius: 4,
-                      border: '1px solid rgba(107, 142, 126, 0.3)',
-                      backgroundColor: 'rgba(107, 142, 126, 0.1)',
-                      color: '#6B8E7E',
+                      border: 'none',
+                      backgroundColor: tint.sage,
+                      backdropFilter: blur.subtle,
+                      color: text.primary,
                       cursor: 'pointer',
                       fontWeight: 600,
                     }}
@@ -430,9 +443,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
               padding: '8px',
               fontSize: 10,
               fontWeight: 600,
-              color: '#7B6B8E',
-              backgroundColor: 'rgba(123, 107, 142, 0.06)',
-              border: '1px solid rgba(123, 107, 142, 0.2)',
+              color: text.secondary,
+              backgroundColor: tint.plum,
+              backdropFilter: blur.subtle,
+              border: 'none',
               borderRadius: 6,
               cursor: 'pointer',
               display: 'flex',
@@ -459,24 +473,25 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                       key={idx}
                       style={{
                         padding: '10px',
-                        backgroundColor: 'rgba(123, 107, 142, 0.08)',
+                        backgroundColor: glass.ultraLight,
+                        backdropFilter: blur.subtle,
                         borderRadius: 6,
-                        border: '1px solid rgba(123, 107, 142, 0.15)',
+                        border: 'none',
                         marginBottom: 6,
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 6 }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#555' }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: text.secondary }}>
                             {intention.title}
                           </div>
                           {intention.timerDuration && (
-                            <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                            <div style={{ fontSize: 10, color: text.tertiary, marginTop: 2 }}>
                               {intention.timerDuration} min
                             </div>
                           )}
                         </div>
-                        <div style={{ fontSize: 10, color: '#999' }}>
+                        <div style={{ fontSize: 10, color: text.tertiary }}>
                           {formatDate(intention.updatedAt)}
                         </div>
                       </div>
@@ -486,9 +501,9 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                           fontSize: 10,
                           padding: '4px 8px',
                           borderRadius: 4,
-                          border: '1px solid rgba(139, 115, 85, 0.2)',
-                          backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                          color: '#666',
+                          border: 'none',
+                          backgroundColor: glass.light,
+                          color: text.secondary,
                           cursor: 'pointer',
                           fontWeight: 500,
                         }}
@@ -514,9 +529,10 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
               padding: '8px',
               fontSize: 10,
               fontWeight: 600,
-              color: '#999',
-              backgroundColor: 'rgba(153, 153, 153, 0.05)',
-              border: '1px solid rgba(153, 153, 153, 0.15)',
+              color: text.tertiary,
+              backgroundColor: tint.slate,
+              backdropFilter: blur.subtle,
+              border: 'none',
               borderRadius: 6,
               cursor: 'pointer',
               display: 'flex',
@@ -543,25 +559,26 @@ export const IntentionsView = ({ intentions }: { intentions: Intention[] }) => {
                       key={idx}
                       style={{
                         padding: '10px',
-                        backgroundColor: 'rgba(153, 153, 153, 0.08)',
+                        backgroundColor: glass.ultraLight,
+                        backdropFilter: blur.subtle,
                         borderRadius: 6,
-                        border: '1px solid rgba(153, 153, 153, 0.15)',
+                        border: 'none',
                         marginBottom: 6,
                         opacity: 0.7,
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#666' }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: text.tertiary }}>
                             {intention.title}
                           </div>
                           {intention.timerDuration && (
-                            <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                            <div style={{ fontSize: 10, color: text.subtle, marginTop: 2 }}>
                               {intention.timerDuration} min
                             </div>
                           )}
                         </div>
-                        <div style={{ fontSize: 10, color: '#999' }}>
+                        <div style={{ fontSize: 10, color: text.subtle }}>
                           {formatDate(intention.updatedAt)}
                         </div>
                       </div>

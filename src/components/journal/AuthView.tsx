@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react'
 import { useIsAuthenticated } from 'jazz-tools/react-core'
 import { useAuthFlow } from '../../hooks/useAuthFlow'
+import { glass, text, tint, blur } from './theme'
 
 interface AuthViewProps {
   isDocked: boolean
@@ -8,6 +9,7 @@ interface AuthViewProps {
   setIsAuthMinimized: (minimized: boolean) => void
   isAuthTransitioningOut: boolean
   showAuthAfterCollapse: boolean
+  hasActiveTab: boolean
 }
 
 export function AuthView({
@@ -15,7 +17,8 @@ export function AuthView({
   isAuthMinimized,
   setIsAuthMinimized,
   isAuthTransitioningOut,
-  showAuthAfterCollapse
+  showAuthAfterCollapse,
+  hasActiveTab
 }: AuthViewProps) {
   const isAuthenticated = useIsAuthenticated()
 
@@ -39,7 +42,7 @@ export function AuthView({
 
   return (
     <AnimatePresence>
-      {!isAuthenticated && showAuthAfterCollapse && !isAuthTransitioningOut && (isDocked || isAuthMinimized) && (
+      {!isAuthenticated && showAuthAfterCollapse && !isAuthTransitioningOut && (isDocked || isAuthMinimized) && !hasActiveTab && (
         <motion.div
           layout
           initial={{ opacity: 0, y: -20, scale: 0.98 }}
@@ -54,14 +57,12 @@ export function AuthView({
             width: 'min(400px, 90vw)',
             margin: '0 auto',
             zIndex: 2000,
-            backgroundColor: 'var(--glass-sand-bg)',
-            backdropFilter: 'blur(var(--glass-blur))',
+            // backgroundColor: glass.ultraLight,
+            //backdropFilter: blur.medium,
             borderRadius: 12,
-            border: '1px solid var(--glass-sand-border)',
+            border: 'none',
             pointerEvents: 'auto',
             overflow: 'hidden',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            color: 'var(--glass-text-primary)',
           }}
         >
           {isAuthMinimized ? (
@@ -79,10 +80,10 @@ export function AuthView({
                 transition={{ layout: { type: 'spring', stiffness: 300, damping: 35 } }}
                 style={{
                   fontSize: 16,
-                  fontWeight: 600,
-                  color: '#2C2C2C',
+                  fontWeight: 500,
+                  color: text.secondary,
                   whiteSpace: 'nowrap',
-                  letterSpacing: '-0.01em',
+                  letterSpacing: '0.01em',
                   width: 'fit-content',
                 }}
               >
@@ -97,8 +98,9 @@ export function AuthView({
                     padding: '8px 20px',
                     fontSize: 13,
                     fontWeight: 500,
-                    color: '#fff',
-                    backgroundColor: '#8B7355',
+                    color: text.secondary,
+                    backgroundColor: tint.earthStrong,
+                    backdropFilter: blur.subtle,
                     border: 'none',
                     borderRadius: 9999,
                     cursor: 'pointer',
@@ -107,7 +109,6 @@ export function AuthView({
                     letterSpacing: '-0.0125em',
                     width: 'fit-content',
                   }}
-                  whileHover={{ backgroundColor: '#7B6355', scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   continue
@@ -130,13 +131,13 @@ export function AuthView({
                   style={{
                     fontSize: 16,
                     fontWeight: 600,
-                    color: '#2C2C2C',
+                    color: text.secondary,
                     whiteSpace: 'nowrap',
                     letterSpacing: '-0.01em',
                     width: 'fit-content',
                   }}
                 >
-                  hey, human bean.
+                  hey, human bean
                 </motion.div>
                 <button
                   onClick={() => setIsAuthMinimized(true)}
@@ -146,7 +147,7 @@ export function AuthView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: 'rgba(139, 115, 85, 0.08)',
+                    backgroundColor: glass.ultraLight,
                     border: 'none',
                     borderRadius: 9999,
                     cursor: 'pointer',
@@ -163,8 +164,8 @@ export function AuthView({
                     xmlns="http://www.w3.org/2000/svg"
                     style={{ display: 'block' }}
                   >
-                    <line x1="4" y1="4" x2="12" y2="12" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
-                    <line x1="12" y1="4" x2="4" y2="12" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
+                    <line x1="4" y1="4" x2="12" y2="12" stroke={text.tertiary} strokeWidth="1.8" strokeLinecap="round" />
+                    <line x1="12" y1="4" x2="4" y2="12" stroke={text.tertiary} strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>
@@ -181,7 +182,7 @@ export function AuthView({
                           marginBottom: 6,
                           fontSize: 11,
                           fontWeight: 600,
-                          color: '#666',
+                          color: text.tertiary,
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px'
                         }}
@@ -201,35 +202,35 @@ export function AuthView({
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid rgba(139, 115, 85, 0.2)',
+                          border: 'none',
                           borderRadius: 8,
                           fontSize: 14,
                           boxSizing: 'border-box',
-                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                          color: '#2C2C2C',
+                          backgroundColor: glass.light,
+                          backdropFilter: blur.subtle,
+                          color: text.primary,
                           outline: 'none',
-                          transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                          transition: 'background-color 0.2s ease',
                         }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
-                          e.target.style.backgroundColor = '#fff'
+                          e.target.style.backgroundColor = glass.strong
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
-                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                          e.target.style.backgroundColor = glass.light
                         }}
                       />
                     </div>
 
                     {error && (
                       <div style={{
-                        color: '#d32f2f',
-                        backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                        color: text.primary,
+                        backgroundColor: tint.coral,
+                        backdropFilter: blur.subtle,
                         padding: '10px 12px',
                         borderRadius: 8,
                         marginBottom: 12,
                         fontSize: 12,
-                        border: '1px solid rgba(211, 47, 47, 0.2)',
+                        border: 'none',
                         lineHeight: 1.4
                       }}>
                         {error}
@@ -244,10 +245,11 @@ export function AuthView({
                         disabled={checking}
                         style={{
                           padding: '8px 20px',
-                          backgroundColor: checking ? 'rgba(139, 115, 85, 0.3)' : '#8B7355',
+                          backgroundColor: checking ? tint.earth : tint.earthStrong,
+                          backdropFilter: blur.subtle,
                           fontSize: 13,
                           fontWeight: 500,
-                          color: '#fff',
+                          color: text.primary,
                           border: 'none',
                           borderRadius: 9999,
                           cursor: 'pointer',
@@ -255,8 +257,8 @@ export function AuthView({
                           whiteSpace: 'nowrap',
                           letterSpacing: '-0.0125em',
                           width: 'fit-content',
+                          opacity: checking ? 0.6 : 1,
                         }}
-                        whileHover={{ backgroundColor: '#7B6355', scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         {checking ? "Checking..." : "continue"}
@@ -276,7 +278,7 @@ export function AuthView({
                           marginBottom: 6,
                           fontSize: 11,
                           fontWeight: 600,
-                          color: '#666',
+                          color: text.tertiary,
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px'
                         }}
@@ -297,35 +299,35 @@ export function AuthView({
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid rgba(139, 115, 85, 0.2)',
+                          border: 'none',
                           borderRadius: 8,
                           fontSize: 14,
                           boxSizing: 'border-box',
-                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                          color: '#2C2C2C',
+                          backgroundColor: glass.light,
+                          backdropFilter: blur.subtle,
+                          color: text.primary,
                           outline: 'none',
-                          transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                          transition: 'background-color 0.2s ease',
                         }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
-                          e.target.style.backgroundColor = '#fff'
+                          e.target.style.backgroundColor = glass.strong
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
-                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                          e.target.style.backgroundColor = glass.light
                         }}
                       />
                     </div>
 
                     {error && (
                       <div style={{
-                        color: '#d32f2f',
-                        backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                        color: text.primary,
+                        backgroundColor: tint.coral,
+                        backdropFilter: blur.subtle,
                         padding: '10px 12px',
                         borderRadius: 8,
                         marginBottom: 12,
                         fontSize: 12,
-                        border: '1px solid rgba(211, 47, 47, 0.2)',
+                        border: 'none',
                         lineHeight: 1.4
                       }}>
                         {error}
@@ -340,8 +342,9 @@ export function AuthView({
                         disabled={loading}
                         style={{
                           padding: '8px 20px',
-                          backgroundColor: loading ? 'rgba(107, 142, 126, 0.4)' : '#6B8E7E',
-                          color: '#fff',
+                          backgroundColor: loading ? tint.sage : tint.sageStrong,
+                          backdropFilter: blur.subtle,
+                          color: text.primary,
                           border: 'none',
                           borderRadius: 9999,
                           fontSize: 13,
@@ -349,8 +352,8 @@ export function AuthView({
                           cursor: loading ? 'not-allowed' : 'pointer',
                           opacity: loading ? 0.6 : 1,
                           letterSpacing: '-0.01em',
-                          transition: 'background-color 0.2s ease, opacity 0.2s ease',
                         }}
+                        whileTap={{ scale: 0.98 }}
                       >
                         {loading ? "Signing In..." : "Sign In"}
                       </motion.button>
@@ -364,7 +367,7 @@ export function AuthView({
                         padding: '8px',
                         background: 'none',
                         border: 'none',
-                        color: '#888',
+                        color: text.subtle,
                         fontSize: 11,
                         cursor: loading ? 'not-allowed' : 'pointer',
                         opacity: loading ? 0.5 : 1,
@@ -389,7 +392,7 @@ export function AuthView({
                           marginBottom: 6,
                           fontSize: 11,
                           fontWeight: 600,
-                          color: '#666',
+                          color: text.tertiary,
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px'
                         }}
@@ -408,22 +411,21 @@ export function AuthView({
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid rgba(139, 115, 85, 0.2)',
+                          border: 'none',
                           borderRadius: 8,
                           fontSize: 14,
                           boxSizing: 'border-box',
-                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                          color: '#2C2C2C',
+                          backgroundColor: glass.light,
+                          backdropFilter: blur.subtle,
+                          color: text.primary,
                           outline: 'none',
-                          transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                          transition: 'background-color 0.2s ease',
                         }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
-                          e.target.style.backgroundColor = '#fff'
+                          e.target.style.backgroundColor = glass.strong
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
-                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                          e.target.style.backgroundColor = glass.light
                         }}
                       />
                     </div>
@@ -436,7 +438,7 @@ export function AuthView({
                           marginBottom: 6,
                           fontSize: 11,
                           fontWeight: 600,
-                          color: '#666',
+                          color: text.tertiary,
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px'
                         }}
@@ -456,35 +458,35 @@ export function AuthView({
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid rgba(139, 115, 85, 0.2)',
+                          border: 'none',
                           borderRadius: 8,
                           fontSize: 14,
                           boxSizing: 'border-box',
-                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                          color: '#2C2C2C',
+                          backgroundColor: glass.light,
+                          backdropFilter: blur.subtle,
+                          color: text.primary,
                           outline: 'none',
-                          transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                          transition: 'background-color 0.2s ease',
                         }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.4)'
-                          e.target.style.backgroundColor = '#fff'
+                          e.target.style.backgroundColor = glass.strong
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = 'rgba(139, 115, 85, 0.2)'
-                          e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.8)'
+                          e.target.style.backgroundColor = glass.light
                         }}
                       />
                     </div>
 
                     {error && (
                       <div style={{
-                        color: '#d32f2f',
-                        backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                        color: text.primary,
+                        backgroundColor: tint.coral,
+                        backdropFilter: blur.subtle,
                         padding: '10px 12px',
                         borderRadius: 8,
                         marginBottom: 12,
                         fontSize: 12,
-                        border: '1px solid rgba(211, 47, 47, 0.2)',
+                        border: 'none',
                         lineHeight: 1.4
                       }}>
                         {error}
@@ -499,8 +501,9 @@ export function AuthView({
                         disabled={loading}
                         style={{
                           padding: '8px 20px',
-                          backgroundColor: loading ? 'rgba(139, 115, 85, 0.4)' : '#8B7355',
-                          color: '#fff',
+                          backgroundColor: loading ? tint.earth : tint.earthStrong,
+                          backdropFilter: blur.subtle,
+                          color: text.primary,
                           border: 'none',
                           borderRadius: 9999,
                           fontSize: 13,
@@ -508,8 +511,8 @@ export function AuthView({
                           cursor: loading ? 'not-allowed' : 'pointer',
                           opacity: loading ? 0.6 : 1,
                           letterSpacing: '-0.01em',
-                          transition: 'background-color 0.2s ease, opacity 0.2s ease',
                         }}
+                        whileTap={{ scale: 0.98 }}
                       >
                         {loading ? "Creating Account..." : "Sign Up"}
                       </motion.button>
@@ -523,7 +526,7 @@ export function AuthView({
                         padding: '8px',
                         background: 'none',
                         border: 'none',
-                        color: '#888',
+                        color: text.subtle,
                         fontSize: 11,
                         cursor: loading ? 'not-allowed' : 'pointer',
                         opacity: loading ? 0.5 : 1,

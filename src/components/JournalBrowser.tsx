@@ -86,6 +86,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
         setIsAuthMinimized={setIsAuthMinimized}
         isAuthTransitioningOut={isAuthTransitioningOut}
         showAuthAfterCollapse={showAuthAfterCollapse}
+        hasActiveTab={activeTab !== null}
       />
 
       {/* Main Journal UI */}
