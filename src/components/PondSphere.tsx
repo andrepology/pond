@@ -42,8 +42,8 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   } = useControls({
     Sky: folder(
       {
-        skyTurbidityMin: { label: 'Turbidity Min', value: 4, min: 0, max: 20, step: 0.1 },
-        skyTurbidityMax: { label: 'Turbidity Max', value: 16, min: 0, max: 30, step: 0.1 },
+        skyTurbidityMin: { label: 'Turbidity Min', value: 0.5, min: 0, max: 20, step: 0.1 },
+        skyTurbidityMax: { label: 'Turbidity Max', value: 4.0, min: 0, max: 30, step: 0.1 },
         skyRayleighMin: { label: 'Rayleigh Min', value: 0.8, min: 0, max: 4, step: 0.01 },
         skyRayleighMax: { label: 'Rayleigh Max', value: 3.24, min: 0, max: 6, step: 0.01 },
         skyMieCoefficientMin: { label: 'Mie Coeff Min', value: 0.16, min: 0, max: 0.5, step: 0.001 },
@@ -163,7 +163,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           }
         }}
       >
-        <sphereGeometry args={[1.01, 50, 50]} />
+        <sphereGeometry args={[1.2, 50, 50]} />
         <meshPhysicalMaterial
           ref={(mat) => { waterMaterialRef.current = mat as unknown as THREE.MeshPhysicalMaterial }}
           transmission={waterControls.transmission}
@@ -178,6 +178,8 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
           transparent={true}
           opacity={1.0}
           depthWrite={false}
+          fog={true}
+          
         />
       </mesh>
 

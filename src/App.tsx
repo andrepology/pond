@@ -103,7 +103,7 @@ export default function App() {
   }, [])
 
 
-  const { toneMappingEnabled, toneMappingMode, toneMappingBlendFunction, toneMappingAdaptive, toneMappingResolution, toneMappingMiddleGrey, toneMappingMaxLuminance, toneMappingAverageLuminance, toneMappingAdaptationRate, bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize, saturation, hue, filmGrainIntensity, filmGrainGrayscale } = useControls({
+  const { toneMappingEnabled, toneMappingMode, toneMappingBlendFunction, toneMappingAdaptive, toneMappingResolution, toneMappingMiddleGrey, toneMappingMaxLuminance, toneMappingAverageLuminance, toneMappingAdaptationRate, bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize, saturation, hue, filmGrainIntensity, filmGrainGrayscale, depthFogEnabled, depthFogColor, depthFogNear, depthFogFar, depthFogIntensity, depthFogRadialInfluence } = useControls({
     'Post Processing': folder({
       'Tone Mapping': folder({
         toneMappingEnabled: { label: 'Enabled', value: false },
@@ -130,6 +130,14 @@ export default function App() {
         bloomThreshold: { label: 'Threshold', value: 0.96, min: 0, max: 1, step: 0.01 },
         bloomSmoothing: { label: 'Smoothing', value: 0.025, min: 0, max: 1, step: 0.001 },
         bloomKernelSize: { label: 'Kernel Size', value: 1, options: [0, 1, 2], labels: ['Small', 'Medium', 'Large'] },
+      }, { collapsed: true }),
+      'Depth Fog': folder({
+        depthFogEnabled: { label: 'Enabled', value: false },
+        depthFogColor: { label: 'Color', value: '#F6F5F3' },
+        depthFogNear: { label: 'Fog Near', value: 0.0, min: 0, max: 1, step: 0.01 },
+        depthFogFar: { label: 'Fog Far', value: 0.85, min: 0, max: 1, step: 0.01 },
+        depthFogIntensity: { label: 'Intensity', value: 1.0, min: 0, max: 2, step: 0.01 },
+        depthFogRadialInfluence: { label: 'Radial Mode', value: 1.5, min: 0, max: 3, step: 0.05 },
       }, { collapsed: true }),
       'Hue & Saturation': folder({
         saturation: { value: 0, min: -1, max: 1, step: 0.01 },
@@ -191,13 +199,13 @@ export default function App() {
         <SceneInitializer onReady={() => setSceneReady(true)}>
         <CameraRig markersVisible={markersVisibleRef.current} />
 
-        <color attach="background" args={['rgba(246, 245, 243, 0.05)']} />
-        <AdaptiveFog
+        <color attach="background" args={['#F6F5F3']} />
+        {/* <AdaptiveFog
           color="#F6F5F3"
-          defaultFog={{ near: 3, far: 22 }}
+          defaultFog={{ near: 1, far: 22 }}
           focusedFog={{ near: 3, far: 22 }}
           animationDuration={1.2}
-        /> 
+        />  */}
 
         <Environment
            files={['/envmaps/rogland_moonlit_night_1k.hdr']}
@@ -263,6 +271,12 @@ export default function App() {
             toneMappingAdaptationRate={toneMappingAdaptationRate}
             filmGrainIntensity={filmGrainIntensity}
             filmGrainGrayscale={filmGrainGrayscale}
+            depthFogEnabled={depthFogEnabled}
+            depthFogColor={depthFogColor}
+            depthFogNear={depthFogNear}
+            depthFogFar={depthFogFar}
+            depthFogIntensity={depthFogIntensity}
+            depthFogRadialInfluence={depthFogRadialInfluence}
           />
         )}
         </SceneInitializer>

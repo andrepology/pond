@@ -1,7 +1,9 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useEffect, useRef } from 'react'
 import { EffectComposer, Bloom, HueSaturation, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode, BlendFunction } from 'postprocessing'
 import { FilmGrain } from './FilmGrain'
+import { RadialFog } from './RadialFog'
+import { useThree } from '@react-three/fiber'
 
 interface PostProcessingEffectsProps {
   bloomIntensity: number
@@ -21,6 +23,12 @@ interface PostProcessingEffectsProps {
   toneMappingAdaptationRate: number
   filmGrainIntensity: number
   filmGrainGrayscale: boolean
+  depthFogEnabled: boolean
+  depthFogColor: string
+  depthFogNear: number
+  depthFogFar: number
+  depthFogIntensity: number
+  depthFogRadialInfluence: number
 }
 
 export const PostProcessingEffects = memo(function PostProcessingEffects({
@@ -41,9 +49,26 @@ export const PostProcessingEffects = memo(function PostProcessingEffects({
   toneMappingAdaptationRate,
   filmGrainIntensity,
   filmGrainGrayscale,
+  depthFogEnabled,
+  depthFogColor,
+  depthFogNear,
+  depthFogFar,
+  depthFogIntensity,
+  depthFogRadialInfluence,
 }: PostProcessingEffectsProps) {
   const mode = useMemo(() => ToneMappingMode[toneMappingMode as keyof typeof ToneMappingMode], [toneMappingMode])
   const blendFunction = useMemo(() => BlendFunction[toneMappingBlendFunction as keyof typeof BlendFunction], [toneMappingBlendFunction])
+  
+  const { size } = useThree()
+  const depthFogRef = useRef<any>(null)
+
+  // Update aspect ratio when viewport size changes
+  useEffect(() => {
+    if (depthFogRef.current && depthFogEnabled) {
+      const aspectRatio = size.width / size.height
+      depthFogRef.current.aspectRatio = aspectRatio
+    }
+  }, [size.width, size.height, depthFogEnabled])
 
   return (
     <EffectComposer autoClear={true} multisampling={0} resolutionScale={0.5}>
@@ -54,6 +79,17 @@ export const PostProcessingEffects = memo(function PostProcessingEffects({
         kernelSize={bloomKernelSize}
       />
       <HueSaturation saturation={saturation} hue={hue} />
+      {depthFogEnabled && (
+        <RadialFog
+          ref={depthFogRef}
+          fogColor={depthFogColor}
+          fogNear={depthFogNear}
+          fogFar={depthFogFar}
+          intensity={depthFogIntensity}
+          radialInfluence={depthFogRadialInfluence}
+          aspectRatio={size.width / size.height}
+        />
+      )}
       {filmGrainIntensity > 0 && (
         <FilmGrain intensity={filmGrainIntensity} grayscale={filmGrainGrayscale} />
       )}
