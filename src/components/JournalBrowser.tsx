@@ -67,7 +67,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
       const isDesktop = deviceType === 'desktop'
       const maxHeight = isDesktop
         ? Math.min(viewportHeight * 0.55, 600)
-        : viewportHeight * 0.6
+        : viewportHeight * 0.85
 
       setViewHeight(maxHeight)
     }
