@@ -64,10 +64,10 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
     const updateHeight = () => {
       const deviceType = getDeviceType()
       const viewportHeight = window.innerHeight
-      const eightyVh = viewportHeight * 0.65
-
       const isDesktop = deviceType === 'desktop'
-      const maxHeight = isDesktop ? Math.min(eightyVh, 600) : eightyVh
+      const maxHeight = isDesktop
+        ? Math.min(viewportHeight * 0.55, 600)
+        : viewportHeight * 0.6
 
       setViewHeight(maxHeight)
     }

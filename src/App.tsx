@@ -86,6 +86,22 @@ export default function App() {
     }
   }, [])
 
+  // Prevent touch events from scrolling the viewport globally
+  // CSS touch-action handles most cases, but this ensures viewport never scrolls
+  useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement
+      // Only prevent if touch is NOT on a scrollable element
+      // Scrollable elements have touch-action: pan-y and handle their own scrolling
+      const scrollableElement = target?.closest('.scroller, [style*="overflow"]')
+      if (!scrollableElement && target?.closest('[data-ui]')) {
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    return () => document.removeEventListener('touchmove', handleTouchMove)
+  }, [])
+
 
   const { toneMappingEnabled, toneMappingMode, toneMappingBlendFunction, toneMappingAdaptive, toneMappingResolution, toneMappingMiddleGrey, toneMappingMaxLuminance, toneMappingAverageLuminance, toneMappingAdaptationRate, bloomIntensity, bloomThreshold, bloomSmoothing, bloomKernelSize, saturation, hue, filmGrainIntensity, filmGrainGrayscale } = useControls({
     'Post Processing': folder({

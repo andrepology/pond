@@ -7,6 +7,7 @@ body {
   overflow: hidden;
   background-color: rgba(246, 245, 243, 0.1n0);
   backdrop-filter: blur(10px);
+  touch-action: none; /* Prevent viewport scrolling on mobile */
 }
 
 /* Tauri transparent window support */
@@ -109,4 +110,5 @@ canvas {
   mask-size: 100% 100%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+  touch-action: pan-y; /* Allow vertical scrolling within scrollable elements */
 }
