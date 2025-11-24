@@ -1,3 +1,4 @@
+import React from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useIsAuthenticated } from 'jazz-tools/react-core'
 import { useAuthFlow } from '../../hooks/useAuthFlow'
@@ -39,6 +40,8 @@ export function AuthView({
     handleSignUp,
     resetToEmail,
   } = useAuthFlow()
+
+  const [introSeen, setIntroSeen] = React.useState(false)
 
   return (
     <AnimatePresence>
@@ -171,8 +174,95 @@ export function AuthView({
               </div>
 
               <div style={{ padding: '12px 20px 20px 20px' }}>
+                {/* Step 0: Introduction */}
+                {!introSeen && (
+                  <div style={{ marginTop: 0 }}>
+                    <div style={{
+                      fontSize: 14,
+                      color: text.secondary,
+                      lineHeight: 1.5,
+                      marginBottom: 16,
+                      fontWeight: 400,
+                    }}>
+                      <span style={{
+                        fontSize: 18,
+                        opacity: 0.7,
+                        color: 'white',
+                        marginRight: 4,
+                      }}>
+                        ⦿
+                      </span>
+                      <span style={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        letterSpacing: '0.025em',
+                      }}>
+                        pond
+                      </span>
+                      <span style={{
+                        marginLeft: 6,
+                        opacity: 0.9,
+                      }}>
+                        is a calm space to return to amidst the hustle and bustle of the rest of your digital life. 
+                      </span>
+                    </div>
+
+                    <div style={{
+                      fontSize: 13,
+                      color: text.secondary,
+                      lineHeight: 1.4,
+                      marginBottom: 16,
+                      opacity: 0.8,
+                    }}>
+                      When you're ready, meet Innio—a witty fish and self-styled anthropologist. As you set intentions,Innio will offer reflection when invited, but may also want to interview you (you can say no!).
+                    </div>
+
+                    <div style={{
+                      fontSize: 11,
+                      color: text.tertiary,
+                      lineHeight: 1.4,
+                      marginBottom: 16,
+                      padding: '8px 12px',
+                      backgroundColor: glass.light,
+                      backdropFilter: blur.subtle,
+                      borderRadius: 6,
+                      border: 'none',
+                    }}>
+                      <div>• When AI is used, it is never stored anywhere except your device</div>
+                      <div>• We can't read it if we tried (it's encrypted)</div>
+                      <div>• Innio will always ask before sharing anything he learns about you</div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <motion.button
+                        layoutId="continueButton"
+                        transition={{ layout: { type: 'spring', stiffness: 400, damping: 35 } }}
+                        onClick={() => setIntroSeen(true)}
+                        style={{
+                          padding: '8px 20px',
+                          backgroundColor: tint.earth,
+                          backdropFilter: blur.subtle,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: text.earth,
+                          border: 'none',
+                          borderRadius: 9999,
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          whiteSpace: 'nowrap',
+                          letterSpacing: '-0.0125em',
+                          width: 'fit-content',
+                        }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        continue
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Step 1: Email Input Only */}
-                {!emailChecked && (
+                {introSeen && !emailChecked && (
                   <form onSubmit={handleEmailSubmit} style={{ marginTop: 12 }}>
                     <div style={{ marginBottom: 12 }}>
                       <label
@@ -268,7 +358,7 @@ export function AuthView({
                 )}
 
                 {/* Step 2: Existing User - Sign In */}
-                {emailChecked && userExists && (
+                {introSeen && emailChecked && userExists && (
                   <form onSubmit={handleSignIn} style={{ marginTop: 12 }}>
                     <div style={{ marginBottom: 12 }}>
                       <label
@@ -382,7 +472,7 @@ export function AuthView({
                 )}
 
                 {/* Step 3: New User - Sign Up */}
-                {emailChecked && !userExists && (
+                {introSeen && emailChecked && !userExists && (
                   <form onSubmit={handleSignUp} style={{ marginTop: 12 }}>
                     <div style={{ marginBottom: 12 }}>
                       <label

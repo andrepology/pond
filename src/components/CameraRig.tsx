@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useDeferredValue } from 'react'
 import { useThree } from '@react-three/fiber'
 import { CameraControls } from '@react-three/drei'
 import { useRoute } from 'wouter'
@@ -11,15 +11,19 @@ CameraControlsImpl.install({ THREE })
 
 interface CameraRigProps {
   markersVisible: boolean;
+  isJournalDocked: boolean;
 }
 
-export function CameraRig({ markersVisible }: CameraRigProps) {
+export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
   const { controls, scene, viewport } = useThree()
   const [routeMatch, paramsRaw] = useRoute('/item/:id')
   const params: Record<string, string> = paramsRaw || {}
   const targetPositionRef = useRef(new THREE.Vector3())
   const savedCameraPosition = useRef(new THREE.Vector3())
   const wasActiveRef = useRef(false)
+  
+  // Defer camera animation to avoid blocking React UI and Motion animations
+  const deferredIsJournalDocked = useDeferredValue(isJournalDocked)
 
   useEffect(() => {
     const cameraControls = controls as CameraControlsImpl | null
@@ -72,10 +76,13 @@ export function CameraRig({ markersVisible }: CameraRigProps) {
         const insideY = targetY + 0.5
         const insideZ = targetZ + insideDistance
 
+        // Apply downward tilt when journal is undocked
+        const tiltOffset = deferredIsJournalDocked ? 0 : 0.6
+
         if (insideMode) {
           cameraControls.setLookAt(
             insideX,
-            insideY,
+            insideY + tiltOffset,
             insideZ,
             targetX,
             targetY,
@@ -86,7 +93,7 @@ export function CameraRig({ markersVisible }: CameraRigProps) {
           // Overview mode: stay outside and above, looking down
           cameraControls.setLookAt(
             overviewX,
-            overviewY,
+            overviewY + tiltOffset,
             overviewZ,
             targetX,
             targetY,
@@ -127,9 +134,10 @@ export function CameraRig({ markersVisible }: CameraRigProps) {
         )
       } else {
         const overviewHeight = isMobileDevice() ? 7 : 8
+        const tiltOffset = deferredIsJournalDocked ? 0 : -1.5
         cameraControls?.setLookAt(
           0,
-          overviewHeight,
+          overviewHeight + tiltOffset,
           0.001,
           0,
           0,
@@ -140,7 +148,7 @@ export function CameraRig({ markersVisible }: CameraRigProps) {
     }
 
     wasActiveRef.current = isActive
-  }, [params.id, controls, scene, viewport.aspect, markersVisible])
+  }, [params.id, controls, scene, viewport.aspect, markersVisible, deferredIsJournalDocked])
 
   return (
     <CameraControls

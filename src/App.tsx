@@ -197,7 +197,7 @@ export default function App() {
         <Preload all />
 
         <SceneInitializer onReady={() => setSceneReady(true)}>
-        <CameraRig markersVisible={markersVisibleRef.current} />
+        <CameraRig markersVisible={markersVisibleRef.current} isJournalDocked={isJournalDocked} />
 
         <color attach="background" args={['#F6F5F3']} />
         {/* <AdaptiveFog

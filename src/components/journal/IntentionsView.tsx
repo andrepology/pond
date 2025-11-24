@@ -277,7 +277,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                 height: 32,
                 minWidth: 32,
                 minHeight: 32,
-                borderRadius: 8,
+                borderRadius: '50%',
                 border: `2px solid ${text.primary}`,
                 backgroundColor: 'transparent',
                 cursor: 'pointer',
@@ -432,7 +432,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                       height: 28,
                       minWidth: 28,
                       minHeight: 28,
-                      borderRadius: 6,
+                      borderRadius: '50%',
                       border: `2px solid ${text.secondary}`,
                       backgroundColor: 'transparent',
                       cursor: 'pointer',
@@ -576,7 +576,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                   height: 28,
                   minWidth: 28,
                   minHeight: 28,
-                  borderRadius: 6,
+                  borderRadius: '50%',
                   border: `2px solid ${text.tertiary}`,
                   backgroundColor: text.tertiary,
                   cursor: 'pointer',
@@ -586,9 +586,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                   fontSize: 14,
                   color: '#fff',
                 }}
-              >
-                ✓
-              </button>
+              ></button>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 17, fontWeight: 600, color: text.secondary, textDecoration: 'line-through' }}>
                   {intention.title}
