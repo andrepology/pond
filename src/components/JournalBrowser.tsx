@@ -6,6 +6,7 @@ import { getDeviceType } from '../helpers/deviceDetection'
 import { IntentionsView } from './journal/IntentionsView'
 import { FieldNotesView } from './journal/FieldNotesView'
 import { AuthView } from './journal/AuthView'
+import { glass } from './journal/theme'
 import { useVoice } from '../VoiceChat/VoiceProvider'
 
 type TabId = 'intentions' | 'fieldNotes'
@@ -34,6 +35,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
   const isMounted = useMounted()
   const viewsContainerRef = useRef<HTMLDivElement>(null)
   const [viewsContainerWidth, setViewsContainerWidth] = useState(0)
+  const [viewHeight, setViewHeight] = useState(320)
 
   const { me } = useAccount(PondAccount, {
     resolve: {
@@ -56,6 +58,23 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
     updateWidth()
     window.addEventListener('resize', updateWidth)
     return () => window.removeEventListener('resize', updateWidth)
+  }, [])
+
+  useEffect(() => {
+    const updateHeight = () => {
+      const deviceType = getDeviceType()
+      const viewportHeight = window.innerHeight
+      const eightyVh = viewportHeight * 0.65
+
+      const isDesktop = deviceType === 'desktop'
+      const maxHeight = isDesktop ? Math.min(eightyVh, 600) : eightyVh
+
+      setViewHeight(maxHeight)
+    }
+
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    return () => window.removeEventListener('resize', updateHeight)
   }, [])
 
   const handleTabChange = (tabId: TabId) => {
@@ -125,8 +144,8 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
                 style={{
                   display: 'flex',
                   justifyContent: 'center',
-                  marginBottom: -62,
-                  marginLeft: -2,
+                  marginBottom: -36,
+                  marginLeft: -4,
                 }}
               >
                 <AmbientCallButton />
@@ -134,7 +153,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
             )}
           </AnimatePresence>
 
-          {/* Views Container */}
+          {/* Views + Tabs Container */}
           <motion.div
             ref={viewsContainerRef}
             initial={{
@@ -142,20 +161,25 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
               opacity: 0,
             }}
             animate={{
-              height: isDocked ? 0 : 280,
-              opacity: isDocked ? 0 : 1,
+              // When docked, keep a small height so the tabs remain visible.
+              // When expanded, extend upward to show the views behind the tabs.
+              height: isDocked ? 72 : viewHeight,
+              opacity: 1,
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 60 }}
             style={{
               overflow: 'hidden',
               position: 'relative',
               width: '100%',
-              backdropFilter: 'blur(2px)',
+              // backgroundColor: glass.medium,
+              // backdropFilter: tabs.length > 0 ? 'blur(2px)' : undefined,
               borderRadius: 12,
-              pointerEvents: isDocked ? 'none' : 'auto', // Don't block canvas when collapsed
+              // Keep interactive so tabs can be clicked even when docked.
+              pointerEvents: 'auto',
             }}
             onWheel={(e) => e.stopPropagation()}
           >
+            {/* Sliding views fill the glass panel and can render beneath the tabs */}
             {isMounted && !isDocked &&
               tabs.map((tab, idx) => (
                 <View
@@ -167,17 +191,37 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
                   <TabContent tabId={tab.id} root={root} />
                 </View>
               ))}
-          </motion.div>
 
-          {/* Shared Tabs - always 90% width to avoid layout shift */}
-          <div
-            style={{
-              width: '80%',
-              margin: '-2px auto 0'
-            }}
-          >
-            <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} isDocked={isDocked} />
-          </div>
+            {/* Tabs overlaid at the bottom, centered within the same panel */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                // Allow scroll/pointer events to hit views except on the actual buttons
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: '80%',
+                  pointerEvents: 'auto',
+                  paddingTop: 4,
+                  paddingBottom: 4,
+                }}
+              >
+                <Tabs
+                  tabs={tabs}
+                  activeTab={activeTab}
+                  onTabChange={handleTabChange}
+                  isDocked={isDocked}
+                />
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </>
@@ -390,7 +434,8 @@ const View = ({
           flexDirection: 'column',
           gap: 12,
           overflowY: 'auto',
-          paddingBottom: 48,
+          // Extra bottom padding so content can scroll under the overlaid tabs
+          paddingBottom: 120,
         }}
         onWheel={(e) => e.stopPropagation()}
       >
@@ -491,6 +536,7 @@ const Tabs = ({
                     position: 'absolute',
                     inset: 0,
                     borderRadius: 200,
+                    backdropFilter: 'blur(4px)',
                     backgroundColor: 'rgba(255, 255, 255, 0.13)',
                   }}
                 />
