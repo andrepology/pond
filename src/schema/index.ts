@@ -15,6 +15,10 @@ export const Intention = co.map({
   createdAt: z.number(), // Unix timestamp
   updatedAt: z.number(), // Unix timestamp
   timerDuration: z.number().optional(), // Minutes, if user sets a timer
+  startTime: z.number().optional(), // Unix timestamp when timer started (for active intentions)
+  endTime: z.number().optional(), // Unix timestamp when timer ended (for completed intentions)
+  pausedAt: z.number().optional(), // Unix timestamp when timer was paused
+  pausedDuration: z.number().optional(), // Accumulated paused time in milliseconds
   notes: z.string().optional(), // User's personal notes
 });
 

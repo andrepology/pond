@@ -24,6 +24,15 @@ body.tauri-app {
   position: relative;
 }
 
+/* Global scrollbar hiding */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Webkit */
+}
 
 canvas {
   display: block;

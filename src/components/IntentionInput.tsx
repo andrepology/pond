@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import React, { useEffect, useMemo, useRef } from 'react'
 import { useAccount } from 'jazz-tools/react'
 import type { Signal } from '@preact/signals-core'
-import { Input } from '@react-three/uikit'
+import { Input, Text } from '@react-three/uikit'
 import { useBillboard } from '../hooks/useBillboard'
 import { PondAccount, Intention } from '../schema'
 
@@ -13,55 +13,49 @@ interface IntentionInputProps {
 export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }) => {
   const inputGroupRef = useRef<THREE.Group>(null)
 
-  // Load account with intentions list (shallow)
+  // Load account with intentions list - deep load each intention
   const { me } = useAccount(PondAccount, {
     resolve: {
-      root: { intentions: true }
+      root: { intentions: { $each: true } }
     }
   })
 
-  // Find current active intention (only one at a time)
+  // Find current active intention with a timer
   const activeIntention = useMemo(() => {
     if (!me?.root.intentions) return null
-    return me.root.intentions.find(intention => intention && intention.status === "active") || null
+    return me.root.intentions.find(
+      intention => intention && intention.status === "active" && intention.timerDuration
+    ) || null
   }, [me?.root.intentions])
 
-  // Billboard the input to face the camera (more weighty than markers)
+  // Billboard the display to face the camera (more weighty than markers)
   useBillboard(inputGroupRef, {
     damping: 0.98,      // Higher damping = more inertia/weight
     noiseSpeed: 0.3,    // Slower noise oscillation
     noiseScale: 0.05      // Reduced noise amplitude
   })
 
-  // Handle input changes - update active intention title
-  const handleInputChange = (newValue: string) => {
-    if (!activeIntention) return
-    
-    activeIntention.$jazz.set("title", newValue)
-    activeIntention.$jazz.set("updatedAt", Date.now())
-  }
-
-  // Update signal when input changes (based on active intention)
+  // Update signal based on whether there's an active intention with timer
   useEffect(() => {
     if (hasInputSignal) {
-      const hasInput = activeIntention?.title?.trim().length > 0
-      hasInputSignal.value = Boolean(hasInput)
+      hasInputSignal.value = Boolean(activeIntention)
     }
-  }, [activeIntention?.title, hasInputSignal])
+  }, [activeIntention, hasInputSignal])
+
+  // Don't render if no active intention or no timer
+  if (!activeIntention) {
+    return null
+  }
 
   return (
     <group ref={inputGroupRef} renderOrder={-2}>
       <Input
-        value={activeIntention?.title || ''}
-        onValueChange={handleInputChange}
-        placeholder="what is your intention?"
+        disabled={true}
         width={200}
         sizeX={2}
         sizeY={0.75}
-        fontSize={12}
+        fontSize={8}
         fontWeight="bold"
-        // @ts-ignore
-        multiline={true}
         opacity={0.40}
         color="#F6F5F3"
         letterSpacing={"-0.125rem"}
@@ -72,9 +66,9 @@ export const IntentionInput: React.FC<IntentionInputProps> = ({ hasInputSignal }
         flexDirection="column"
         textAlign="center"
         zIndex={1000}
-        caretBorderRadius={0.5}
-        selectionColor="rgba(255,255,255,0.8)"
+        value={activeIntention.title}
       />
+  
     </group>
   )
 }

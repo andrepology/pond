@@ -559,7 +559,19 @@ const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
 
   switch (tabId) {
     case 'intentions':
-      return <IntentionsView intentions={root.intentions || []} />
+      return (
+        <IntentionsView 
+          intentions={root.intentions || []}
+          onIntentionStart={() => {
+            // TODO: Wire up camera zoom and RadialMarkers visibility
+            console.log('Intention started')
+          }}
+          onIntentionComplete={() => {
+            // TODO: Wire up camera zoom and RadialMarkers visibility
+            console.log('Intention completed')
+          }}
+        />
+      )
     case 'fieldNotes':
       return <FieldNotesView fieldNotes={root.fieldNotes || []} />
     default:
