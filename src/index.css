@@ -90,16 +90,23 @@ canvas {
 }
 
 .scroller {
-  animation: scroll-fade;
-  animation-timeline: scroll(self);
-  mask: linear-gradient(to bottom, black 0%, black calc(100% - 4rem), rgba(0,0,0,0.3) calc(100% - 2rem), transparent 100%);
+  /* Static top+bottom vignette using masks, no JS, no scroll-timeline */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black 2rem,
+    black calc(100% - 2rem),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black 2rem,
+    black calc(100% - 2rem),
+    transparent 100%
+  );
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
-
-@keyframes scroll-fade {
-  0% {
-    mask: linear-gradient(to bottom, black 0%, black calc(100% - 4rem), rgba(0,0,0,0.3) calc(100% - 2rem), transparent 100%);
-  }
-  100% {
-    mask: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, black 2rem, black calc(100% - 4rem), rgba(0,0,0,0.3) calc(100% - 2rem), transparent 100%);
-  }
-} 
