@@ -179,47 +179,35 @@ export function AuthView({
                   <div style={{ marginTop: 0 }}>
                     <div style={{
                       fontSize: 14,
-                      color: text.secondary,
+                      color: 'white',
                       lineHeight: 1.5,
                       marginBottom: 16,
                       fontWeight: 400,
                     }}>
-                      <span style={{
-                        fontSize: 18,
-                        opacity: 0.7,
-                        color: 'white',
-                        marginRight: 4,
-                      }}>
-                        ⦿
-                      </span>
-                      <span style={{
-                        fontSize: 15,
-                        fontWeight: 600,
-                        letterSpacing: '0.025em',
-                      }}>
-                        pond
-                      </span>
-                      <span style={{
-                        marginLeft: 6,
-                        opacity: 0.9,
-                      }}>
-                        is a calm space to return to amidst the hustle and bustle of the rest of your digital life. 
-                      </span>
+                      we created pond to help us anchor into presence and calm amidst busy digital life.
                     </div>
 
                     <div style={{
-                      fontSize: 13,
-                      color: text.secondary,
+                      fontSize: 14,
+                      color: 'white',
                       lineHeight: 1.4,
                       marginBottom: 16,
-                      opacity: 0.8,
                     }}>
-                      When you're ready, meet Innio—a witty fish and self-styled anthropologist. As you set intentions,Innio will offer reflection when invited, but may also want to interview you (you can say no!).
+                      here, you will find Innio who shares this space of here and now. as an anthropologist and a coach, Innio is eager to learn who you are and what you want in life. 
+                    </div>
+
+                    <div style={{
+                      fontSize: 14,
+                      color: 'white',
+                      lineHeight: 1.4,
+                      marginBottom: 16,
+                    }}>
+                      huggingly,<br />svitlana and andre
                     </div>
 
                     <div style={{
                       fontSize: 11,
-                      color: text.tertiary,
+                      color: 'white',
                       lineHeight: 1.4,
                       marginBottom: 16,
                       padding: '8px 12px',
@@ -228,9 +216,10 @@ export function AuthView({
                       borderRadius: 6,
                       border: 'none',
                     }}>
-                      <div>• When AI is used, it is never stored anywhere except your device</div>
-                      <div>• We can't read it if we tried (it's encrypted)</div>
-                      <div>• Innio will always ask before sharing anything he learns about you</div>
+                      <div style={{ marginBottom: 8 }}>now, some housekeeping:)</div>
+                      <div>• pond is local-first, which means the data is stored in your device! we cannot see it even if we tried.</div>
+                      <div>• it is not backed by any VCs or like big corporations. it is a passionate project of two curious souls: <a href="https://andrepology.substack.com/p/why-i-draw" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>Andre</a> and <a href="https://svitlana.me" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>Svitlana</a></div>
+                      <div>• join this <a href="https://t.me/pondspace" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>telegram channel</a> for updates and co-creation</div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -383,7 +372,7 @@ export function AuthView({
                         required
                         disabled={loading}
                         minLength={8}
-                        placeholder="Your password"
+                        placeholder="your password"
                         autoComplete="current-password"
                         autoFocus
                         style={{
@@ -445,7 +434,7 @@ export function AuthView({
                         }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        {loading ? "Signing In..." : "Sign In"}
+                        {loading ? "signing in..." : "sign in"}
                       </motion.button>
                     </div>
 
@@ -466,7 +455,7 @@ export function AuthView({
                         transition: 'opacity 0.2s ease',
                       }}
                     >
-                      Different email?
+                      different email?
                     </button>
                   </form>
                 )}
@@ -625,7 +614,7 @@ export function AuthView({
                         transition: 'opacity 0.2s ease',
                       }}
                     >
-                      Different email?
+                      different email?
                     </button>
                   </form>
                 )}

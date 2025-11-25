@@ -9,6 +9,10 @@ export const formatDate = (timestamp: number) => {
   if (diffMins < 60) return `${diffMins}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
   if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
+  
+  // Format as "november 18" (lowercase month, day)
+  const month = date.toLocaleDateString('en-US', { month: 'long' }).toLowerCase()
+  const day = date.getDate()
+  return `${month} ${day}`
 }
 
