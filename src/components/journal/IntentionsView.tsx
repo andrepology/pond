@@ -385,7 +385,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
               handleCreateIntention()
             }
           }}
-          placeholder="Set an intention"
+          placeholder="set an intention"
           style={{
             flex: 1,
             padding: 0,
