@@ -184,7 +184,15 @@ export function AuthView({
                       marginBottom: 16,
                       fontWeight: 400,
                     }}>
-                      we created pond to help us anchor into presence and calm amidst busy digital life.
+                      we created pond as an anchor for presence and calm amidst busy digital life.
+                    </div>
+                    <div style={{
+                      fontSize: 14,
+                      color: 'white',
+                      lineHeight: 1.4,
+                      marginBottom: 16,
+                    }}>
+                       while we are stll stitching the parts together,  it is already functional and beautiful; as such, you are welcome here and it will be an honor to have your presence 💛
                     </div>
 
                     <div style={{
@@ -193,7 +201,7 @@ export function AuthView({
                       lineHeight: 1.4,
                       marginBottom: 16,
                     }}>
-                      here, you will find Innio who shares this space of here and now. as an anthropologist and a coach, Innio is eager to learn who you are and what you want in life. 
+                      may it serve you, dear fellow human bean. 
                     </div>
 
                     <div style={{
@@ -202,25 +210,37 @@ export function AuthView({
                       lineHeight: 1.4,
                       marginBottom: 16,
                     }}>
-                      huggingly,<br />svitlana and andre
+                      huggingly,<br /><a href="https://svitlana.me" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>svitlana</a> and <a href="https://andrepology.substack.com/p/why-i-draw" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>andre</a> (no corporations or VCs involved;)🌻
                     </div>
+                  
 
+                    <img 
+                      src="/svitlana-and-andre.jpg" 
+                      alt="Svitlana and Andre" 
+                      style={{
+                        width: '50%',
+                        borderRadius: 8,
+                        marginBottom: 16,
+                      }}
+                    />
+                      <div style={{
+                      fontSize: 10,
+                      color: 'white',
+                      lineHeight: 1.4,
+                      marginBottom: 8,
+                    }}>
+                      p.s.: pond is local-first, which means that your data is stored on your device. we can't see it even if we tried.
+                    </div>
                     <div style={{
-                      fontSize: 11,
+                      fontSize: 10,
                       color: 'white',
                       lineHeight: 1.4,
                       marginBottom: 16,
-                      padding: '8px 12px',
-                      backgroundColor: glass.light,
-                      backdropFilter: blur.subtle,
-                      borderRadius: 6,
-                      border: 'none',
                     }}>
-                      <div style={{ marginBottom: 8 }}>now, some housekeeping:)</div>
-                      <div>• pond is local-first, which means the data is stored in your device! we cannot see it even if we tried.</div>
-                      <div>• it is not backed by any VCs or like big corporations. it is a passionate project of two curious souls: <a href="https://andrepology.substack.com/p/why-i-draw" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>Andre</a> and <a href="https://svitlana.me" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>Svitlana</a></div>
-                      <div>• join this <a href="https://t.me/pondspace" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>telegram channel</a> for updates and co-creation</div>
+                      p.s.2: join this <a href="https://t.me/pondspace" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>telegram channel</a> for updates and co-creation ;3
                     </div>
+
+                   
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <motion.button
