@@ -192,7 +192,7 @@ export function AuthView({
                       lineHeight: 1.4,
                       marginBottom: 16,
                     }}>
-                       while we are stll stitching the parts together,  it is already functional and beautiful; as such, you are welcome here and it will be an honor to have your presence 💛
+                       while we are still stitching the parts together,  it is already functional and beautiful; as such, you are welcome here and it will be an honor to have your presence 💛
                     </div>
 
                     <div style={{
@@ -505,7 +505,7 @@ export function AuthView({
                         onChange={(e) => setName(e.target.value)}
                         required
                         disabled={loading}
-                        placeholder="Your name"
+                        placeholder="your name"
                         autoFocus
                         style={{
                           width: '100%',
@@ -552,7 +552,7 @@ export function AuthView({
                         required
                         disabled={loading}
                         minLength={8}
-                        placeholder="Min. 8 characters"
+                        placeholder="at least 8 characters please:)"
                         autoComplete="new-password"
                         style={{
                           width: '100%',
@@ -613,7 +613,7 @@ export function AuthView({
                         }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        {loading ? "Creating Account..." : "Sign Up"}
+                        {loading ? "creating account..." : "sign up"}
                       </motion.button>
                     </div>
 
