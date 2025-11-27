@@ -25,14 +25,14 @@ export const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
           <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 4 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: text.primary }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: text.tertiary }}>
                   Innio
                 </div>
                 <div style={{ fontSize: 11, color: text.tertiary }}>
                   {formatDate(note.createdAt)}
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: text.secondary, lineHeight: 1.5, marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'white', lineHeight: 1.5, marginTop: 4 }}>
                 {note.content}
               </div>
             </div>

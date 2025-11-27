@@ -360,7 +360,7 @@ export function AuthView({
                         }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        {checking ? "Checking..." : "continue"}
+                        {checking ? "checking..." : "continue"}
                       </motion.button>
                     </div>
                   </form>
