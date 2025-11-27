@@ -79,6 +79,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
     // Current timestamp - formatted as readable date/time
     const now = new Date();
     variables.now_timestamp = now.toLocaleString('en-US', {
+      weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
