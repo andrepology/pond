@@ -27,7 +27,7 @@ export async function processConversationAI(conversationId: string, account: Pon
   try {
     // 4. Convert messages to API format (no time_in_call_secs)
     const transcript = conversation.messages.map(msg => ({
-      role: msg.role,
+      role: msg.role === 'agent' ? 'innio' : msg.role,
       message: msg.content
     }));
 
