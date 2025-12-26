@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation, useRoute } from 'wouter'
+import { useLocation } from 'wouter'
 import { useAccount } from 'jazz-tools/react'
 import { useIsAuthenticated } from 'jazz-tools/react-core'
 import { PondAccount } from '../schema'
 import { betterAuthClient } from '../lib/auth-client'
+import { motion, useMotionValue } from 'motion/react'
+import { pondFadeSignal } from '../hooks/usePondCrossfade'
 
 // Font loading - same pattern as focusable.tsx
 const loadFont = () => {
@@ -17,9 +19,9 @@ const loadFont = () => {
 }
 
 interface DateTimeState {
-  promptIndex: number
-  promptFadeClass: string
-  displayOpacity: string
+  index: number // Index for cycling through display types
+  promptIndex: number // Index for which prompt to show
+  fadeClass: string
 }
 
 function getOrdinalSuffix(day: number): string {
@@ -47,16 +49,12 @@ const formatDate = (date: Date): string => {
 }
 
 const FISH_NAMES = [
-  'sardine',
-  'salmon',
-  'trout',
-  'bass',
+  'koi',
   'carp',
-  'pike',
-  'perch',
-  'roach',
-  'bream',
-  'tench'
+  'salmon',
+  'catfish',
+  'tilapia',
+  'goldfish'
 ]
 
 const PROMPTS = [
@@ -70,18 +68,23 @@ const PROMPTS = [
 
 export function DateTimeDisplay() {
   const [location] = useLocation()
-  const [routeMatch] = useRoute('/item/:id')
   const [fontLoaded, setFontLoaded] = useState(false)
   const { me } = useAccount(PondAccount, { resolve: { profile: true } })
   const isAuthenticated = useIsAuthenticated()
   const [anonymousFish, setAnonymousFish] = useState<string>('')
   const [state, setState] = useState<DateTimeState>({
+    index: 0,
     promptIndex: 0,
-    promptFadeClass: 'opacity-100',
-    displayOpacity: 'opacity-100'
+    fadeClass: 'opacity-100'
   })
 
-  const isFocused = !!routeMatch
+  const uiOpacity = useMotionValue(1)
+
+  useEffect(() => {
+    return pondFadeSignal.subscribe((fade) => {
+      uiOpacity.set(1 - fade)
+    })
+  }, [uiOpacity])
 
   // Load font and set random fish name on mount
   useEffect(() => {
@@ -89,46 +92,46 @@ export function DateTimeDisplay() {
     setAnonymousFish(FISH_NAMES[Math.floor(Math.random() * FISH_NAMES.length)])
   }, [])
 
-  // Handle display opacity when focusing/unfocusing
-  useEffect(() => {
-    setState(prev => ({
-      ...prev,
-      displayOpacity: isFocused ? 'opacity-0' : 'opacity-100'
-    }))
-  }, [isFocused])
-
   // Update time and cycle logic
   useEffect(() => {
-    if (isFocused) return
+    const PERIOD_MS = 4000
+    const FADE_MS = 1000
 
-    const PROMPT_PERIOD_MS = 5000
-    const PROMPT_FADE_MS = 1000
+    let fadeTimeout: number | undefined
 
-    let promptFadeTimeout: number | undefined
+    const runCycle = () => {
+      setState(prev => {
+        const nextIndex = (prev.index + 1) % 3
+        const nextPromptIndex = nextIndex === 2 
+          ? (prev.promptIndex + 1) % PROMPTS.length 
+          : prev.promptIndex
 
-    const runPromptPhase = () => {
-      setState(prev => ({
-        ...prev,
-        promptIndex: (prev.promptIndex + 1) % PROMPTS.length,
-        promptFadeClass: 'opacity-100'
-      }))
+        return {
+          ...prev,
+          index: nextIndex,
+          promptIndex: nextPromptIndex,
+          fadeClass: 'opacity-100'
+        }
+      })
 
-      if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
-      promptFadeTimeout = window.setTimeout(() => {
-        setState(prev => ({ ...prev, promptFadeClass: 'opacity-0' }))
-      }, Math.max(0, PROMPT_PERIOD_MS - PROMPT_FADE_MS))
+      if (fadeTimeout) clearTimeout(fadeTimeout)
+      fadeTimeout = window.setTimeout(() => {
+        setState(prev => ({ ...prev, fadeClass: 'opacity-0' }))
+      }, PERIOD_MS - FADE_MS)
     }
 
-    // Kick off immediately to avoid initial delay
-    runPromptPhase()
+    // Initial delay for first fade out
+    fadeTimeout = window.setTimeout(() => {
+      setState(prev => ({ ...prev, fadeClass: 'opacity-0' }))
+    }, PERIOD_MS - FADE_MS)
 
-    const promptInterval = window.setInterval(runPromptPhase, PROMPT_PERIOD_MS)
+    const interval = window.setInterval(runCycle, PERIOD_MS)
 
     return () => {
-      clearInterval(promptInterval)
-      if (promptFadeTimeout) clearTimeout(promptFadeTimeout)
+      clearInterval(interval)
+      if (fadeTimeout) clearTimeout(fadeTimeout)
     }
-  }, [isFocused])
+  }, [])
 
 
   // Don't render if font not loaded
@@ -136,71 +139,72 @@ export function DateTimeDisplay() {
     return null
   }
 
-  const getCurrentText = () => {
-    const baseText = isAuthenticated && me ? `${me.profile?.name?.toLowerCase() || 'user'}'s pond` : `anonymous ${anonymousFish}'s pond`
-    return baseText
+  const getDisplayText = () => {
+    switch (state.index) {
+      case 0: // Name
+        return isAuthenticated && me 
+          ? `${me.profile?.name?.toLowerCase() || 'user'}'s pond` 
+          : `unnamed ${anonymousFish}'s pond`
+      case 1: // Date
+        return formatDate(new Date())
+      case 2: // Prompt
+        return PROMPTS[state.promptIndex]
+      default:
+        return ''
+    }
   }
 
-  const renderTextWithHoverIcons = () => {
-    const text = getCurrentText()
-    const icons = ['☼', '☽', '⚘']
+  const renderContent = () => {
+    const text = getDisplayText()
 
     return (
-      <>
-        <span
-          className="transition-colors duration-200 cursor-default text-[rgba(206,205,195,0.80)] hover:text-gray-600"
-        >
-          {text}
-        </span>
-      </>
+      <span
+        className={`transition-opacity duration-1000 ${state.fadeClass} cursor-default`}
+        style={{ color: 'rgba(110, 104, 92, 0.25)' }}
+      >
+        {text}
+      </span>
     )
   }
 
   return (
-    <div className={`fixed top-0 left-0 z-50 pointer-events-none p-10 transition-opacity duration-1000 ${state.displayOpacity}`}>
+    <motion.div 
+      style={{ opacity: uiOpacity }}
+      className="fixed top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none p-10 w-[80%] max-w-[384px]"
+    >
       <div
-        className="text-4xl md:text-3xl tracking-tight"
+        className="text-3xl md:text-3xl tracking-tight text-center"
         style={{
           fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          color: 'rgba(144, 144, 144, 0.40)',
-          lineHeight: '1.025',
+          lineHeight: '1.2',
+          whiteSpace: 'normal', // Allow wrapping since we have a max-width now
+          wordBreak: 'break-word'
         }}
       >
-        {renderTextWithHoverIcons()}
-        {isAuthenticated && (
+        {renderContent()}
+        {isAuthenticated && state.index === 0 && (
           <button
             onClick={async () => {
               await betterAuthClient.signOut();
               window.location.reload();
             }}
-            className="inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto transition-colors hover:bg-gray-600 transition-transform duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+            className={`inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto hover:bg-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ${state.fadeClass}`}
             style={{
-              backgroundColor: 'rgba(206, 205, 195, 0.80)',
-              color: 'rgba(255, 255, 255, 0.9)',
+              backgroundColor: 'rgba(110, 104, 92, 0.1)',
+              color: 'rgba(110, 104, 92, 0.25)',
               fontFamily: 'AlteHaasGroteskBold, sans-serif',
-              fontSize: '0.75rem',
+              fontSize: '0.65rem',
               lineHeight: '1.125',
               verticalAlign: 'middle',
-              padding: '0.25rem 0.5rem',
+              padding: '0.2rem 0.4rem',
               letterSpacing: '0.0295rem',
-              marginTop: '-0.45rem'
+              marginTop: '-0.25rem'
             }}
           >
             logout
           </button>
         )}
       </div>
-      {false && (
-        <div
-          className={`mt-0 text-lg md:text-lg tracking-wide transition-opacity duration-1000 ${state.promptFadeClass} transition-colors duration-200 cursor-default text-[rgba(206,205,195,0.80)] hover:text-gray-600`}
-          style={{
-            fontFamily: 'AlteHaasGroteskBold, sans-serif',
-            letterSpacing: '0.0295rem'
-          }}
-        >
-          {PROMPTS[state.promptIndex]}
-        </div>
-      )}
-    </div>
+    </motion.div>
   )
 } 

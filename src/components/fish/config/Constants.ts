@@ -16,13 +16,6 @@ export const REST_DEFAULTS = {
   maxWanderRest: 8,
 }
 
-export const SWIM_CYCLE = {
-  burstMin: 0.3,
-  burstMax: 0.5,
-  glideMin: 0.5,
-  glideMax: 1.5,
-}
-
 export const PHYSICS = {
   mass: 1.0,
   drag: 4.45,

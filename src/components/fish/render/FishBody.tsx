@@ -26,6 +26,7 @@ function createSpineSphereMaterial(): THREE.ShaderMaterial {
       sizeVariation: { value: 0.15 },
       phaseStrength: { value: 0.3 },
       phaseSpeed: { value: 1.5 },
+      uWavePhase: { value: 0 },
     },
     vertexShader: `
       attribute float spinePosition; // 0.0 = head, 1.0 = tail
@@ -34,7 +35,7 @@ function createSpineSphereMaterial(): THREE.ShaderMaterial {
       uniform float sphereRadius;
       uniform float minStarSize;
       uniform float maxRenderDistance;
-      uniform float waveSpeed;
+      uniform float uWavePhase; // Integrated phase for continuous speed changes
       uniform float waveStrength;
       uniform float wavelength;
       uniform float headBoost;
@@ -69,8 +70,8 @@ function createSpineSphereMaterial(): THREE.ShaderMaterial {
         sizeFactor = clamp(sizeFactor, 0.3, 1.0);
 
         // Traveling wave: energy pulse moves along spine from head to tail
-        // Configurable wave speed and wavelength for visible propagation
-        float wavePhase = time * waveSpeed * 6.28318; // Full 2π cycle per waveSpeed cycles
+        // We use the integrated uWavePhase instead of time * speed to prevent jumps
+        float wavePhase = uWavePhase * 6.28318; 
         float waveDistance = spinePosition * wavelength * 6.28318; // Configurable wavelengths along spine
         // Wave travels head→tail: phase increases over time, creating traveling effect
         float travelingWave = sin(wavePhase - waveDistance) * 0.5 + 0.5; // 0-1 range
@@ -132,7 +133,7 @@ function createSpineSphereMaterial(): THREE.ShaderMaterial {
         }
 
         // Core and halo configuration (similar to starfield)
-        float coreRadius = 0.03;
+        float coreRadius = 0.02;
         float coreTransition = 0.15;
         float coreIntensity = coreBrightness * 1.2;
 
@@ -241,6 +242,9 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
   // Separate material instance for the head glow so it can stay constant-bright
   const headSphereMaterial = useMemo(() => createSpineSphereMaterial(), [])
 
+  // State for continuous wave phase integration
+  const accumulatedPhase = useRef(0)
+
   // Generate per-sphere phase offsets for variation (seed based on index)
   const phaseOffsets = useMemo(() => {
     return spine.points.map((_, idx) => {
@@ -250,15 +254,42 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
     })
   }, [spine.points.length])
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
+    // Dynamic coupling logic
+    // We integrate phase based on current coupled speed to avoid jumps when speed changes
+    let coupledSpeed = controls.waveSpeed
+    let coupledStrength = controls.waveStrength
+    let coupledWavelength = controls.wavelength
+
+    if (velocity && velocity.current) {
+      const speed = velocity.current.length()
+      // Map speed (0 to ~0.5) to an intensity factor (0 to 1)
+      // We clamp slightly so there's always *some* movement
+      const speedFactor = THREE.MathUtils.clamp(speed / 0.5, 0, 1) // 0.5 is approx maxSpeed from constants
+      
+      // Interpolate parameters based on speed
+      // At rest: Slower wave, dimmer wave, longer wavelength (lazy)
+      // At speed: Fast wave, bright wave, shorter wavelength (energetic)
+      coupledSpeed = THREE.MathUtils.lerp(controls.waveSpeed * 0.3, controls.waveSpeed * 1.5, speedFactor)
+      coupledStrength = THREE.MathUtils.lerp(controls.waveStrength * 0.5, controls.waveStrength * 1.2, speedFactor)
+      coupledWavelength = THREE.MathUtils.lerp(controls.wavelength * 1.2, controls.wavelength * 0.8, speedFactor)
+    }
+
+    // Integrate phase
+    accumulatedPhase.current += delta * coupledSpeed
+
     // Update shader uniforms for spine spheres
     if (spineSphereMaterial) {
       spineSphereMaterial.uniforms.time.value = state.clock.elapsedTime
       spineSphereMaterial.uniforms.opacity.value = controls.opacity
       spineSphereMaterial.uniforms.tailFadeStrength.value = controls.tailFadeStrength
-      spineSphereMaterial.uniforms.waveSpeed.value = controls.waveSpeed
-      spineSphereMaterial.uniforms.waveStrength.value = controls.waveStrength
-      spineSphereMaterial.uniforms.wavelength.value = controls.wavelength
+      
+      // Use our coupled values
+      spineSphereMaterial.uniforms.uWavePhase.value = accumulatedPhase.current
+      spineSphereMaterial.uniforms.waveStrength.value = coupledStrength
+      spineSphereMaterial.uniforms.wavelength.value = coupledWavelength
+      
+      // Pass other controls
       spineSphereMaterial.uniforms.coreBrightness.value = controls.coreBrightness
       spineSphereMaterial.uniforms.headBoost.value = controls.headBoost
       spineSphereMaterial.uniforms.baseSize.value = controls.baseSize
@@ -274,9 +305,9 @@ export function FishBody({ spine, headRef, headDirection, velocity, bankRadians 
       headSphereMaterial.uniforms.time.value = state.clock.elapsedTime
       headSphereMaterial.uniforms.opacity.value = controls.opacity
       headSphereMaterial.uniforms.tailFadeStrength.value = 0.0
-      headSphereMaterial.uniforms.waveSpeed.value = controls.waveSpeed
+      headSphereMaterial.uniforms.uWavePhase.value = accumulatedPhase.current // Keep synced just in case, though unused
       headSphereMaterial.uniforms.waveStrength.value = 0.0
-      headSphereMaterial.uniforms.wavelength.value = controls.wavelength
+      headSphereMaterial.uniforms.wavelength.value = coupledWavelength
       // Slightly boosted core/head brightness so the head reads as the energy source,
       // but with a smaller apparent size than the first tail segment.
       headSphereMaterial.uniforms.coreBrightness.value = controls.coreBrightness * 1.2

@@ -50,6 +50,8 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
         cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
       }
 
+      const currentAzimuth = cameraControls?.azimuthAngle ?? 0
+
       // Reuse existing Vector3 instance
       active.getWorldPosition(targetPositionRef.current)
       const { x, y, z } = targetPositionRef.current
@@ -66,15 +68,15 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
         // Overview pose: outside and above, looking down towards pond center
         const overviewHeight = isMobileDevice() ? 7 : 8
         const overviewDistance = 4
-        const overviewX = targetX
+        const overviewX = targetX + Math.sin(currentAzimuth) * overviewDistance
         const overviewY = targetY + overviewHeight
-        const overviewZ = targetZ + overviewDistance
+        const overviewZ = targetZ + Math.cos(currentAzimuth) * overviewDistance
 
         // Inside pose: close to pond center, slightly above
         const insideDistance = 0.8
-        const insideX = targetX
+        const insideX = targetX + Math.sin(currentAzimuth) * insideDistance
         const insideY = targetY + 0.5
-        const insideZ = targetZ + insideDistance
+        const insideZ = targetZ + Math.cos(currentAzimuth) * insideDistance
 
         // Apply downward tilt when journal is undocked
         const tiltOffset = deferredIsJournalDocked ? 0 : 0.6
@@ -105,9 +107,9 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
         // Non-pond active object: simple inspectable view similar to original behavior
         const distance = 6 / Math.min(viewport.aspect < 1 ? 0.9 : viewport.aspect, 1)
         cameraControls?.setLookAt(
-          x,
+          x + Math.sin(currentAzimuth) * distance,
           y + 0.5,
-          z + distance,
+          z + Math.cos(currentAzimuth) * distance,
           x,
           y,
           z,
@@ -133,12 +135,14 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
           true
         )
       } else {
+        const currentAzimuth = cameraControls?.azimuthAngle ?? 0
         const overviewHeight = isMobileDevice() ? 7 : 8
-        const tiltOffset = deferredIsJournalDocked ? 0 : -1.5
+        const tiltOffset = deferredIsJournalDocked ? 0 : 0.6
+        const distance = 4
         cameraControls?.setLookAt(
-          0,
+          Math.sin(currentAzimuth) * distance,
           overviewHeight + tiltOffset,
-          0.001,
+          Math.cos(currentAzimuth) * distance,
           0,
           0,
           0,
@@ -148,7 +152,7 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
     }
 
     wasActiveRef.current = isActive
-  }, [params.id, controls, scene, viewport.aspect, markersVisible, deferredIsJournalDocked])
+  }, [params.id, controls, scene, markersVisible, deferredIsJournalDocked])
 
   return (
     <CameraControls

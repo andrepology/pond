@@ -1,4 +1,4 @@
-import { motion, useMotionTemplate, useSpring, useTransform, useVelocity, AnimatePresence } from 'motion/react'
+import { motion, useMotionTemplate, useSpring, useTransform, useVelocity, AnimatePresence, useMotionValue } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useAccount } from 'jazz-tools/react'
 import { PondAccount } from '../schema'
@@ -8,6 +8,7 @@ import { FieldNotesView } from './journal/FieldNotesView'
 import { AuthView } from './journal/AuthView'
 import { glass } from './journal/theme'
 import { useVoice } from '../VoiceChat/VoiceProvider'
+import { pondFadeSignal } from '../hooks/usePondCrossfade'
 
 type TabId = 'intentions' | 'fieldNotes'
 
@@ -48,6 +49,15 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
   })
   const root = me?.root
 
+
+  const uiOpacity = useMotionValue(1)
+
+  useEffect(() => {
+    return pondFadeSignal.subscribe((fade) => {
+      uiOpacity.set(fade)
+    })
+  }, [uiOpacity])
+
   useEffect(() => {
     const updateWidth = () => {
       if (viewsContainerRef.current) {
@@ -66,7 +76,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
       const viewportHeight = window.innerHeight
       const isDesktop = deviceType === 'desktop'
       const maxHeight = isDesktop
-        ? Math.min(viewportHeight * 0.55, 600)
+        ? Math.min(viewportHeight * 0.75, 800)
         : viewportHeight * 0.85
 
       setViewHeight(maxHeight)
@@ -97,7 +107,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
   }
 
   return (
-    <>
+    <motion.div style={{ opacity: uiOpacity }}>
       {/* Auth View - Top Aligned */}
       <AuthView
         isDocked={isDocked}
@@ -224,7 +234,7 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
           </motion.div>
         </motion.div>
       </div>
-    </>
+    </motion.div>
   )
 }
 

@@ -49,9 +49,7 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
   const targetLerp = useRef(0)
   const lastWanderUpdate = useRef(0)
   const lastDir = useRef(new THREE.Vector3(0, 0, 1))
-  const swimPhase = useRef<'burst' | 'glide'>('glide')
-  const swimTimer = useRef(0)
-  const swimDuration = useRef(1)
+  // Swim cycle removed for smoother movement
   const foodTarget = useRef<THREE.Vector3 | null>(null)
   const approachSwayTime = useRef(0)
   const distanceTraveled = useRef(0)
@@ -175,29 +173,14 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
       }
     }
 
-    // Swim cycle (burst/glide)
-    swimTimer.current += delta
-    if (swimTimer.current >= swimDuration.current) {
-      swimTimer.current = 0
-      if (swimPhase.current === 'glide') {
-        swimPhase.current = 'burst'
-        swimDuration.current = THREE.MathUtils.lerp(0.3, 0.5, Math.random())
-      } else {
-        swimPhase.current = 'glide'
-        swimDuration.current = THREE.MathUtils.lerp(0.5, 1.5, Math.random())
-      }
-    }
-    
     // Speed calculation with rest override
     let speedScale: number
     if (restState.current === 'resting') {
       // VERY slow drift during rest - lazy hovering
       speedScale = THREE.MathUtils.lerp(0.01, 0.03, Math.random() * 0.2)
     } else {
-      // Active: normal burst/glide cycle
-      speedScale = swimPhase.current === 'burst' 
-        ? THREE.MathUtils.lerp(1.0, 1.2, Math.random() * 0.2)
-        : THREE.MathUtils.lerp(0.6, 0.9, Math.random() * 0.2)
+      // Active: smooth cruising speed
+      speedScale = THREE.MathUtils.lerp(0.8, 1.0, Math.random() * 0.2)
     }
 
     // Steering toward target with arrive behavior
@@ -276,7 +259,7 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
       )
       
       // Pure distance-based traveling wave (couples to actual velocity)
-      // Burst → faster velocity → wave advances faster naturally
+      // Faster velocity → wave advances faster naturally
       const waveTravel = distanceTraveled.current * params.undulation.propulsionRatio
       const distancePhase = (waveTravel / (bodyLength * params.undulation.bodyWavelength)) * Math.PI * 2
       const spinePhase = spinePos * Math.PI * 2 / params.undulation.bodyWavelength

@@ -268,7 +268,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           
           // Apply horizon offset using uniform controls
           // localPos.x += horizonOffset.x;
-          localPos.y += horizonOffset.y + 0.6;
+          localPos.y += horizonOffset.y + 0.65;
           // localPos.z += horizonOffset.z;
           // localPos = normalize(localPos);
           
@@ -382,7 +382,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
     const dayLengthSeconds = 36
     const t = (timeRef.current % dayLengthSeconds) / dayLengthSeconds // 0..1
     const azimuth = t * Math.PI * 2
-    const maxElevationDeg = 0.1
+    const maxElevationDeg = 0.001
     const altitude = THREE.MathUtils.degToRad(Math.sin(azimuth) * maxElevationDeg)
     const cosAlt = Math.cos(altitude)
     const sinAlt = Math.sin(altitude)

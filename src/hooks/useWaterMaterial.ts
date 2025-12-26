@@ -124,8 +124,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     flowSpeed: { value: 0.012, min: 0, max: 0.1, step: 0.001 },
     blendSharpness: { value: 1.5, min: 1, max: 10, step: 0.5 },
   Distortion: folder({
-    distortAmount: { value: 0.16, min: 0, max: 1, step: 0.01 },
-    distortRadius: { value: 1.03, min: 0.5, max: 1.5, step: 0.01 },
+    distortAmount: { value: 0.00, min: 0, max: 1, step: 0.01 },
+    distortRadius: { value: 1.00, min: 0.5, max: 1.5, step: 0.01 },
     distortSpeed: { value: 0.06, min: 0.0, max: 0.14, step: 0.01 }
   }),
     Ripples: folder({

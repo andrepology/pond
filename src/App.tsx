@@ -177,7 +177,7 @@ export default function App() {
 
       <Canvas
         shadows="soft"
-        camera={{ position: [-1.5, 2.5, 18], fov: 45 }}
+        camera={{ position: [0, 2.5, 18], fov: 45 }}
         eventSource={document.getElementById('root')!}
         eventPrefix="client"
         gl={{
@@ -200,33 +200,25 @@ export default function App() {
         <CameraRig markersVisible={markersVisibleRef.current} isJournalDocked={isJournalDocked} />
 
         <color attach="background" args={['#F6F5F3']} />
-        {/* <AdaptiveFog
+        <AdaptiveFog
           color="#F6F5F3"
-          defaultFog={{ near: 1, far: 22 }}
-          focusedFog={{ near: 3, far: 22 }}
+          defaultFog={{ near: 7, far: 14 }}
+          focusedFog={{ near: 7, far: 14 }}
           animationDuration={1.2}
-        />  */}
+        /> 
 
         <Environment
            files={['/envmaps/rogland_moonlit_night_1k.hdr']}
-           backgroundBlurriness={0.0}
+           backgroundBlurriness={.0}
            environmentIntensity={1.0}
            
           />
         
 
 
-        {/* Main Scene Content */}
-        {/* <ZenSand
-          size={30}
-          segments={128}
-          driftSpeed={1.1}
-          centers={[[0, 0]]}
-          position={[-1.2, -2.5, -3]}
-         //bgColor="#F6F5F3"
-        /> */}
+
         
-          <group name="pond" position={[-1.2, 2.0, -3]} userData={{ inspectable: true }}>
+          <group name="pond" position={[0, 2.0, -3]} userData={{ inspectable: true }}>
             <PondSphere markersVisibleRef={markersVisibleRef} hasInputSignal={hasInputSignal} />
           </group>
 
@@ -286,10 +278,12 @@ export default function App() {
       </Canvas>
 
 
-      {/* <DateTimeDisplay /> */}
-
-      {/* Journal Browser - Mount after scene settles to avoid animation jank */}
-      {sceneReady && <JournalBrowser isDocked={isJournalDocked} setIsDocked={setIsJournalDocked} />}
+      {sceneReady && (
+        <>
+          <DateTimeDisplay />
+          <JournalBrowser isDocked={isJournalDocked} setIsDocked={setIsJournalDocked} />
+        </>
+      )}
 
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
