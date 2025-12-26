@@ -69,30 +69,7 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
     }
   }, [fade])
 
-  // Subtle mouse following for the entire pond group
-  useFrame((state) => {
-    if (!groupRef.current) return
-
-    const { pointer } = state
-    const group = groupRef.current
-
-    // Reduce following intensity during crossfade transitions
-    const followingIntensity = 1 - fade * 0.8 // Reduce following when fading
-
-    // Responsive horizontal following
-    group.position.x = THREE.MathUtils.lerp(
-      group.position.x,
-      pointer.x * 0.1 * followingIntensity, // Horizontal movement
-      0.005
-    )
-
-    // Responsive vertical following
-    group.position.y = THREE.MathUtils.lerp(
-      group.position.y,
-      pointer.y * 0.1 * followingIntensity, // Vertical movement
-      0.005
-    )
-  })
+  
 
   return (
     <group  {...props} ref={(node) => {

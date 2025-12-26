@@ -56,6 +56,7 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
   
   // Rest state management
   const restState = useRef<'active' | 'resting'>('active')
+  const restFactor = useRef(0) // 0 = fully active, 1 = fully resting
   const restTimer = useRef(0)
   const restDuration = useRef(0)
   const restCheckTimer = useRef(0)
@@ -101,19 +102,22 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
       }
     }
 
+    // Smoothly transition restFactor based on state
+    // Adjust 1.5 to tune transition speed (lower = slower/smoother)
+    const targetRestFactor = restState.current === 'resting' ? 1.0 : 0.0
+    restFactor.current = THREE.MathUtils.lerp(restFactor.current, targetRestFactor, delta * 1.5)
+
     // Determine forward vector
     const forward = velocity.current.lengthSq() > 1e-6 ? velocity.current.clone().normalize() : new THREE.Vector3(0, 0, 1)
 
-    // Vision check for boundary awareness
+    // Vision check for boundary awareness (Spherical)
+    // We check if the projected point is beyond our spherical radius
     const visionPoint = pos.clone().addScaledVector(forward, params.visionDistance)
-    const isVisionOut = (
-      visionPoint.x < params.bounds.min + params.bounds.buffer ||
-      visionPoint.x > params.bounds.max - params.bounds.buffer ||
-      visionPoint.y < params.bounds.min + params.bounds.buffer ||
-      visionPoint.y > params.bounds.max - params.bounds.buffer ||
-      visionPoint.z < params.bounds.min + params.bounds.buffer ||
-      visionPoint.z > params.bounds.max - params.bounds.buffer
-    )
+    const visionDistSq = visionPoint.lengthSq()
+    // Use squared comparison for performance. Radius is params.bounds.max (3.8). 
+    // We treat 'max' as the sphere radius.
+    const maxRadius = params.bounds.max
+    const isVisionOut = visionDistSq > (maxRadius - params.bounds.buffer) ** 2
 
     // Update wander target if needed
     const timeNow = performance.now() / 1000
@@ -132,18 +136,50 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
         base.addScaledVector(forward, params.forwardDistance)
       }
       // Random 3D offset on sphere
-      const phi = Math.random() * Math.PI * 2
-      const theta = Math.acos(2 * Math.random() - 1)
-      const r = params.wanderRadius
-      const offset = new THREE.Vector3(
-        r * Math.sin(theta) * Math.cos(phi),
-        r * Math.sin(theta) * Math.sin(phi),
-        r * Math.cos(theta)
-      )
-      const newTarget = base.add(offset)
-      newTarget.x = THREE.MathUtils.clamp(newTarget.x, params.bounds.min, params.bounds.max)
-      newTarget.y = THREE.MathUtils.clamp(newTarget.y, params.bounds.min, params.bounds.max)
-      newTarget.z = THREE.MathUtils.clamp(newTarget.z, params.bounds.min, params.bounds.max)
+      // Cone-based wandering with rare "flips" for more natural swimming
+      // 10% chance to pick a completely random direction (turn around/explore)
+      // 90% chance to pick a direction roughly forward (maintain flow)
+      
+      let targetDir: THREE.Vector3
+      
+      if (Math.random() < 0.10) {
+        // "Flip": Completely random direction
+        const phi = Math.random() * Math.PI * 2
+        const theta = Math.acos(2 * Math.random() - 1)
+        targetDir = new THREE.Vector3(
+          Math.sin(theta) * Math.cos(phi),
+          Math.sin(theta) * Math.sin(phi),
+          Math.cos(theta)
+        )
+      } else {
+        // "Flow": Cone-biased forward direction
+        // Start with current forward direction
+        const currentForward = velocity.current.lengthSq() > 1e-6 
+          ? velocity.current.clone().normalize() 
+          : new THREE.Vector3(0, 0, 1)
+          
+        // Add random jitter to create a cone
+        // spread=0.5 gives roughly a 45-degree cone
+        const jitter = new THREE.Vector3(
+          (Math.random() - 0.5) * 1.5,
+          (Math.random() - 0.5) * 1.5,
+          (Math.random() - 0.5) * 1.5
+        )
+        
+        targetDir = currentForward.add(jitter).normalize()
+      }
+
+      // Pick a random distance to travel (between 50% and 90% of max radius)
+      // This keeps it moving within the volume but not always hugging the center
+      const r = params.bounds.max * (0.5 + Math.random() * 0.4)
+      
+      const newTarget = targetDir.multiplyScalar(r)
+      
+      // Ensure target is inside bounds (it naturally is due to r calc, but good for safety)
+      if (newTarget.length() > params.bounds.max) {
+        newTarget.setLength(params.bounds.max * 0.95)
+      }
+      
       if (wanderTarget.current.lengthSq() === 0) {
         wanderTarget.current.copy(newTarget)
       } else {
@@ -174,14 +210,10 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     }
 
     // Speed calculation with rest override
-    let speedScale: number
-    if (restState.current === 'resting') {
-      // VERY slow drift during rest - lazy hovering
-      speedScale = THREE.MathUtils.lerp(0.01, 0.03, Math.random() * 0.2)
-    } else {
-      // Active: smooth cruising speed
-      speedScale = THREE.MathUtils.lerp(0.8, 1.0, Math.random() * 0.2)
-    }
+    // Smooth blending between active cruising and resting drift
+    const activeSpeedScale = THREE.MathUtils.lerp(0.8, 1.0, Math.random() * 0.2)
+    const restSpeedScale = THREE.MathUtils.lerp(0.01, 0.03, Math.random() * 0.2)
+    const speedScale = THREE.MathUtils.lerp(activeSpeedScale, restSpeedScale, restFactor.current)
 
     // Steering toward target with arrive behavior
     const desired = currentTarget.clone().sub(pos)
@@ -205,29 +237,55 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
 
     const steer = desired.clone().sub(velocity.current)
     const steerLen = steer.length()
-    const maxSteerAdjusted = restState.current === 'resting' 
-      ? params.maxSteer * 0.25  // Very lazy turns during rest
-      : params.maxSteer
+    
+    // Blend between sharp active turns and lazy resting turns
+    const maxSteerAdjusted = THREE.MathUtils.lerp(
+      params.maxSteer, 
+      params.maxSteer * 0.25, 
+      restFactor.current
+    )
+    
     if (steerLen > maxSteerAdjusted) steer.multiplyScalar(maxSteerAdjusted / (steerLen || 1))
     velocity.current.add(steer)
+
+    // Turning Drag: Bleed speed when turning sharply
+    // The sharper the turn (higher steerLen), the more speed we lose.
+    // Factor 0.02 is a tunable constant for how much energy turning consumes.
+    if (steerLen > 0.1) {
+      const turningFactor = Math.min(steerLen, 1.0)
+      velocity.current.multiplyScalar(1.0 - turningFactor * 0.02)
+    }
 
     // Drag + clamp
     applyDrag(velocity.current, delta, PHYSICS)
     
     // Clamp speed: allow very slow drift during rest
-    const minSpeed = restState.current === 'resting' ? 0.0 : params.maxSpeed * 0.3
+    // Smoothly lower the floor so we don't snap to stop or snap to start
+    const minSpeed = THREE.MathUtils.lerp(params.maxSpeed * 0.3, 0.0, restFactor.current)
     clampSpeed(velocity.current, minSpeed, params.maxSpeed)
 
     // Integrate position (delta-scaled for framerate independence)
     headRef.current.position.addScaledVector(velocity.current, delta)
-    // Bounds clamp
-    const p = headRef.current.position
-    p.x = THREE.MathUtils.clamp(p.x, params.bounds.min, params.bounds.max)
-    p.y = THREE.MathUtils.clamp(p.y, params.bounds.min, params.bounds.max)
-    p.z = THREE.MathUtils.clamp(p.z, params.bounds.min, params.bounds.max)
+    
+    // Spherical Bounds clamp
+    const currentDist = headRef.current.position.length()
+    if (currentDist > params.bounds.max) {
+      headRef.current.position.setLength(params.bounds.max)
+      // Optional: Reflect velocity to bounce off glass? 
+      // For now, just slide along it by removing the outward component
+      const normal = headRef.current.position.clone().normalize()
+      const outward = velocity.current.dot(normal)
+      if (outward > 0) {
+        velocity.current.addScaledVector(normal, -outward)
+      }
+    }
     // Direction smoothing
     const prevDir = lastDir.current.clone()
-    if (velocity.current.lengthSq() > 1e-6) headDirection.current.lerp(velocity.current.clone().normalize(), 0.5)
+    // Only update direction if velocity is significant (prevents noise amplification)
+    const directionThreshold = 0.01
+    if (velocity.current.lengthSq() > directionThreshold * directionThreshold) {
+      headDirection.current.lerp(velocity.current.clone().normalize(), 0.15)
+    }
     lastDir.current.copy(headDirection.current)
 
     // Bank based on turn rate (lateral change)
@@ -240,8 +298,11 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     const time = performance.now() / 1000
     const speed = velocity.current.length()
     
-    // Accumulate distance traveled (delta-scaled for framerate independence)
-    distanceTraveled.current += speed * delta
+    // Only accumulate distance when meaningfully moving (prevents drift noise)
+    const movementThreshold = params.maxSpeed * 0.05
+    if (speed > movementThreshold) {
+      distanceTraveled.current += speed * delta
+    }
     
     // Body length estimate for calculating propulsion
     const bodyLength = spine.points.length * spine.spacing
@@ -258,25 +319,41 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
         smoothGrowth
       )
       
-      // Pure distance-based traveling wave (couples to actual velocity)
-      // Faster velocity → wave advances faster naturally
+      // Calculate both phases
       const waveTravel = distanceTraveled.current * params.undulation.propulsionRatio
       const distancePhase = (waveTravel / (bodyLength * params.undulation.bodyWavelength)) * Math.PI * 2
       const spinePhase = spinePos * Math.PI * 2 / params.undulation.bodyWavelength
+      const propulsivePhase = distancePhase - spinePhase
       
-      // Gentle idle breathing when nearly stopped
-      const idlePhase = time * params.undulation.idleFrequency
-      let idleWeight = THREE.MathUtils.clamp(1.0 - speed / (params.maxSpeed * 0.3), 0, 1)
+      // Idle phase: Use a synchronized approach - derive from propulsive phase when transitioning
+      // This prevents phase discontinuity by keeping idle "in sync" with last propulsive state
+      const idleBasePhase = time * params.undulation.idleFrequency - spinePhase * 0.5
       
-      // Boost idle breathing during rest for gentle tail sway
-      if (restState.current === 'resting') {
-        idleWeight = Math.max(idleWeight, 0.85) // Strong idle breathing during rest
+      // Blend weight based on speed (smoothstep for smoother transition)
+      const speedRatio = THREE.MathUtils.clamp(speed / (params.maxSpeed * 0.15), 0, 1)
+      const propulsiveWeight = speedRatio * speedRatio * (3 - 2 * speedRatio) // smoothstep
+      
+      // During rest, favor idle more strongly
+      let finalPropulsiveWeight = propulsiveWeight
+      if (restFactor.current > 0.1) {
+        finalPropulsiveWeight *= (1 - restFactor.current * 0.9)
       }
       
-      // Blend distance-based (propulsive) and time-based (idle) waves
-      const phase = THREE.MathUtils.lerp(distancePhase - spinePhase, idlePhase - spinePhase * 0.5, idleWeight)
+      // Use angular interpolation to avoid phase jumps
+      // Convert phases to unit circle positions, lerp, then back to angle
+      const propX = Math.cos(propulsivePhase)
+      const propY = Math.sin(propulsivePhase)
+      const idleX = Math.cos(idleBasePhase)
+      const idleY = Math.sin(idleBasePhase)
       
-      return Math.sin(phase) * amplitude
+      const blendedX = THREE.MathUtils.lerp(idleX, propX, finalPropulsiveWeight)
+      const blendedY = THREE.MathUtils.lerp(idleY, propY, finalPropulsiveWeight)
+      
+      // The sine of the blended angle is simply the Y component (normalized)
+      const blendedMag = Math.sqrt(blendedX * blendedX + blendedY * blendedY)
+      const waveValue = blendedMag > 0.001 ? blendedY / blendedMag : 0
+      
+      return waveValue * amplitude
     }
     
     // Stiffer spine = more constraint enforcement
@@ -287,11 +364,11 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
   }
 
   const setFoodTarget = (p: THREE.Vector3) => {
-    const clamped = new THREE.Vector3(
-      THREE.MathUtils.clamp(p.x, params.bounds.min, params.bounds.max),
-      THREE.MathUtils.clamp(p.y, params.bounds.min, params.bounds.max),
-      THREE.MathUtils.clamp(p.z, params.bounds.min, params.bounds.max)
-    )
+    // Clamp food target to sphere
+    const clamped = p.clone()
+    if (clamped.length() > params.bounds.max) {
+      clamped.setLength(params.bounds.max)
+    }
     foodTarget.current = clamped
   }
 

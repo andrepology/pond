@@ -1,5 +1,5 @@
 export const MOVEMENT_DEFAULTS = {
-  maxSpeed: 0.5,
+  maxSpeed: 0.35,
   maxSteer: 4.0,
   slowingRadius: 2.0,
   visionDistance: 5.0,
@@ -17,8 +17,8 @@ export const REST_DEFAULTS = {
 }
 
 export const PHYSICS = {
-  mass: 1.0,
-  drag: 4.45,
+  mass: 2.5, // Increased from 1.0 for more inertia/weight
+  drag: 7.5, // Increased from 4.45 for thicker water feel
 }
 
 export const SPINE = {

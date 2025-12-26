@@ -7,6 +7,7 @@ import { FishBody } from './render/FishBody'
 import { usePointerGestures } from './interaction/usePointerGestures'
 import { useFoodSystem } from '../../fish/hooks/useFoodSystem'
 import { FoodVisuals } from '../../fish/components/FoodVisuals'
+import { FishDebugVisuals } from './components/FishDebugVisuals'
 import { useMemo, useRef, useState } from 'react'
 import { useControls, folder } from 'leva'
 
@@ -46,8 +47,9 @@ export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
     wanderRadius: MOVEMENT_DEFAULTS.wanderRadius,
     updateInterval: MOVEMENT_DEFAULTS.updateInterval,
     arrivalThreshold: MOVEMENT_DEFAULTS.arrivalThreshold,
-    // Bound fish within PondSphere via innio-container scale (≈0.15). World radius ~1.01 → local bounds ~±6.5. Use conservative ±6.
-    bounds: { min: -5, max: 5, buffer: 0.8 },
+    // Bound fish within PondSphere via innio-container scale (0.30). World radius 1.2 → local bounds = 1.2 / 0.30 = 4.0.
+    // Use 3.8 to keep body safely inside.
+    bounds: { min: -3.8, max: 3.8, buffer: 0.5 },
     undulation: {
       headAmplitude: undulationControls.headAmplitude,
       tailAmplitude: undulationControls.tailAmplitude,
@@ -112,6 +114,9 @@ export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
 
       {/* Food system visuals */}
       <FoodVisuals foodMarkers={foodMarkers} ripples={ripples} />
+      
+      {/* Debug Visuals */}
+      {debug && <FishDebugVisuals movement={movement} bounds={{ max: 3.8 }} />}
     </group>
   )
 }
