@@ -223,21 +223,26 @@ export function AuthView({
                         marginBottom: 16,
                       }}
                     />
-                      <div style={{
+
+                    <div style={{
                       fontSize: 10,
                       color: 'white',
                       lineHeight: 1.4,
                       marginBottom: 8,
+                      opacity: 0.8
                     }}>
-                      p.s.: pond is local-first, which means that your data is stored on your device. we can't see it even if we tried.
+                      <div>• pond is local-first: your data stays on your device, encrypted. we can't see it even if we tried.</div>
+                      <div>• when AI is used, it is never stored anywhere except your device.</div>
+                      <div>• Innio will always ask before sharing anything he learns about you.</div>
                     </div>
+
                     <div style={{
                       fontSize: 10,
                       color: 'white',
                       lineHeight: 1.4,
                       marginBottom: 16,
                     }}>
-                      p.s.2: join this <a href="https://t.me/pondspace" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>telegram channel</a> for updates and co-creation ;3
+                      p.s.: join this <a href="https://t.me/pondspace" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>telegram channel</a> for updates and co-creation ;3
                     </div>
 
                    

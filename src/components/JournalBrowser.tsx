@@ -561,7 +561,7 @@ const Tabs = ({
 
 const TabContent = ({ tabId, root }: { tabId: TabId; root?: any }) => {
   if (!root) {
-    return <div style={{ color: '#8B7355', fontSize: 14, padding: 16 }}>Loading...</div>
+    return <div style={{ color: '#8B7355', fontSize: 14, padding: 16 }}>loading...</div>
   }
 
   const tab = tabs.find(t => t.id === tabId)
