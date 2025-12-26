@@ -385,7 +385,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
               handleCreateIntention()
             }
           }}
-          placeholder="Set an intention"
+          placeholder="set an intention"
           style={{
             flex: 1,
             padding: 0,
@@ -607,7 +607,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
 
       {intentions.length === 0 && (
         <div style={{ color: text.tertiary, fontSize: 15, textAlign: 'center', marginTop: 60, opacity: 0.5 }}>
-          No intentions yet
+          no intentions yet
         </div>
       )}
     </div>

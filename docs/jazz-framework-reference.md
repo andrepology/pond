@@ -295,7 +295,7 @@ function AuthComponent() {
   });
 
   if (state.state === "loading") {
-    return <>Loading...</>;
+    return <>loading...</>;
   }
 
   if (state.state === "signedIn") {
@@ -328,7 +328,7 @@ function PassphraseAuth() {
   });
 
   if (state.state === "loading") {
-    return <>Loading...</>;
+    return <>loading...</>;
   }
 
   if (state.state === "signedIn") {
@@ -366,7 +366,7 @@ function AuthStateIndicator() {
   // me: Account - Successfully authenticated
 
   if (me === undefined) {
-    return <span>Loading...</span>;
+    return <span>loading...</span>;
   }
 
   if (!me) {
@@ -443,7 +443,7 @@ Jazz enables automatic form persistence without manual save logic:
 function AutosavingForm({ documentId }: { documentId: string }) {
   const doc = useCoState(Document, documentId)
   
-  if (doc === undefined) return <div>Loading...</div>
+  if (doc === undefined) return <div>loading...</div>
   if (doc === null) return <div>Document not found</div>
   
   return (
@@ -800,7 +800,7 @@ import { useAccount } from 'jazz-react'
 function App() {
   const { me, logOut } = useAccount(MyAppAccount)
   
-  if (me === undefined) return <div>Loading...</div>
+  if (me === undefined) return <div>loading..</div>
   
   if (!me) {
     return <div>Please sign in to continue</div>
@@ -820,7 +820,7 @@ function App() {
 function CollaborativeForm({ documentId }: { documentId: string }) {
   const doc = useCoState(Document, documentId)
   
-  if (doc === undefined) return <div>Loading...</div>
+  if (doc === undefined) return <div>loading...</div>
   if (doc === null) return <div>Document not found</div>
   
   return (
@@ -1485,7 +1485,7 @@ function TaskDetail({ taskId }: { taskId: string }) {
 function TaskDetail({ taskId }: { taskId: string }) {
   const task = useCoState(Task, taskId);
   
-  if (task === undefined) return <div>Loading...</div>;
+  if (task === undefined) return <div>loading...</div>;
   if (task === null) return <div>Task not found</div>;
   
   return <div>{task.title}</div>;
@@ -1901,7 +1901,7 @@ function EditableComponent({ dataId }: { dataId: string }) {
     }
   }
   
-  if (data === undefined) return <div>Loading...</div>
+  if (data === undefined) return <div>loading...</div>
   if (data === null) return <div>Data not found</div>
   
   return (
@@ -2011,7 +2011,7 @@ function MyComponent() {
   const { me } = useAccount(MyAppAccount);
   const project = useCoState(Project, projectId);
   
-  if (project === undefined) return <div>Loading...</div>;
+  if (project === undefined) return <div>loading...</div>;
   if (project === null) return <div>Not found</div>;
   
   return (

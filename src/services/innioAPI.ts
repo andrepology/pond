@@ -14,6 +14,10 @@ export const innioAPI = {
     return this.callAPI("summarize_conversation", payload);
   },
 
+  async createFirstMsg(payload: any) {
+    return this.callAPI("create_first_msg", payload);
+  },
+
   async callAPI(endpoint: string, payload: any, retryCount = 0) {
     try {
       const response = await fetch(`${INNIOS_BASE}/${endpoint}`, {

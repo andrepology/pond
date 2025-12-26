@@ -5,6 +5,7 @@ import { co } from 'jazz-tools'
 import type { VoiceStatus, VoiceError, VoiceMessage, ConversationConfig } from './types'
 import { PondAccount, Conversation, ConversationMessage } from '../schema'
 import { processConversationAI } from '../services/conversationAIProcessing'
+import { innioAPI } from '../services/innioAPI'
 
 // Global refs that persist across component re-mounts
 const globalMessagesRef = { current: [] as VoiceMessage[] }
@@ -79,6 +80,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
     // Current timestamp - formatted as readable date/time
     const now = new Date();
     variables.now_timestamp = now.toLocaleString('en-US', {
+      weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -283,7 +285,30 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children, config }
       // Get dynamic variables from Jazz data
       const dynamicVariables = getDynamicVariables()
       
-      // Start the ElevenLabs session with dynamic variables
+      // Call API to generate first_msg
+      // Note: The API expects last7d_convo_summaries_innotes as an array, not a string
+      // So we get the raw conversations array instead of the formatted string
+      const recentConversations = getRecentConversations()
+      
+      try {
+        const firstMsgResponse = await innioAPI.createFirstMsg({
+          now_timestamp: dynamicVariables.now_timestamp,
+          first_name: dynamicVariables.first_name,
+          world_model: dynamicVariables.world_model,
+          last7d_convo_summaries_innotes: recentConversations
+        })
+        
+        // Add the first_msg to dynamic variables
+        // The API returns { first_message: "..." } - we rename it to first_msg for 11Labs
+        if (firstMsgResponse?.first_message) {
+          dynamicVariables.first_msg = firstMsgResponse.first_message
+        }
+      } catch (apiError) {
+        console.warn('Failed to get first_msg from API, continuing without it:', apiError)
+        // Continue without first_msg - don't break the conversation start
+      }
+      
+      // Start the ElevenLabs session with dynamic variables (including first_msg if available)
       await conversation.startSession({
         agentId: config.agentId,
         connectionType: "webrtc",
