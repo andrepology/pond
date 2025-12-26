@@ -10,6 +10,7 @@ import { isMobileDevice } from './helpers/deviceDetection'
 import { folder } from 'leva'
 import { PondSphere } from './components/PondSphere'
 
+import { motion, AnimatePresence } from 'motion/react'
 import { DateTimeDisplay } from './components/DateTimeDisplay'
 import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
@@ -165,7 +166,7 @@ export default function App() {
       shadowColor: { label: 'Color', value: '#ffb700' },
       shadowColorBlend: { label: 'Color Blend', value: 0.20, min: 0, max: 2, step: 0.01 },
       shadowOpacity: { label: 'Opacity', value: 0.15, min: 0, max: 1, step: 0.01 },
-      shadowScale: { label: 'Scale', value: 10, min: 10, max: 100, step: 1 },
+      shadowScale: { label: 'Scale', value: 10, min: 0, max: 20, step: 0.5 },
     }, { collapsed: true })
   })
 
@@ -177,7 +178,7 @@ export default function App() {
 
       <Canvas
         shadows="soft"
-        camera={{ position: [0, 2.5, 18], fov: 45 }}
+        camera={{ position: [0, 20, -3], fov: 45 }}
         eventSource={document.getElementById('root')!}
         eventPrefix="client"
         gl={{
@@ -278,12 +279,14 @@ export default function App() {
       </Canvas>
 
 
-      {sceneReady && (
-        <>
-          <DateTimeDisplay />
-          <JournalBrowser isDocked={isJournalDocked} setIsDocked={setIsJournalDocked} />
-        </>
-      )}
+      <AnimatePresence>
+        {sceneReady && (
+          <>
+            <DateTimeDisplay />
+            <JournalBrowser isDocked={isJournalDocked} setIsDocked={setIsJournalDocked} />
+          </>
+        )}
+      </AnimatePresence>
 
 
       {/* <Sheet sheetPercentage={sheetPercentage} />
@@ -291,5 +294,6 @@ export default function App() {
     </>
   )
 }
+
 
 

@@ -21,14 +21,14 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
   const targetPositionRef = useRef(new THREE.Vector3())
   const savedCameraPosition = useRef(new THREE.Vector3())
   const wasActiveRef = useRef(false)
+  const hasLandedRef = useRef(false)
   
-  // Defer camera animation to avoid blocking React UI and Motion animations
   const deferredIsJournalDocked = useDeferredValue(isJournalDocked)
 
   useEffect(() => {
     const cameraControls = controls as CameraControlsImpl | null
+    if (!cameraControls) return
 
-    // Fallback to "pond" if no route match, otherwise use route param
     const active = routeMatch && params.id
       ? scene.getObjectByName(params.id)
       : scene.getObjectByName('pond')
@@ -36,116 +36,84 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
     const isActive = !!active
 
     if (isActive && active) {
-      // Save current camera position before moving to active item
-      if (!wasActiveRef.current && cameraControls) {
+      if (!wasActiveRef.current) {
         cameraControls.getPosition(savedCameraPosition.current)
       }
 
-      // If the object is inspectable, allow closer zoom.
       const inspectable = active.userData.inspectable
+      cameraControls.minDistance = inspectable ? 1.0 : 5
+      cameraControls.maxDistance = 20
+      cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
 
-      if (cameraControls) {
-        cameraControls.minDistance = inspectable ? 1.0 : 5
-        cameraControls.maxDistance = 20
-        cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
-      }
-
-      const currentAzimuth = cameraControls?.azimuthAngle ?? 0
-
-      // Reuse existing Vector3 instance
+      const currentAzimuth = cameraControls.azimuthAngle ?? 0
       active.getWorldPosition(targetPositionRef.current)
       const { x, y, z } = targetPositionRef.current
 
+      // Align the camera's internal target with the pond instantly on first load
+      // This prevents the "spiral" by ensuring we're already looking straight down 
+      // at the correct point before the dolly-in begins.
+      if (!hasLandedRef.current) {
+        cameraControls.setLookAt(x, 20, z, x, y, z, false)
+      }
+
       const isPond = active.name === 'pond'
-      const insideMode = isPond && !markersVisible
+      
+      // Forced overview on first load, then respect markersVisible for dive-in
+      const isOverview = !hasLandedRef.current || markersVisible
+      const insideMode = isPond && !isOverview
 
-      if (isPond && cameraControls) {
-        // Shared target for both overview and inside poses
-        const targetX = x
-        const targetY = y
-        const targetZ = z
+      const tiltOffset = deferredIsJournalDocked ? 0 : 0.6
 
-        // Overview pose: outside and above, looking down towards pond center
-        const overviewHeight = isMobileDevice() ? 7 : 8
-        const overviewDistance = 4
-        const overviewX = targetX + Math.sin(currentAzimuth) * overviewDistance
-        const overviewY = targetY + overviewHeight
-        const overviewZ = targetZ + Math.cos(currentAzimuth) * overviewDistance
-
-        // Inside pose: close to pond center, slightly above
-        const insideDistance = 0.8
-        const insideX = targetX + Math.sin(currentAzimuth) * insideDistance
-        const insideY = targetY + 0.5
-        const insideZ = targetZ + Math.cos(currentAzimuth) * insideDistance
-
-        // Apply downward tilt when journal is undocked
-        const tiltOffset = deferredIsJournalDocked ? 0 : 0.6
-
+      if (isPond) {
         if (insideMode) {
+          // Inside pose: close to pond center, slightly above
+          const insideDistance = 0.8
           cameraControls.setLookAt(
-            insideX,
-            insideY + tiltOffset,
-            insideZ,
-            targetX,
-            targetY,
-            targetZ,
+            x + Math.sin(currentAzimuth) * insideDistance,
+            y + 0.5 + tiltOffset,
+            z + Math.cos(currentAzimuth) * insideDistance,
+            x, y, z,
             true
           )
         } else {
-          // Overview mode: stay outside and above, looking down
+          // Overview pose: directly overhead, dolly in to standard height
+          const overviewHeight = isMobileDevice() ? 12 : 8
           cameraControls.setLookAt(
-            overviewX,
-            overviewY + tiltOffset,
-            overviewZ,
-            targetX,
-            targetY,
-            targetZ,
+            x, y + overviewHeight + tiltOffset, z,
+            x, y, z,
             true
           )
         }
       } else {
-        // Non-pond active object: simple inspectable view similar to original behavior
         const distance = 6 / Math.min(viewport.aspect < 1 ? 0.9 : viewport.aspect, 1)
-        cameraControls?.setLookAt(
+        cameraControls.setLookAt(
           x + Math.sin(currentAzimuth) * distance,
           y + 0.5,
           z + Math.cos(currentAzimuth) * distance,
-          x,
-          y,
-          z,
+          x, y, z,
           true
         )
       }
+      
+      hasLandedRef.current = true
     } else {
-      // No active object: fall back to a simple top-down-ish overview of the origin
-      if (cameraControls) {
-        cameraControls.minDistance = 5
-        cameraControls.maxDistance = 20
-        cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
-      }
-
+      cameraControls.minDistance = 5
+      cameraControls.maxDistance = 20
+      
       if (wasActiveRef.current && savedCameraPosition.current.length() > 0) {
-        cameraControls?.setLookAt(
+        cameraControls.setLookAt(
           savedCameraPosition.current.x,
           savedCameraPosition.current.y,
           savedCameraPosition.current.z,
-          0,
-          0,
-          0,
+          0, 0, 0,
           true
         )
       } else {
-        const currentAzimuth = cameraControls?.azimuthAngle ?? 0
-        const overviewHeight = isMobileDevice() ? 7 : 8
+        const overviewHeight = isMobileDevice() ? 12 : 8
         const tiltOffset = deferredIsJournalDocked ? 0 : 0.6
-        const distance = 4
-        cameraControls?.setLookAt(
-          Math.sin(currentAzimuth) * distance,
-          overviewHeight + tiltOffset,
-          Math.cos(currentAzimuth) * distance,
-          0,
-          0,
-          0,
+        cameraControls.setLookAt(
+          0, 2.0 + overviewHeight + tiltOffset, -3,
+          0, 2.0, -3,
           true
         )
       }

@@ -168,43 +168,51 @@ export function DateTimeDisplay() {
   }
 
   return (
-    <motion.div 
-      style={{ opacity: uiOpacity }}
-      className="fixed top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none p-10 w-[80%] max-w-[384px]"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 1, ease: 'easeInOut' }}
+      className="fixed top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-[80%] max-w-[384px]"
     >
-      <div
-        className="text-3xl md:text-3xl tracking-tight text-center"
-        style={{
-          fontFamily: 'AlteHaasGroteskBold, sans-serif',
-          lineHeight: '1.2',
-          whiteSpace: 'normal', // Allow wrapping since we have a max-width now
-          wordBreak: 'break-word'
-        }}
+      <motion.div 
+        style={{ opacity: uiOpacity }}
+        className="p-10"
       >
-        {renderContent()}
-        {isAuthenticated && state.index === 0 && (
-          <button
-            onClick={async () => {
-              await betterAuthClient.signOut();
-              window.location.reload();
-            }}
-            className={`inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto hover:bg-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ${state.fadeClass}`}
-            style={{
-              backgroundColor: 'rgba(110, 104, 92, 0.1)',
-              color: 'rgba(110, 104, 92, 0.25)',
-              fontFamily: 'AlteHaasGroteskBold, sans-serif',
-              fontSize: '0.65rem',
-              lineHeight: '1.125',
-              verticalAlign: 'middle',
-              padding: '0.2rem 0.4rem',
-              letterSpacing: '0.0295rem',
-              marginTop: '-0.25rem'
-            }}
-          >
-            logout
-          </button>
-        )}
-      </div>
+        <div
+          className="text-3xl md:text-3xl tracking-tight text-center"
+          style={{
+            fontFamily: 'AlteHaasGroteskBold, sans-serif',
+            lineHeight: '1.2',
+            whiteSpace: 'normal', // Allow wrapping since we have a max-width now
+            wordBreak: 'break-word'
+          }}
+        >
+          {renderContent()}
+          {isAuthenticated && state.index === 0 && (
+            <button
+              onClick={async () => {
+                await betterAuthClient.signOut();
+                window.location.reload();
+              }}
+              className={`inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto hover:bg-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ${state.fadeClass}`}
+              style={{
+                backgroundColor: 'rgba(110, 104, 92, 0.1)',
+                color: 'rgba(110, 104, 92, 0.25)',
+                fontFamily: 'AlteHaasGroteskBold, sans-serif',
+                fontSize: '0.65rem',
+                lineHeight: '1.125',
+                verticalAlign: 'middle',
+                padding: '0.2rem 0.4rem',
+                letterSpacing: '0.0295rem',
+                marginTop: '-0.25rem'
+              }}
+            >
+              logout
+            </button>
+          )}
+        </div>
+      </motion.div>
     </motion.div>
   )
 } 
