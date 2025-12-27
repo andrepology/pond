@@ -145,7 +145,6 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
 })
 
   const createRipple = useCallback((worldPos: THREE.Vector3, customSpeed?: number, customDecay?: number) => {
-    console.log('Creating ripple at:', worldPos, 'Distance from origin:', worldPos.length())
     setRipples(prev => {
       const newRipples = [...prev, {
         centerX: worldPos.x,

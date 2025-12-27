@@ -1,9 +1,4 @@
 /// <reference types="vite/client" />
-
-declare global {
-  interface Window {
-    __TAURI__?: unknown
-  }
-}
+/// <reference types="vite-plugin-pwa/client" />
 
 declare const __IS_DEV__: boolean
