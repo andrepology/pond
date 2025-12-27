@@ -10,7 +10,7 @@ import { glass } from './journal/theme'
 import { useVoice } from '../VoiceChat/VoiceProvider'
 import { pondFadeSignal } from '../hooks/usePondCrossfade'
 
-type TabId = 'intentions' | 'fieldNotes'
+export type TabId = 'intentions' | 'fieldNotes'
 
 type Tab = {
   id: TabId
@@ -28,11 +28,11 @@ interface JournalBrowserProps {
   setIsDocked: (docked: boolean) => void
 }
 
-export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
+export function JournalBrowser({ 
+  isDocked, 
+  setIsDocked
+}: JournalBrowserProps) {
   const [activeTab, setActiveTab] = useState<TabId | null>(null)
-  const [isAuthMinimized, setIsAuthMinimized] = useState(true)
-  const [isAuthTransitioningOut, setIsAuthTransitioningOut] = useState(false)
-  const [showAuthAfterCollapse, setShowAuthAfterCollapse] = useState(true)
   const isMounted = useMounted()
   const viewsContainerRef = useRef<HTMLDivElement>(null)
   const [viewsContainerWidth, setViewsContainerWidth] = useState(0)
@@ -92,11 +92,6 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
       // Clicking active tab while expanded -> dock
       setIsDocked(true)
       setActiveTab(null)
-      setShowAuthAfterCollapse(false)
-      // Wait for collapse animation to complete, then show auth view
-      setTimeout(() => {
-        setShowAuthAfterCollapse(true)
-      }, 300)
     } else {
       // Switching tabs or expanding from docked
       setActiveTab(tabId)
@@ -108,16 +103,6 @@ export function JournalBrowser({ isDocked, setIsDocked }: JournalBrowserProps) {
 
   return (
     <motion.div style={{ opacity: uiOpacity }}>
-      {/* Auth View - Top Aligned */}
-      <AuthView
-        isDocked={isDocked}
-        isAuthMinimized={isAuthMinimized}
-        setIsAuthMinimized={setIsAuthMinimized}
-        isAuthTransitioningOut={isAuthTransitioningOut}
-        showAuthAfterCollapse={showAuthAfterCollapse}
-        hasActiveTab={activeTab !== null}
-      />
-
       {/* Main Journal UI */}
       <div
         data-ui

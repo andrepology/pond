@@ -11,10 +11,10 @@ import { folder } from 'leva'
 import { PondSphere } from './components/PondSphere'
 
 import { motion, AnimatePresence } from 'motion/react'
-import { DateTimeDisplay } from './components/DateTimeDisplay'
+import { HUD } from './components/HUD'
 import { AdaptiveFog } from './components/AdaptiveFog'
 import { MeditationContainer } from './components/MeditationContainer'
-import { JournalBrowser } from './components/JournalBrowser'
+import { JournalBrowser, TabId } from './components/JournalBrowser'
 import { SceneInitializer } from './components/SceneInitializer'
 import { useAppUpdater } from './hooks/useAppUpdater'
 
@@ -30,6 +30,7 @@ import { PostProcessingEffects } from './components/PostProcessingEffects'
 
 export default function App() {
   const [isJournalDocked, setIsJournalDocked] = useState(true)
+  
   const [sceneReady, setSceneReady] = useState(false)
   const markersVisibleRef = useRef(false)
   const hasInputSignal = useMemo(() => signal(false), [])
@@ -282,8 +283,11 @@ export default function App() {
       <AnimatePresence>
         {sceneReady && (
           <>
-            <DateTimeDisplay />
-            <JournalBrowser isDocked={isJournalDocked} setIsDocked={setIsJournalDocked} />
+            <HUD />
+            <JournalBrowser 
+              isDocked={isJournalDocked} 
+              setIsDocked={setIsJournalDocked}
+            />
           </>
         )}
       </AnimatePresence>

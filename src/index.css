@@ -5,8 +5,7 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: rgba(246, 245, 243, 0.1n0);
-  backdrop-filter: blur(10px);
+  background-color: rgba(246, 245, 243, 0.1);
   touch-action: none; /* Prevent viewport scrolling on mobile */
 }
 
@@ -36,6 +35,8 @@ body.tauri-app {
 
 canvas {
   display: block;
+  position: absolute;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   opacity: 0;

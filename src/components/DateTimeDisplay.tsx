@@ -7,6 +7,8 @@ import { betterAuthClient } from '../lib/auth-client'
 import { motion, useMotionValue } from 'motion/react'
 import { pondFadeSignal } from '../hooks/usePondCrossfade'
 
+import { text as journalText } from './journal/theme'
+
 // Font loading - same pattern as focusable.tsx
 const loadFont = () => {
   return new Promise<void>((resolve) => {
@@ -73,18 +75,10 @@ export function DateTimeDisplay() {
   const isAuthenticated = useIsAuthenticated()
   const [anonymousFish, setAnonymousFish] = useState<string>('')
   const [state, setState] = useState<DateTimeState>({
-    index: 0,
+    index: 2, // Start with prompts
     promptIndex: 0,
     fadeClass: 'opacity-100'
   })
-
-  const uiOpacity = useMotionValue(1)
-
-  useEffect(() => {
-    return pondFadeSignal.subscribe((fade) => {
-      uiOpacity.set(1 - fade)
-    })
-  }, [uiOpacity])
 
   // Load font and set random fish name on mount
   useEffect(() => {
@@ -101,14 +95,11 @@ export function DateTimeDisplay() {
 
     const runCycle = () => {
       setState(prev => {
-        const nextIndex = (prev.index + 1) % 3
-        const nextPromptIndex = nextIndex === 2 
-          ? (prev.promptIndex + 1) % PROMPTS.length 
-          : prev.promptIndex
+        const nextPromptIndex = (prev.promptIndex + 1) % PROMPTS.length
 
         return {
           ...prev,
-          index: nextIndex,
+          index: 2, // Always use prompt index
           promptIndex: nextPromptIndex,
           fadeClass: 'opacity-100'
         }
@@ -160,7 +151,7 @@ export function DateTimeDisplay() {
     return (
       <span
         className={`transition-opacity duration-1000 ${state.fadeClass} cursor-default`}
-        style={{ color: 'rgba(110, 104, 92, 0.25)' }}
+        style={{ color: journalText.stoneSubtle }}
       >
         {text}
       </span>
@@ -173,12 +164,9 @@ export function DateTimeDisplay() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 1, ease: 'easeInOut' }}
-      className="fixed top-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-[80%] max-w-[384px]"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-[80%] max-w-[384px]"
     >
-      <motion.div 
-        style={{ opacity: uiOpacity }}
-        className="p-10"
-      >
+      <div className="p-10">
         <div
           className="text-3xl md:text-3xl tracking-tight text-center"
           style={{
@@ -189,30 +177,8 @@ export function DateTimeDisplay() {
           }}
         >
           {renderContent()}
-          {isAuthenticated && state.index === 0 && (
-            <button
-              onClick={async () => {
-                await betterAuthClient.signOut();
-                window.location.reload();
-              }}
-              className={`inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto hover:bg-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ${state.fadeClass}`}
-              style={{
-                backgroundColor: 'rgba(110, 104, 92, 0.1)',
-                color: 'rgba(110, 104, 92, 0.25)',
-                fontFamily: 'AlteHaasGroteskBold, sans-serif',
-                fontSize: '0.65rem',
-                lineHeight: '1.125',
-                verticalAlign: 'middle',
-                padding: '0.2rem 0.4rem',
-                letterSpacing: '0.0295rem',
-                marginTop: '-0.25rem'
-              }}
-            >
-              logout
-            </button>
-          )}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   )
 } 
