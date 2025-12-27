@@ -31,7 +31,12 @@ const scratchPrev = new THREE.Vector3()
 const scratchBase = new THREE.Vector3()
 const scratchPerp = new THREE.Vector3()
 
-export function updateSpineFollow(spine: SpineState, headPos: THREE.Vector3, headDir: THREE.Vector3, waveOffset: (i: number) => number, responsiveness = 0.05, constraintIterations = 1) {
+export function updateSpineFollow(spine: SpineState, headPos: THREE.Vector3, headDir: THREE.Vector3, waveOffset: (i: number) => number, responsiveness = 0.05, constraintIterations = 1, delta = 1/60) {
+  // Frame-rate independent smoothing: convert fixed factor to exponential decay
+  // responsiveness ~0.06 at 60fps → speed ≈ 3.7
+  const smoothSpeed = -Math.log(1 - Math.min(responsiveness, 0.99)) * 60
+  const smoothFactor = 1 - Math.exp(-smoothSpeed * delta)
+  
   scratchPrev.copy(headPos)
   for (let i = 0; i < spine.points.length; i++) {
     const spacing = getSegmentSpacing(i, spine.points.length, spine.spacing, spine.falloff)
@@ -39,7 +44,7 @@ export function updateSpineFollow(spine: SpineState, headPos: THREE.Vector3, hea
     scratchPerp.set(-headDir.z, 0, headDir.x)
     scratchBase.addScaledVector(scratchPerp, waveOffset(i))
     const cur = spine.points[i]
-    cur.lerp(scratchBase, responsiveness)
+    cur.lerp(scratchBase, smoothFactor)
     
     // Multiple constraint passes for stiffer spine (prevents tail disconnection)
     for (let iter = 0; iter < constraintIterations; iter++) {

@@ -20,7 +20,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
   const bodyControls = useControls('Fish Body', {
     shape: folder({
       maxRadius: { value: 0.30, min: 0.1, max: 1.0, step: 0.05, label: 'Max Radius' },
-      headRoundness: { value: 0.6, min: 0.1, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
+      headRoundness: { value: 1.0, min: 0.5, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
       tailSharpness: { value: 2.5, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
     }),
     belly: folder({
@@ -235,7 +235,8 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
       const s = t
 
       // Compute radius: r(s) = maxR * s^p * (1-s)^q * belly(s)
-      const sPowP = Math.pow(s, p)
+      const sBase = Math.max(0.001, s)
+      const sPowP = Math.pow(sBase, p)
       const oneMinusS = 1 - s
       const oneMinusSPowQ = Math.pow(oneMinusS, q)
       const baseRadius = sPowP * oneMinusSPowQ
@@ -249,7 +250,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
 
       // Compute dr/ds using product rule: d/ds[s^p * (1-s)^q * belly(s)]
       // = [p * s^(p-1) * (1-s)^q - q * s^p * (1-s)^(q-1)] * belly + s^p * (1-s)^q * d(belly)/ds
-      const dBaseRadius = p * Math.pow(Math.max(0.001, s), p - 1) * oneMinusSPowQ - 
+      const dBaseRadius = p * Math.pow(sBase, p - 1) * oneMinusSPowQ - 
                           q * sPowP * Math.pow(oneMinusS, q - 1)
       const dBelly = bodyControls.bellyAmount * Math.PI * bodyControls.bellyFrequency * Math.cos(bellyArg)
       const dRadius = maxR * (dBaseRadius * belly + baseRadius * dBelly)
@@ -306,4 +307,3 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
     <mesh ref={meshRef} geometry={geometry} material={material} frustumCulled={false} />
   )
 }
-

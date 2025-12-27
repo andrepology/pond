@@ -102,10 +102,10 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
       }
     }
 
-    // Smoothly transition restFactor based on state
-    // Adjust 1.5 to tune transition speed (lower = slower/smoother)
+    // Smoothly transition restFactor based on state (frame-rate independent)
     const targetRestFactor = restState.current === 'resting' ? 1.0 : 0.0
-    restFactor.current = THREE.MathUtils.lerp(restFactor.current, targetRestFactor, delta * 1.5)
+    const restSmoothFactor = 1 - Math.exp(-1.5 * delta)
+    restFactor.current = THREE.MathUtils.lerp(restFactor.current, targetRestFactor, restSmoothFactor)
 
     // Determine forward vector
     const forward = velocity.current.lengthSq() > 1e-6 ? velocity.current.clone().normalize() : new THREE.Vector3(0, 0, 1)
@@ -279,19 +279,23 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
         velocity.current.addScaledVector(normal, -outward)
       }
     }
-    // Direction smoothing
+    // Direction smoothing (frame-rate independent)
+    // 0.15 at 60fps → speed ≈ 9.7
+    const dirSmoothFactor = 1 - Math.exp(-9.7 * delta)
     const prevDir = lastDir.current.clone()
     // Only update direction if velocity is significant (prevents noise amplification)
     const directionThreshold = 0.01
     if (velocity.current.lengthSq() > directionThreshold * directionThreshold) {
-      headDirection.current.lerp(velocity.current.clone().normalize(), 0.15)
+      headDirection.current.lerp(velocity.current.clone().normalize(), dirSmoothFactor)
     }
     lastDir.current.copy(headDirection.current)
 
-    // Bank based on turn rate (lateral change)
+    // Bank based on turn rate (lateral change, frame-rate independent)
+    // 0.2 at 60fps → speed ≈ 13.4
+    const bankSmoothFactor = 1 - Math.exp(-13.4 * delta)
     const turnAxis = new THREE.Vector3().crossVectors(prevDir, headDirection.current)
     const turnMag = THREE.MathUtils.clamp(turnAxis.length(), 0, 1)
-    const bank = THREE.MathUtils.lerp(bankRadians.current, -Math.sign(turnAxis.y) * turnMag * 0.35, 0.2)
+    const bank = THREE.MathUtils.lerp(bankRadians.current, -Math.sign(turnAxis.y) * turnMag * 0.35, bankSmoothFactor)
     bankRadians.current = bank
 
     // Spine update with distance-based propulsive undulation
@@ -358,7 +362,7 @@ export function useFishMovement(params: MovementParams): MovementOutputs {
     
     // Stiffer spine = more constraint enforcement
     const constraintIterations = Math.floor(params.undulation.spineStiffness)
-    updateSpineFollow(spine, headRef.current.position, headDirection.current, wave, params.undulation.spineResponsiveness, constraintIterations)
+    updateSpineFollow(spine, headRef.current.position, headDirection.current, wave, params.undulation.spineResponsiveness, constraintIterations, delta)
 
     // Do not auto-clear food target here; consumption is managed externally
   }

@@ -69,6 +69,7 @@ export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
   // Food system manages markers and ripples
   const { foodMarkers, ripples, handleFeed } = useFoodSystem(rootRef, movement)
 
+  // Priority -1 ensures movement updates before FishBody/TubeBody read spine.points
   useFrame((_, dt) => {
     // Face the invisible plane toward the camera and keep it through the sphere center
     if (planeRef.current) {
@@ -87,7 +88,7 @@ export function Fish({ debug = false, onHeadPositionUpdate }: FishProps) {
       movement.headRef.current.getWorldPosition(worldPos)
       onHeadPositionUpdate(worldPos)
     }
-  })
+  }, -1)
 
   // Invisible ground for feeding
   const gestures = usePointerGestures({
