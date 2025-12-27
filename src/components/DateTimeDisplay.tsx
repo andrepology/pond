@@ -19,6 +19,10 @@ interface DateTimeState {
   promptIndex: number
 }
 
+interface DateTimeDisplayProps {
+  isInteractive?: boolean
+}
+
 const FISH_NAMES = ['koi', 'carp', 'salmon', 'catfish', 'tilapia', 'goldfish']
 
 const PROMPTS = [
@@ -30,7 +34,7 @@ const PROMPTS = [
   'what is your inner story about yourself?',
 ]
 
-export function DateTimeDisplay() {
+export function DateTimeDisplay({ isInteractive = true }: DateTimeDisplayProps) {
   const { me } = useAccount(PondAccount, { resolve: { profile: true } })
   const isAuthenticated = useIsAuthenticated()
   const [anonymousFish, setAnonymousFish] = useState('')
@@ -86,9 +90,9 @@ export function DateTimeDisplay() {
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-[600px]">
       <motion.div 
-        whileTap={{ scale: 0.98 }}
-        onClick={handleTap}
-        className="px-16 py-10 min-h-[140px] flex items-center justify-center pointer-events-auto cursor-pointer"
+        whileTap={isInteractive ? { scale: 0.98 } : undefined}
+        onClick={isInteractive ? handleTap : undefined}
+        className={`px-16 py-10 min-h-[140px] flex items-center justify-center ${isInteractive ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none'}`}
       >
         <AnimatePresence mode="wait">
           {state.index === 1 ? (
@@ -146,11 +150,12 @@ export function DateTimeDisplay() {
                 {isAuthenticated && state.index === 0 && (
                   <button
                     onClick={async (e) => {
+                      if (!isInteractive) return;
                       e.stopPropagation(); // Don't trigger the cycle when clicking logout
                       await betterAuthClient.signOut();
                       window.location.reload();
                     }}
-                    className="inline-flex items-center ml-3 px-2 rounded-full font-medium pointer-events-auto hover:bg-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+                    className={`inline-flex items-center ml-3 px-2 rounded-full font-medium transition-all duration-200 hover:scale-110 active:scale-95 ${isInteractive ? 'pointer-events-auto cursor-pointer hover:bg-gray-600' : 'pointer-events-none'}`}
                     style={{
                       backgroundColor: 'rgba(110, 104, 92, 0.05)',
                       color: 'rgba(110, 104, 92, 0.25)',

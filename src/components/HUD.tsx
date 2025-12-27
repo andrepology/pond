@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion, useMotionValue } from 'motion/react'
 import { pondFadeSignal } from '../hooks/usePondCrossfade'
 import { AuthView } from './journal/AuthView'
@@ -6,11 +6,16 @@ import { DateTimeDisplay } from './DateTimeDisplay'
 
 export function HUD() {
   const uiOpacity = useMotionValue(1)
+  const [isInteractive, setIsInteractive] = useState(true)
 
   useEffect(() => {
     return pondFadeSignal.subscribe((fade) => {
       // Fades OUT as we zoom in (fade goes 0 -> 1)
-      uiOpacity.set(1 - fade)
+      const opacity = 1 - fade
+      uiOpacity.set(opacity)
+      
+      // Disable interaction quickly as we fade out
+      setIsInteractive(opacity > 0.1)
     })
   }, [uiOpacity])
 
@@ -26,12 +31,14 @@ export function HUD() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        pointerEvents: 'none',
+        pointerEvents: isInteractive ? 'auto' : 'none',
         zIndex: 2000
       }}
     >
-      <AuthView />
-      <DateTimeDisplay />
+      <div className="w-full h-full flex flex-col items-center pointer-events-none relative">
+        <AuthView />
+        <DateTimeDisplay isInteractive={isInteractive} />
+      </div>
     </motion.div>
   )
 }

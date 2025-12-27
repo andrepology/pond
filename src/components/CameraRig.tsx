@@ -77,7 +77,7 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
           )
         } else {
           // Overview pose: directly overhead, dolly in to standard height
-          const overviewHeight = isMobileDevice() ? 12 : 8
+          const overviewHeight = isMobileDevice() ? 9 : 8
           cameraControls.setLookAt(
             x, y + overviewHeight + tiltOffset, z,
             x, y, z,
