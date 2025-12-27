@@ -204,8 +204,8 @@ export default function App() {
         <color attach="background" args={['#F6F5F3']} />
         <AdaptiveFog
           color="#F6F5F3"
-          defaultFog={{ near: 7, far: 14 }}
-          focusedFog={{ near: 7, far: 14 }}
+          defaultFog={{ near: 14, far: 20 }}
+          focusedFog={{ near: 14, far: 20 }}
           animationDuration={1.2}
         /> 
 

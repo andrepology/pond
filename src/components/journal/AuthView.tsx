@@ -125,6 +125,8 @@ export function AuthView({ }: AuthViewProps) {
     resetToEmail,
   } = useAuthFlow()
 
+  if (isAuthenticated) return null
+
   return (
     <AnimatePresence>
       <motion.div
@@ -136,13 +138,13 @@ export function AuthView({ }: AuthViewProps) {
           layout: layoutTransition,
           opacity: { duration: 0.4 }
         }}
+        className="mt-16 sm:mt-6 mx-auto"
         style={{
           position: 'relative',
-          marginTop: 24,
           width: 'min(400px, 90vw)',
-          backgroundColor: isAuthenticated ? 'transparent' : background,
-          backdropFilter: isAuthenticated ? 'none' : backdropFilter,
-          WebkitBackdropFilter: isAuthenticated ? 'none' : backdropFilter,
+          backgroundColor: background,
+          backdropFilter: backdropFilter,
+          WebkitBackdropFilter: backdropFilter,
           zIndex: 2000,
           borderRadius: 12,
           border: 'none',
@@ -182,37 +184,12 @@ export function AuthView({ }: AuthViewProps) {
               marginTop: -2
             }}
           >
-            {isAuthenticated
-              ? `${me?.profile?.name?.toLowerCase() || 'user'}'s pond`
-              : 'hey, human bean'}
+            hey, human bean
           </motion.div>
 
           <div style={{ display: 'grid', placeItems: 'center end' }}>
             <AnimatePresence>
-              {isAuthenticated ? (
-                <motion.div
-                  key="logout-btn"
-                  layout
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{
-                    layout: layoutTransition,
-                    opacity: { duration: 0.2 }
-                  }}
-                  style={{ gridArea: '1 / 1' }}
-                >
-                  <PrimaryButton
-                    layoutId="continueButton"
-                    onClick={async () => {
-                      await betterAuthClient.signOut();
-                      window.location.reload();
-                    }}
-                  >
-                    log out
-                  </PrimaryButton>
-                </motion.div>
-              ) : isAuthMinimized ? (
+              {isAuthMinimized ? (
                 <motion.div
                   key="continue-btn"
                   layout
