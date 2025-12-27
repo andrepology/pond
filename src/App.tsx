@@ -194,7 +194,7 @@ export default function App() {
           scene.background = null
         }}
       >
-        <Perf deepAnalyze position="top-left" />
+        <Perf position="bottom-right" deepAnalyze />
         {/* <Stats /> */}
         <Preload all />
 

@@ -20,7 +20,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
   const bodyControls = useControls('Fish Body', {
     shape: folder({
       maxRadius: { value: 0.30, min: 0.1, max: 1.0, step: 0.05, label: 'Max Radius' },
-      headRoundness: { value: 1.0, min: 0.5, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
+      headRoundness: { value: 0.6, min: 0.1, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
       tailSharpness: { value: 2.5, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
     }),
     belly: folder({
