@@ -194,12 +194,12 @@ export default function App() {
           scene.background = null
         }}
       >
-        <Perf 
+        {/* <Perf 
           position="bottom-right" 
           minimal={isMobile} 
           deepAnalyze={!isMobile} 
           logsPerSecond={isMobile ? 2 : 5}
-        />
+        /> */}
         {/* <Stats /> */}
         <Preload all />
 
