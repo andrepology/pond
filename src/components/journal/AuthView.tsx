@@ -73,6 +73,11 @@ export function AuthView({ }: AuthViewProps) {
   const [isAuthMinimized, setIsAuthMinimized] = React.useState(true)
   const [introSeen, setIntroSeen] = React.useState(false)
   const [fontLoaded, setFontLoaded] = React.useState(false)
+  const privacyBullets = [
+    "pond is local-first: your data stays on your device, encrypted. we can't see it even if we tried.",
+    <>when AI providers are used, it is under a <a href="https://openrouter.ai/docs/guides/features/zdr" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Zero Data Retention policy</a></>,
+    'you can use, export and delete this data at any time'
+  ]
 
   // Load font on mount
   React.useEffect(() => {
@@ -330,7 +335,7 @@ export function AuthView({ }: AuthViewProps) {
                           lineHeight: 1.4,
                           marginBottom: 16,
                         }}>
-                          while we are still stitching the parts together,  it is already functional and beautiful; as such, you are welcome here and it will be an honor to have your presence 💛
+                          while we are still stitching the parts together, it is already functional and beautiful; as such, you are welcome here and it will be an honor to have your presence 💛
                         </div>
 
                         <div style={{
@@ -339,7 +344,7 @@ export function AuthView({ }: AuthViewProps) {
                           lineHeight: 1.4,
                           marginBottom: 16,
                         }}>
-                          may it serve you, dear fellow human bean.
+                          may it serve you, dear fellow human bean. 
                         </div>
 
                         <div style={{
@@ -357,7 +362,7 @@ export function AuthView({ }: AuthViewProps) {
                           lineHeight: 1.4,
                           marginBottom: 16,
                         }}>
-                          p.s.: join this <a href="https://t.me/pondspace" target="_blank" rel="noopener noreferrer" style={{ color: text.stone, textDecoration: 'underline' }}>telegram channel</a> for updates and co-creation ;3
+                          p.s.: join our <a href="https://t.me/pondspace" target="_blank" rel="noopener noreferrer" style={{ color: text.stone, textDecoration: 'underline' }}>telegram channel</a> for updates and co-creation ;3
                         </div>
 
 
@@ -376,20 +381,33 @@ export function AuthView({ }: AuthViewProps) {
                           }}
                         />
 
-                        <div style={{
-                          fontSize: 10,
-                          color: text.stone,
-                          lineHeight: 1.4,
-                          marginBottom: 24,
-                          marginLeft: '12px',
-                          marginRight: '56px',
-                          paddingTop: '16px',
-                          opacity: 0.8,
-                          textAlign: 'left'
-                        }}>
-                          <div>• pond is local-first: your data stays on your device, encrypted. we can't see it even if we tried.</div>
-                          <div>• when AI providers are used, it is under a Zero Data Retention policy</div>
-                          <div>• you can use, export and delete this data at any time</div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: text.stone,
+                            lineHeight: 1.4,
+                            marginBottom: 24,
+                            marginRight: '56px',
+                            paddingTop: '16px',
+                            opacity: 0.8,
+                            textAlign: 'left'
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '12px 1fr',
+                              columnGap: 6,
+                              rowGap: 6
+                            }}
+                          >
+                            {privacyBullets.map((item, index) => (
+                              <React.Fragment key={index}>
+                                <span aria-hidden="true">•</span>
+                                <span>{item}</span>
+                              </React.Fragment>
+                            ))}
+                          </div>
                         </div>
 
 

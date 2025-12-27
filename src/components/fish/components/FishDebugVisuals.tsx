@@ -17,6 +17,12 @@ export function FishDebugVisuals({ movement, bounds }: FishDebugVisualsProps) {
     geo.setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1)])
     return geo
   }, [])
+  const visionLine = React.useMemo(() => {
+    return new THREE.Line(
+      visionGeo,
+      new THREE.LineBasicMaterial({ color: 'cyan' })
+    )
+  }, [visionGeo])
 
   useFrame(() => {
     if (!movement.headRef.current) return
@@ -65,11 +71,7 @@ export function FishDebugVisuals({ movement, bounds }: FishDebugVisualsProps) {
           For now, let's stick to external observables. */}
           
       {/* 4. Vision Ray */}
-      <line ref={visionLineRef}>
-        <bufferGeometry />
-        <lineBasicMaterial color="cyan" />
-      </line>
+      <primitive object={visionLine} ref={visionLineRef} />
     </group>
   )
 }
-
