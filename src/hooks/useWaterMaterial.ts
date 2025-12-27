@@ -90,6 +90,8 @@ interface Ripple {
   centerZ: number
   startTime: number
   intensity: number
+  speed: number
+  decay: number
 }
 
 interface UseWaterMaterialReturn {
@@ -99,7 +101,7 @@ interface UseWaterMaterialReturn {
   createRipple: (worldPos: THREE.Vector3) => void
 }
 
-const MAX_RIPPLES = 16
+const MAX_RIPPLES = 32
 
 export function useWaterMaterial(): UseWaterMaterialReturn {
   const materialRef = useRef<THREE.MeshPhysicalMaterial | null>(null)
@@ -107,6 +109,8 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
   const [ripples, setRipples] = useState<Ripple[]>([])
   const ripplesRef = useRef<Ripple[]>([])
   const timeRef = useRef(0)
+  const randomAccumulatorRef = useRef(0)
+  const nextRandomSpawnTimeRef = useRef(Math.random() * 2)
 
   const controls = useControls({
     'Water Material': folder({
@@ -133,25 +137,30 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       rippleIntensity: { value: 1.0, min: 0, max: 2, step: 0.05 },
       rippleSpeed: { value: 0.4, min: 0.1, max: 3, step: 0.1 },
       rippleDecay: { value: 0.1, min: 0.1, max: 5, step: 0.1 },
-      rippleMaxRadius: { value: 1.5, min: 0.1, max: 2.0, step: 0.05 }
+      rippleMaxRadius: { value: 1.5, min: 0.1, max: 2.0, step: 0.05 },
+      randomRipplesEnabled: { value: true, label: 'Random Ripples' },
+      randomRippleFrequency: { value: 0.5, min: 0, max: 10, step: 0.1, label: 'Frequency' }
     })
   }, { collapsed: true })
 })
 
-  const createRipple = useCallback((worldPos: THREE.Vector3) => {
+  const createRipple = useCallback((worldPos: THREE.Vector3, customSpeed?: number, customDecay?: number) => {
+    console.log('Creating ripple at:', worldPos, 'Distance from origin:', worldPos.length())
     setRipples(prev => {
       const newRipples = [...prev, {
         centerX: worldPos.x,
         centerY: worldPos.y,
         centerZ: worldPos.z,
         startTime: timeRef.current,
-        intensity: controls.rippleIntensity
+        intensity: controls.rippleIntensity,
+        speed: customSpeed ?? controls.rippleSpeed,
+        decay: customDecay ?? controls.rippleDecay
       }]
       const updated = newRipples.slice(-MAX_RIPPLES)
       ripplesRef.current = updated
       return updated
     })
-  }, [controls.rippleIntensity])
+  }, [controls.rippleIntensity, controls.rippleSpeed, controls.rippleDecay])
 
   const waterNormals = useTexture('/waternormals/waternormals_3.jpg')
 
@@ -175,7 +184,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     material.normalScale.set(0, 0)
     
     // Use custom cache key to ensure our shader is distinct from default MeshPhysicalMaterial
-    material.customProgramCacheKey = () => 'water-triplanar-clearcoat-v2'
+    material.customProgramCacheKey = () => 'water-triplanar-clearcoat-v3'
 
     material.onBeforeCompile = (shader) => {
       // Add custom uniforms
@@ -190,16 +199,20 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       shader.uniforms.uDistortSpeed = { value: controls.distortSpeed }
 
       // Ripple uniforms
-      shader.uniforms.uRipplesEnabled = { value: true }
-      shader.uniforms.uRippleSpeed = { value: 0.4 }
-      shader.uniforms.uRippleDecay = { value: 2.4 }
-      shader.uniforms.uRippleMaxRadius = { value: 1.0 }
-      shader.uniforms.uRippleIntensity = { value: 1.0 }
+      shader.uniforms.uRipplesEnabled = { value: controls.ripplesEnabled }
+      shader.uniforms.uRippleSpeed = { value: controls.rippleSpeed }
+      shader.uniforms.uRippleDecay = { value: controls.rippleDecay }
+      shader.uniforms.uRippleMaxRadius = { value: controls.rippleMaxRadius }
+      shader.uniforms.uRippleIntensity = { value: controls.rippleIntensity }
       shader.uniforms.uRippleCount = { value: 0 }
 
       // Array of ripples (vec4: xyz=center, w=startTime)
       const rippleArray = new Array(MAX_RIPPLES).fill(null).map(() => new THREE.Vector4(0, 0, 0, -1))
       shader.uniforms.uRipples = { value: rippleArray }
+      
+      // Per-ripple speed and decay arrays (vec2: x=speed, y=decay)
+      const rippleParamsArray = new Array(MAX_RIPPLES).fill(null).map(() => new THREE.Vector2(controls.rippleSpeed, controls.rippleDecay))
+      shader.uniforms.uRippleParams = { value: rippleParamsArray }
 
       // Store reference for live updates
       shaderUniformsRef.current = shader.uniforms
@@ -248,6 +261,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
         uniform float uRippleIntensity;
         uniform int uRippleCount;
         uniform vec4 uRipples[${MAX_RIPPLES}];
+        uniform vec2 uRippleParams[${MAX_RIPPLES}];  // x=speed, y=decay
 
         // Calculate world-space ripple perturbation
         vec3 calculateRippleNormal(vec3 worldPos, float time) {
@@ -259,8 +273,11 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
             if (i >= uRippleCount) break;
 
             vec4 ripple = uRipples[i];
+            vec2 params = uRippleParams[i];
             vec3 center = ripple.xyz;
             float startTime = ripple.w;
+            float rippleSpeed = params.x;
+            float rippleDecay = params.y;
 
             if (startTime < 0.0) continue; // Skip empty slots
 
@@ -278,7 +295,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
             float normDist = dist / uRippleMaxRadius;
 
             // Create expanding ring pattern
-            float rippleRadius = age * uRippleSpeed;
+            float rippleRadius = age * rippleSpeed;
 
             // Create a ring (sharp peak at ripple front)
             float ringWidth = 0.08;
@@ -291,7 +308,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
             float wave = (wave1 + wave2) * ring;
 
             // Exponential decay over time only (not distance)
-            float timeDecay = exp(-age * uRippleDecay);
+            float timeDecay = exp(-age * rippleDecay);
 
             // Fade at edges of max radius
             float edgeFade = 1.0 - smoothstep(uRippleMaxRadius * 0.7, uRippleMaxRadius, dist);
@@ -469,16 +486,56 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
   ])
 
   // Animate time uniform and manage ripples
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     timeRef.current += delta
 
     if (shaderUniformsRef.current?.uTime) {
       shaderUniformsRef.current.uTime.value = timeRef.current
     }
 
-    // Remove expired ripples (older than ripple lifetime)
-    const maxAge = controls.rippleMaxRadius / controls.rippleSpeed
-    const currentRipples = ripplesRef.current.filter(r => (timeRef.current - r.startTime) < maxAge)
+    // Handle random ripple generation
+    if (controls.randomRipplesEnabled && controls.randomRippleFrequency > 0) {
+      randomAccumulatorRef.current += delta
+      if (randomAccumulatorRef.current >= nextRandomSpawnTimeRef.current) {
+        // Sphere center in world space (from App.tsx: pond group at [0, 2.0, -3])
+        const sphereCenter = new THREE.Vector3(0, 2.0, -3)
+        
+        // Get direction from sphere center to camera
+        const directionToCamera = new THREE.Vector3()
+          .subVectors(state.camera.position, sphereCenter)
+          .normalize()
+        
+        // Create a random offset within a cone
+        const randomOffset = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.6,  // ±0.3
+          (Math.random() - 0.5) * 0.6,
+          (Math.random() - 0.5) * 0.3
+        )
+        
+        // Combine direction to camera with random offset and normalize
+        const rippleDir = directionToCamera.add(randomOffset).normalize()
+        
+        // Create position: sphere center + (direction * radius)
+        const randomPos = sphereCenter.clone().add(rippleDir.multiplyScalar(1.2))
+        
+        // Vary speed and decay for natural variation
+        const randomSpeed = controls.rippleSpeed * (0.2 + Math.random() * 0.7)  // 50-150% of base
+        const randomDecay = controls.rippleDecay * (4.0 + Math.random() * 2.0)  // 30-170% of base
+        
+        createRipple(randomPos, randomSpeed, randomDecay)
+        
+        // Reset and set next random interval
+        randomAccumulatorRef.current = 0
+        const avgInterval = 1.0 / controls.randomRippleFrequency
+        nextRandomSpawnTimeRef.current = avgInterval * (0.5 + Math.random())
+      }
+    }
+
+    // Remove expired ripples based on each ripple's individual speed
+    const currentRipples = ripplesRef.current.filter(r => {
+      const rippleMaxAge = controls.rippleMaxRadius / r.speed
+      return (timeRef.current - r.startTime) < rippleMaxAge
+    })
 
     // Update ref and state
     if (currentRipples.length !== ripplesRef.current.length) {
@@ -510,16 +567,20 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       }
 
       // Pack ripple data into uniform array
-      if (uniforms.uRipples) {
+      if (uniforms.uRipples && uniforms.uRippleParams) {
         const rippleArray = uniforms.uRipples.value
+        const paramsArray = uniforms.uRippleParams.value
         for (let i = 0; i < MAX_RIPPLES; i++) {
           if (i < currentRipples.length) {
             const ripple = currentRipples[i]
             // vec4: x=centerX, y=centerY, z=centerZ, w=startTime
             rippleArray[i].set(ripple.centerX, ripple.centerY, ripple.centerZ, ripple.startTime)
+            // vec2: x=speed, y=decay
+            paramsArray[i].set(ripple.speed, ripple.decay)
           } else {
             // Empty slot
             rippleArray[i].set(0, 0, 0, -1)
+            paramsArray[i].set(controls.rippleSpeed, controls.rippleDecay)
           }
         }
       }

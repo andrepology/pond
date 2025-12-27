@@ -42,14 +42,14 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
   } = useControls({
     Sky: folder(
       {
-        skyTurbidityMin: { label: 'Turbidity Min', value: 0.5, min: 0, max: 20, step: 0.1 },
-        skyTurbidityMax: { label: 'Turbidity Max', value: 4.0, min: 0, max: 30, step: 0.1 },
-        skyRayleighMin: { label: 'Rayleigh Min', value: 0.8, min: 0, max: 4, step: 0.01 },
-        skyRayleighMax: { label: 'Rayleigh Max', value: 3.24, min: 0, max: 6, step: 0.01 },
-        skyMieCoefficientMin: { label: 'Mie Coeff Min', value: 0.16, min: 0, max: 0.5, step: 0.001 },
-        skyMieCoefficientMax: { label: 'Mie Coeff Max', value: 0.21, min: 0, max: 0.5, step: 0.001 },
-        skyMieDirectionalGMin: { label: 'Mie g Min', value: 0.44, min: 0, max: 1, step: 0.01 },
-        skyMieDirectionalGMax: { label: 'Mie g Max', value: 0.62, min: 0, max: 1, step: 0.01 },
+        skyTurbidityMin: { label: 'Turbidity Min', value: 3.0, min: 0, max: 20, step: 0.1 },
+        skyTurbidityMax: { label: 'Turbidity Max', value: 9.0, min: 0, max: 30, step: 0.1 },
+        skyRayleighMin: { label: 'Rayleigh Min', value: 2.07, min: 0, max: 4, step: 0.01 },
+        skyRayleighMax: { label: 'Rayleigh Max', value: 5.24, min: 0, max: 6, step: 0.01 },
+        skyMieCoefficientMin: { label: 'Mie Coeff Min', value: 0.02, min: 0, max: 0.5, step: 0.001 },
+        skyMieCoefficientMax: { label: 'Mie Coeff Max', value: 0.10, min: 0, max: 0.5, step: 0.001 },
+        skyMieDirectionalGMin: { label: 'Mie g Min', value: 0.12, min: 0, max: 1, step: 0.01 },
+        skyMieDirectionalGMax: { label: 'Mie g Max', value: 0.28, min: 0, max: 1, step: 0.01 },
         skyDisplayRadius: { label: 'Display Radius', value: 1000, min: 100, max: 3000, step: 10 },
         skyOpacity: { label: 'Opacity', value: 1.00, min: 0, max: 2, step: 0.01 },
         skyAnimate: { label: 'Animate Day/Night', value: true },

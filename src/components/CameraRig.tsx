@@ -67,7 +67,7 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
       if (isPond) {
         if (insideMode) {
           // Inside pose: close to pond center, slightly above
-          const insideDistance = 0.8
+          const insideDistance = 0.4
           cameraControls.setLookAt(
             x + Math.sin(currentAzimuth) * insideDistance,
             y + 0.5 + tiltOffset,

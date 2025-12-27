@@ -268,7 +268,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
           
           // Apply horizon offset using uniform controls
           // localPos.x += horizonOffset.x;
-          localPos.y += horizonOffset.y + 0.65;
+          localPos.y += horizonOffset.y + 0.75;
           // localPos.z += horizonOffset.z;
           // localPos = normalize(localPos);
           
@@ -394,7 +394,7 @@ const SphericalSky: React.FC<SphericalSkyProps> = ({
 
     // Dramatic diurnal parameter variation, driven by configurable ranges.
     const maxAltSin = Math.sin(THREE.MathUtils.degToRad(maxElevationDeg))
-    const horizonProximity = 1 - THREE.MathUtils.clamp(Math.abs(y) / maxAltSin, 0, 1) // 1 near horizon, 0 near noon
+    const horizonProximity = 1 - THREE.MathUtils.clamp(Math.abs(y) / maxAltSin, 0, 0.25) // 1 near horizon, 0 near noon
 
     // Near horizon → use "max" values for hazier, warmer look.
     // Near zenith  → use "min" values for clearer, crisper sky.

@@ -134,8 +134,7 @@ export function AuthView({ }: AuthViewProps) {
         exit={{ opacity: 0, y: -20, scale: 0.98, transition: { duration: 0.2 } }}
         transition={{
           layout: layoutTransition,
-          opacity: { duration: 0.4 },
-          scale: { type: 'spring', stiffness: 400, damping: 60 }
+          opacity: { duration: 0.4 }
         }}
         style={{
           position: 'relative',
@@ -152,7 +151,7 @@ export function AuthView({ }: AuthViewProps) {
       >
         {/* Inner wrapper that fades content without breaking parent backdrop-filter */}
         <motion.div
-          layout
+          layout="position"
           transition={layoutTransition}
           style={{
             display: 'flex',
@@ -164,7 +163,7 @@ export function AuthView({ }: AuthViewProps) {
           }}
         >
           <motion.div
-            layout
+            layout="position"
             initial={{ opacity: 0 }}
             animate={{ opacity: fontLoaded ? 1 : 0 }}
             transition={{
@@ -189,7 +188,7 @@ export function AuthView({ }: AuthViewProps) {
           </motion.div>
 
           <div style={{ display: 'grid', placeItems: 'center end' }}>
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {isAuthenticated ? (
                 <motion.div
                   key="logout-btn"
@@ -288,13 +287,12 @@ export function AuthView({ }: AuthViewProps) {
               <motion.div
                 key="auth-content-expanded"
                 layout
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12, transition: { duration: 0.15 } }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={{
                   layout: layoutTransition,
-                  opacity: { duration: 0.4 },
-                  y: layoutTransition
+                  opacity: { duration: 0.4 }
                 }}
                 style={{
                   position: 'relative',
@@ -357,7 +355,7 @@ export function AuthView({ }: AuthViewProps) {
                         </div>
 
                         <div style={{
-                          fontSize: 10,
+                          fontSize: 14,
                           color: text.stone,
                           lineHeight: 1.4,
                           marginBottom: 16,
@@ -372,6 +370,8 @@ export function AuthView({ }: AuthViewProps) {
                           className="transform-3d perspective-1000  translate-y-2 rotate-x-4 -rotate-z-4"
                           style={{
                             width: '33%',
+                            aspectRatio: '1 / 1',
+                            objectFit: 'cover',
                             borderRadius: 4,
                             marginBottom: 24,
                             boxShadow: '12px 36px 36px rgba(0,0,0,0.25)',
@@ -380,36 +380,6 @@ export function AuthView({ }: AuthViewProps) {
                             transition: 'transform 0.4s ease'
                           }}
                         />
-
-                        <div
-                          style={{
-                            fontSize: 10,
-                            color: text.stone,
-                            lineHeight: 1.4,
-                            marginBottom: 24,
-                            marginRight: '56px',
-                            paddingTop: '16px',
-                            opacity: 0.8,
-                            textAlign: 'left'
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '12px 1fr',
-                              columnGap: 6,
-                              rowGap: 6
-                            }}
-                          >
-                            {privacyBullets.map((item, index) => (
-                              <React.Fragment key={index}>
-                                <span aria-hidden="true">•</span>
-                                <span>{item}</span>
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        </div>
-
 
                       </motion.div>
 
@@ -441,12 +411,40 @@ export function AuthView({ }: AuthViewProps) {
                       onSubmit={handleEmailSubmit}
                       style={{ marginTop: 12 }}
                     >
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: text.stone,
+                          lineHeight: 1.4,
+                          marginBottom: 24,
+                          marginRight: '56px',
+                          opacity: 0.8,
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '12px 1fr',
+                            columnGap: 6,
+                            rowGap: 6
+                          }}
+                        >
+                          {privacyBullets.map((item, index) => (
+                            <React.Fragment key={index}>
+                              <span aria-hidden="true">•</span>
+                              <span>{item}</span>
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      </div>
                       <div style={{ marginBottom: 12 }}>
                         <label
                           htmlFor="email"
                           style={{
                             display: 'block',
                             marginBottom: 6,
+                            paddingLeft: 12,
                             fontSize: 11,
                             fontWeight: 600,
                             color: text.stoneTertiary,
@@ -463,7 +461,7 @@ export function AuthView({ }: AuthViewProps) {
                           onChange={(e) => setEmail(e.target.value)}
                           required
                           disabled={checking}
-                          placeholder="your@email.com"
+                          placeholder="fish@pond.space"
                           autoComplete="email"
                           autoFocus
                           style={{
