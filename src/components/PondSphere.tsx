@@ -7,6 +7,7 @@ import Starfield, { type StarfieldHandle } from './Starfield'
 import Fish from './fish/Fish'
 import { RadialMarkers } from './RadialMarkers'
 import IntentionInput from './IntentionInput'
+import MindBody from './MindBody'
 import type { Signal } from '@preact/signals-core'
 import { usePondCrossfade } from '../hooks/usePondCrossfade'
 import { useWaterMaterial } from '../hooks/useWaterMaterial'
@@ -123,6 +124,13 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       <group name="innio-container" scale={0.30} renderOrder={-1}>
         <Fish onHeadPositionUpdate={(worldPos) => { fishWorldPositionRef.current.copy(worldPos) }} />
       </group>
+
+      {/* MindBody inside sphere - glass material */}
+      {/* <MindBody 
+        isGlass 
+        scale={0.08} 
+        renderOrder={-1} 
+      /> */}
 
       {/* Radial markers */}
       {/* <RadialMarkers count={12} radius={1.5} isVisibleRef={props.markersVisibleRef} /> */}

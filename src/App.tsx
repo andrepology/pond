@@ -18,7 +18,6 @@ import { JournalBrowser, TabId } from './components/JournalBrowser'
 import { SceneInitializer } from './components/SceneInitializer'
 import { useAppUpdater } from './hooks/useAppUpdater'
 
-import MindBody from './components/MindBody'
 import ZenSand from './components/ZenSand'
 import { Perf } from 'r3f-perf'
 import { PostProcessingEffects } from './components/PostProcessingEffects'
