@@ -76,7 +76,7 @@ export function JournalBrowser({
       const viewportHeight = window.innerHeight
       const isDesktop = deviceType === 'desktop'
       const maxHeight = isDesktop
-        ? Math.min(viewportHeight * 0.75, 800)
+        ? Math.min(viewportHeight * 0.85, 800)
         : viewportHeight * 0.85
 
       setViewHeight(maxHeight)
@@ -117,10 +117,10 @@ export function JournalBrowser({
       >
         <motion.div
           initial={{
-            width: 'min(400px, 90vw)',
+            width: 'min(672px, 90vw)',
           }}
           animate={{
-            width: isDocked ? 'min(320px, 85vw)' : 'min(400px, 90vw)',
+            width: isDocked ? 'min(320px, 85vw)' : 'min(672px, 90vw)',
           }}
           transition={{ type: 'spring', stiffness: 400, damping: 60 }}
           style={{
