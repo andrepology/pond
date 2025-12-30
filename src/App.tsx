@@ -65,37 +65,32 @@ export default function App() {
     }
   }, [sceneReady])
 
-  // Prevent wheel events from UI elements reaching the Canvas
+  // Prevent UI events from reaching the Three.js Canvas (blocks camera panning/zooming through UI)
   useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
+    const handleUIEvent = (e: Event) => {
       const target = e.target as HTMLElement
-      // Check if event is from a [data-ui] element
-      if (target?.closest('[data-ui]')) {
-        // In bubble phase, the target has already handled the event for scrolling
-        // Now stop it from reaching Canvas handlers
+      // Stop propagation if clicking on UI or Leva
+      if (target?.closest('[data-ui]') || target?.closest('[class*="leva-"]')) {
         e.stopPropagation()
+        // stopImmediatePropagation is key when multiple listeners are on the same element (#root)
         e.stopImmediatePropagation()
       }
     }
-    // Listen in bubble phase so the target (scrollable UI element) handles scrolling first
-    // Then we stop propagation before it reaches React Three Fiber's Canvas handlers
+
     const root = document.getElementById('root')
     if (root) {
-      // Use a wrapper function to ensure proper cleanup
-      root.addEventListener('wheel', handleWheel, false)
-      return () => root.removeEventListener('wheel', handleWheel, false)
+      const events = ['wheel', 'pointerdown', 'mousedown', 'touchstart']
+      events.forEach(type => root.addEventListener(type, handleUIEvent, false))
+      return () => events.forEach(type => root.removeEventListener(type, handleUIEvent))
     }
   }, [])
 
   // Prevent touch events from scrolling the viewport globally
-  // CSS touch-action handles most cases, but this ensures viewport never scrolls
   useEffect(() => {
     const handleTouchMove = (e: TouchEvent) => {
       const target = e.target as HTMLElement
-      // Only prevent if touch is NOT on a scrollable element
-      // Scrollable elements have touch-action: pan-y and handle their own scrolling
       const scrollableElement = target?.closest('.scroller, [style*="overflow"]')
-      if (!scrollableElement && target?.closest('[data-ui]')) {
+      if (!scrollableElement && (target?.closest('[data-ui]') || target?.closest('[class*="leva-"]'))) {
         e.preventDefault()
       }
     }
@@ -174,7 +169,9 @@ export default function App() {
 
   return (
     <>
-      <Leva hidden={!__IS_DEV__} collapsed={__IS_DEV__} />
+      <div data-ui onPointerDown={(e) => e.stopPropagation()}>
+        <Leva hidden={!__IS_DEV__} collapsed={__IS_DEV__} />
+      </div>
 
       <Canvas
         shadows="soft"
@@ -184,14 +181,13 @@ export default function App() {
         gl={{
           antialias: true,
           powerPreference: "high-performance",
-          localClippingEnabled: true,
           alpha: true
         }}
         dpr={isMobile ? [1.0, 1.3] : [1.0, 1.5]}
-        onCreated={({ gl, scene }) => {
-          gl.setClearColor(0x000000, 0) // Transparent clear
-          scene.background = null
-        }}
+        // onCreated={({ gl, scene }) => {
+        //   gl.setClearColor(0x000000, 0) // Transparent clear
+        //   scene.background = null
+        // }}
       >
         {/* <Perf 
           position="bottom-right" 
@@ -230,7 +226,7 @@ export default function App() {
 
 
            {/* Shadows and Ground */}
-           <AccumulativeShadows
+           {/* <AccumulativeShadows
              temporal={false}
              frames={shadowFrames}
              blend={shadowBlend}
@@ -247,7 +243,7 @@ export default function App() {
               position={lightPosition}
               bias={lightBias}
             />
-          </AccumulativeShadows>
+          </AccumulativeShadows> */}
       
         {/* Post-processing effects run after scene render - disabled on mobile for performance */}
         {!isMobile && (
@@ -302,6 +298,4 @@ export default function App() {
     </>
   )
 }
-
-
 

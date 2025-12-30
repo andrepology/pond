@@ -32,7 +32,7 @@ export function HUD() {
         flexDirection: 'column',
         alignItems: 'center',
         pointerEvents: isInteractive ? 'auto' : 'none',
-        zIndex: 2000
+        zIndex: 1
       }}
     >
       <div className="w-full h-full flex flex-col items-center pointer-events-none relative">

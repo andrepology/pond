@@ -79,6 +79,10 @@ interface WaterMaterialControls {
   rippleSpeed: number
   rippleDecay: number
   rippleMaxRadius: number
+  clipEnabled: boolean
+  clipOffset: number
+  clipSoftness: number
+  clipInvert: boolean
   distortAmount: number
   distortRadius: number
   distortSpeed: number
@@ -99,6 +103,7 @@ interface UseWaterMaterialReturn {
   controls: WaterMaterialControls
   waterNormals: THREE.Texture | null
   createRipple: (worldPos: THREE.Vector3) => void
+  setClipCenter: (worldPos: THREE.Vector3) => void
 }
 
 const MAX_RIPPLES = 32
@@ -111,6 +116,9 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
   const timeRef = useRef(0)
   const randomAccumulatorRef = useRef(0)
   const nextRandomSpawnTimeRef = useRef(Math.random() * 2)
+  const clipPlaneNormalRef = useRef(new THREE.Vector3(0, 0, 1))
+  const clipPlanePointRef = useRef(new THREE.Vector3(0, 2.0, -3))
+  const clipPlaneCenterRef = useRef(new THREE.Vector3(0, 2.0, -3))
 
   const controls = useControls({
     'Water Material': folder({
@@ -121,7 +129,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
     attenuationColor: '#ffffff',
     specularIntensity: { value: 0.72, min: 0, max: 1, step: 0.01 },
-    metalness: { value: 0.00, min: 0, max: 1, step: 0.01 },
+    metalness: { value: 0.1, min: 0, max: 1, step: 0.01 },
     clearcoat: { value: 0.80, min: 0, max: 1, step: 0.01 },
     normalStrength: { value: 0.28, min: 0, max: 2, step: 0.01 },
     triplanarScale: { value: 0.09, min: 0, max: 0.3, step: 0.01 },
@@ -132,6 +140,12 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     distortRadius: { value: 1.00, min: 0.5, max: 1.5, step: 0.01 },
     distortSpeed: { value: 0.06, min: 0.0, max: 0.14, step: 0.01 }
   }),
+    Clipping: folder({
+      clipEnabled: { value: true },
+      clipOffset: { value: 0.11, min: 0.0, max: 1.0, step: 0.01 },
+      clipSoftness: { value: 0.70, min: 0.01, max: 1.0, step: 0.01 },
+      clipInvert: { value: false }
+    }),
     Ripples: folder({
       ripplesEnabled: true,
       rippleIntensity: { value: 1.0, min: 0, max: 2, step: 0.05 },
@@ -160,6 +174,11 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       return updated
     })
   }, [controls.rippleIntensity, controls.rippleSpeed, controls.rippleDecay])
+
+  const setClipCenter = useCallback((worldPos: THREE.Vector3) => {
+    clipPlaneCenterRef.current.copy(worldPos)
+  }, [])
+
 
   const waterNormals = useTexture('/waternormals/waternormals_3.jpg')
 
@@ -196,6 +215,12 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
       shader.uniforms.uDistortAmount = { value: controls.distortAmount }
       shader.uniforms.uDistortRadius = { value: controls.distortRadius }
       shader.uniforms.uDistortSpeed = { value: controls.distortSpeed }
+      shader.uniforms.uClipEnabled = { value: controls.clipEnabled }
+      shader.uniforms.uClipOffset = { value: controls.clipOffset }
+      shader.uniforms.uClipSoftness = { value: controls.clipSoftness }
+      shader.uniforms.uClipInvert = { value: controls.clipInvert }
+      shader.uniforms.uClipPlaneNormal = { value: new THREE.Vector3(0, 0, 1) }
+      shader.uniforms.uClipPlanePoint = { value: new THREE.Vector3(0, 2.0, -3) }
 
       // Ripple uniforms
       shader.uniforms.uRipplesEnabled = { value: controls.ripplesEnabled }
@@ -261,6 +286,12 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
         uniform int uRippleCount;
         uniform vec4 uRipples[${MAX_RIPPLES}];
         uniform vec2 uRippleParams[${MAX_RIPPLES}];  // x=speed, y=decay
+        uniform bool uClipEnabled;
+        uniform float uClipOffset;
+        uniform float uClipSoftness;
+        uniform bool uClipInvert;
+        uniform vec3 uClipPlaneNormal;
+        uniform vec3 uClipPlanePoint;
 
         // Calculate world-space ripple perturbation
         vec3 calculateRippleNormal(vec3 worldPos, float time) {
@@ -425,6 +456,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
 
         // Transform back to view space for lighting
         normal = transformDirection( worldNormal, viewMatrix );
+
         `
       )
 
@@ -441,6 +473,22 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
         
         // Transform to view space for clearcoat lighting (assign to existing variable)
         clearcoatNormal = transformDirection( clearcoatWorldNormal, viewMatrix );
+        `
+      )
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <alphatest_fragment>',
+        `
+        if (uClipEnabled) {
+          float clipDistance = dot(vWorldPosition - uClipPlanePoint, uClipPlaneNormal);
+          float clipFade = smoothstep(0.0, uClipSoftness, clipDistance);
+          if (uClipInvert) {
+            clipFade = 1.0 - clipFade;
+          }
+          if (clipFade <= 0.0) discard;
+          diffuseColor.a *= clipFade;
+        }
+        #include <alphatest_fragment>
         `
       )
     }
@@ -490,6 +538,22 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
 
     if (shaderUniformsRef.current?.uTime) {
       shaderUniformsRef.current.uTime.value = timeRef.current
+    }
+    if (shaderUniformsRef.current?.uClipPlaneNormal && shaderUniformsRef.current?.uClipPlanePoint) {
+      clipPlaneNormalRef.current
+        .set(0, 0, -1)
+        .applyQuaternion(state.camera.quaternion)
+        .normalize()
+        .negate()
+      clipPlanePointRef.current
+        .copy(clipPlaneCenterRef.current)
+        .addScaledVector(clipPlaneNormalRef.current, controls.clipOffset)
+      shaderUniformsRef.current.uClipPlaneNormal.value.copy(clipPlaneNormalRef.current)
+      shaderUniformsRef.current.uClipPlanePoint.value.copy(clipPlanePointRef.current)
+      shaderUniformsRef.current.uClipOffset.value = controls.clipOffset
+      shaderUniformsRef.current.uClipSoftness.value = controls.clipSoftness
+      shaderUniformsRef.current.uClipEnabled.value = controls.clipEnabled
+      shaderUniformsRef.current.uClipInvert.value = controls.clipInvert
     }
 
     // Handle random ripple generation
@@ -595,6 +659,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     materialRef,
     controls,
     waterNormals,
-    createRipple
+    createRipple,
+    setClipCenter
   }
 }

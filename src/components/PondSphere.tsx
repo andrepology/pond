@@ -21,12 +21,13 @@ interface InteractiveProps {
 }
 
 export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((props, ref) => {
-  const { materialRef: waterMaterialRef, controls: waterControls, waterNormals, createRipple } = useWaterMaterial()
+  const { materialRef: waterMaterialRef, controls: waterControls, waterNormals, createRipple, setClipCenter } = useWaterMaterial()
   const { fade } = usePondCrossfade({ start: 1.4, end: 1.5 })
 
   const starfieldRef = useRef<StarfieldHandle>(null)
   const fishWorldPositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
   const groupRef = useRef<THREE.Group>(null)
+  const clipCenterRef = useRef(new THREE.Vector3(0, 2.0, -3))
 
   const {
     skyTurbidityMin,
@@ -69,6 +70,12 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
       waterMaterialRef.current.opacity = 1 - fade
     }
   }, [fade])
+
+  useFrame(() => {
+    if (!groupRef.current) return
+    groupRef.current.getWorldPosition(clipCenterRef.current)
+    setClipCenter(clipCenterRef.current)
+  })
 
   
 
@@ -173,9 +180,3 @@ export const PondSphere = forwardRef<any, Omit<InteractiveProps, 'color'>>((prop
 })
 
 export default PondSphere
-
-
-
-
-
-
