@@ -129,7 +129,7 @@ export function useWaterMaterial(): UseWaterMaterialReturn {
     attenuationDistance: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
     attenuationColor: '#ffffff',
     specularIntensity: { value: 0.72, min: 0, max: 1, step: 0.01 },
-    metalness: { value: 0.1, min: 0, max: 1, step: 0.01 },
+    metalness: { value: 0.06, min: 0, max: 1, step: 0.01 },
     clearcoat: { value: 0.80, min: 0, max: 1, step: 0.01 },
     normalStrength: { value: 0.28, min: 0, max: 2, step: 0.01 },
     triplanarScale: { value: 0.09, min: 0, max: 0.3, step: 0.01 },
