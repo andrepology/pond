@@ -120,7 +120,7 @@ export function JournalBrowser({
             width: 'min(672px, 90vw)',
           }}
           animate={{
-            width: isDocked ? 'min(320px, 85vw)' : 'min(672px, 90vw)',
+            width: isDocked ? 'min(240px, 85vw)' : 'min(672px, 90vw)',
           }}
           transition={{ type: 'spring', stiffness: 400, damping: 60 }}
           style={{
@@ -200,14 +200,14 @@ export function JournalBrowser({
                 pointerEvents: 'none',
               }}
             >
-              <div
-                style={{
-                  width: '80%',
-                  pointerEvents: 'auto',
-                  paddingTop: 4,
-                  paddingBottom: 4,
-                }}
-              >
+            <div
+              style={{
+                width: 'min(400px, 80%)',
+                pointerEvents: 'auto',
+                paddingTop: 4,
+                paddingBottom: 4,
+              }}
+            >
                 <Tabs
                   tabs={tabs}
                   activeTab={activeTab}
