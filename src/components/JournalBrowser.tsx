@@ -20,7 +20,7 @@ type Tab = {
 
 const tabs: Tab[] = [
   { id: 'intentions', label: '⚘', color: '#8B7355' },
-  { id: 'fieldNotes', label: '✎', color: '#8B7355' },
+  { id: 'fieldNotes', label: '✐', color: '#8B7355' },
 ]
 
 interface JournalBrowserProps {
@@ -120,7 +120,7 @@ export function JournalBrowser({
             width: 'min(672px, 90vw)',
           }}
           animate={{
-            width: isDocked ? 'min(240px, 85vw)' : 'min(672px, 90vw)',
+            width: isDocked ? 'min(280px, 85vw)' : 'min(672px, 90vw)',
           }}
           transition={{ type: 'spring', stiffness: 400, damping: 60 }}
           style={{
@@ -264,7 +264,10 @@ const AmbientCallButton = () => {
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0.3, opacity: 0 }}
       whileTap={{ scale: 0.85 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      transition={{ 
+        scale: { type: 'spring', stiffness: 300, damping: 25 },
+        opacity: { duration: 0.45, delay: 0.25, ease: "easeOut" }
+      }}
       onClick={handleClick}
       style={{
         position: 'relative',

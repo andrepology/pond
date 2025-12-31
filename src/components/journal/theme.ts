@@ -15,7 +15,7 @@ export const glass = {
 export const text = {
   primary: 'rgba(255, 255, 255, 0.85)',
   secondary: 'rgba(255, 255, 255, 0.65)',
-  tertiary: 'rgba(255, 255, 255, 0.45)',
+  tertiary: 'rgba(255, 255, 255, 0.50)',
   subtle: 'rgba(255, 255, 255, 0.3)',
 
   sage: 'rgba(220, 240, 230, 0.95)',

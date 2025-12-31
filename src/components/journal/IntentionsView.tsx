@@ -661,9 +661,39 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
         </div>
       )}
 
-      {intentions.length === 0 && (
-        <div style={{ color: text.tertiary, fontSize: 15, textAlign: 'center', marginTop: 60, opacity: 0.5 }}>
-          no intentions yet
+      {intentions.length === 0 ? (
+        <div 
+          style={{ 
+            fontFamily: 'AlteHaasGroteskBold, sans-serif',
+            lineHeight: '1.3',
+            color: text.tertiary,
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+            fontSize: 21,
+            letterSpacing: '-0.01em',
+            textAlign: 'center',
+            padding: '60px 0',
+            maxWidth: '280px',
+            margin: '0 auto',
+          }}
+        >
+          <div>
+            <span style={{ color: text.primary }}>intentions</span> <span style={{ color: text.primary }}>⚘</span> written here will be held by <span style={{ color: text.primary }}>innio</span> <span style={{ color: text.primary }}>♓︎</span>.
+          </div>
+        </div>
+      ) : (
+        <div 
+          style={{ 
+            fontFamily: 'AlteHaasGroteskBold, sans-serif',
+            fontSize: 13,
+            color: text.tertiary,
+            textAlign: 'center',
+            padding: '40px 0 20px',
+            opacity: 0.8,
+            letterSpacing: '0.02em'
+          }}
+        >
+          <span style={{ color: text.primary }}>intentions</span> <span style={{ color: text.primary }}>⚘</span> held by <span style={{ color: text.primary }}>Innio</span> <span style={{ color: text.primary }}>♓︎</span>
         </div>
       )}
     </div>
