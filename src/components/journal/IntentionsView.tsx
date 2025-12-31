@@ -63,9 +63,10 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
     }
   })
 
-  const activeIntention = intentions.find(i => i.status === 'active')
-  const todoIntentions = intentions.filter(i => i.status === 'todo').sort((a, b) => b.createdAt - a.createdAt)
-  const completedIntentions = intentions.filter(i => i.status === 'completed').sort((a, b) => b.updatedAt - a.updatedAt)
+  const validIntentions = intentions.filter(i => i.title?.trim())
+  const activeIntention = validIntentions.find(i => i.status === 'active')
+  const todoIntentions = validIntentions.filter(i => i.status === 'todo').sort((a, b) => b.createdAt - a.createdAt)
+  const completedIntentions = validIntentions.filter(i => i.status === 'completed').sort((a, b) => b.updatedAt - a.updatedAt)
 
   // Update current time every second for live timer display
   /*
