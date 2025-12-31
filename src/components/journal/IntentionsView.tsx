@@ -52,8 +52,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [newIntentionTitle, setNewIntentionTitle] = useState('')
-  const [timerMinutes, setTimerMinutes] = useState(25)
-  const [currentTime, setCurrentTime] = useState(Date.now())
+  const [deletionStage, setDeletionStage] = useState<0 | 1 | 2>(0)
 
   const { me } = useAccount(PondAccount, {
     resolve: {
@@ -69,6 +68,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
   const completedIntentions = intentions.filter(i => i.status === 'completed').sort((a, b) => b.updatedAt - a.updatedAt)
 
   // Update current time every second for live timer display
+  /*
   useEffect(() => {
     // Only run interval if there's an active intention
     if (!activeIntention?.startTime || activeIntention.pausedAt) {
@@ -114,6 +114,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
     const secs = safeSeconds % 60
     return `${mins}m:${secs.toString().padStart(2, '0')}s`
   }
+  */
 
   const handleCreateIntention = () => {
     if (!me || !newIntentionTitle.trim()) return
@@ -129,6 +130,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
     setNewIntentionTitle('')
   }
 
+  /*
   const handleStart = (intention: Intention) => {
     // Move current active to todo if exists (don't complete automatically)
     if (activeIntention && activeIntention.$jazz.id !== intention.$jazz.id) {
@@ -208,6 +210,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
       onIntentionComplete()
     }
   }
+  */
 
   const handleComplete = (intention: Intention) => {
     const now = Date.now()
@@ -258,6 +261,14 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
     setEditTitle('')
   }
 
+  const handleDeleteIntention = (intention: Intention) => {
+    if (!me?.root.intentions) return
+    me.root.intentions.$jazz.remove((i) => i?.$jazz.id === intention.$jazz.id)
+    setEditingId(null)
+    setExpandedId(null)
+    setDeletionStage(0)
+  }
+
   return (
     <div style={{ paddingBottom: 40 }}>
       {/* Active Intention */}
@@ -287,7 +298,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
               <div style={{ fontSize: 22, fontWeight: 700, color: text.primary, lineHeight: 1.3 }}>
                 {activeIntention.title}
               </div>
-              {activeIntention.timerDuration && activeIntention.startTime && (
+              {/* {activeIntention.timerDuration && activeIntention.startTime && (
                 <>
                   <div style={{ fontSize: 15, color: text.secondary, fontWeight: 600, marginTop: 8, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}>
                     {formatElapsedTime(getElapsedSeconds(activeIntention))} / {activeIntention.timerDuration} min
@@ -296,7 +307,6 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                     )}
                   </div>
 
-                  {/* Timer Controls */}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {!activeIntention.pausedAt ? (
                       <button
@@ -365,7 +375,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                     </button>
                   </div>
                 </>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -385,7 +395,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
               handleCreateIntention()
             }
           }}
-          placeholder="set an intention"
+          placeholder="set an intention..."
           style={{
             flex: 1,
             padding: 0,
@@ -439,34 +449,82 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                     }}
                   />
                   {isEditing ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSaveEdit(intention)
-                          setExpandedId(null)
-                        }
-                        if (e.key === 'Escape') {
-                          setEditingId(null)
-                          setEditTitle('')
-                          setExpandedId(null)
-                        }
-                      }}
-                      onBlur={() => handleSaveEdit(intention)}
-                      style={{
-                        flex: 1,
-                        fontSize: 19,
-                        fontWeight: 700,
-                        color: text.primary,
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        lineHeight: 1.3,
-                      }}
-                    />
+                    (editTitle === '' || deletionStage > 0) ? (
+                      <div 
+                        style={{ 
+                          flex: 1, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          fontSize: 16, 
+                          fontWeight: 600,
+                          color: text.tertiary,
+                          gap: 4
+                        }}
+                      >
+                        press <BackspaceKey /> {deletionStage === 1 ? 'one last time' : 'twice'} to delete
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => {
+                            setEditTitle(e.target.value)
+                            if (e.target.value !== '') setDeletionStage(0)
+                          }}
+                          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Backspace') {
+                              if (deletionStage === 0) setDeletionStage(1)
+                              else if (deletionStage === 1) handleDeleteIntention(intention)
+                            } else if (e.key === 'Escape') {
+                              setEditingId(null)
+                              setExpandedId(null)
+                              setDeletionStage(0)
+                            } else if (e.key.length === 1) { // Any printable character
+                              setDeletionStage(0)
+                            }
+                          }}
+                          onBlur={() => {
+                            if (editTitle !== '') {
+                              handleSaveEdit(intention)
+                            } else if (deletionStage === 0) {
+                              setEditingId(null)
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => {
+                          setEditTitle(e.target.value)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveEdit(intention)
+                            setExpandedId(null)
+                          }
+                          if (e.key === 'Escape') {
+                            setEditingId(null)
+                            setEditTitle('')
+                            setExpandedId(null)
+                            setDeletionStage(0)
+                          }
+                        }}
+                        onBlur={() => handleSaveEdit(intention)}
+                        style={{
+                          flex: 1,
+                          fontSize: 19,
+                          fontWeight: 700,
+                          color: text.primary,
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          outline: 'none',
+                          lineHeight: 1.3,
+                        }}
+                      />
+                    )
                   ) : (
                     <div
                       onClick={() => handleToggleExpand(intention)}
@@ -494,8 +552,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                       style={{ overflow: 'hidden' }}
                     >
                       <div style={{ paddingBottom: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        {/* Slider */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {/* <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: 13, fontWeight: 600, color: text.secondary }}>Duration</span>
                             <span style={{ fontSize: 18, fontWeight: 700, color: text.primary }}>{timerMinutes} min</span>
@@ -521,7 +578,6 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                           />
                         </div>
 
-                        {/* Start Button */}
                         <button
                           onClick={() => handleStart(intention)}
                           style={{
@@ -540,7 +596,7 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                           }}
                         >
                           ▶ Start Session
-                        </button>
+                        </button> */}
                       </div>
                     </motion.div>
                   )}
@@ -591,11 +647,11 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
                 <div style={{ fontSize: 17, fontWeight: 600, color: text.secondary, textDecoration: 'line-through' }}>
                   {intention.title}
                 </div>
-                {intention.timerDuration && (
+                {/* {intention.timerDuration && (
                   <div style={{ fontSize: 12, color: text.tertiary, marginTop: 4 }}>
                     {intention.timerDuration} min
                   </div>
-                )}
+                )} */}
               </div>
               <div style={{ fontSize: 11, color: text.tertiary, flexShrink: 0 }}>
                 {formatDate(intention.updatedAt)}
@@ -613,4 +669,26 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
     </div>
   )
 }
+
+const BackspaceKey = () => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2px 8px',
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      border: '1px solid rgba(255, 255, 255, 0.15)',
+      borderRadius: 6,
+      fontSize: 12,
+      fontFamily: 'monospace',
+      color: text.secondary,
+      boxShadow: '0 2px 0 rgba(0, 0, 0, 0.1)',
+      margin: '0 2px',
+      verticalAlign: 'middle',
+    }}
+  >
+    backspace
+  </span>
+)
 

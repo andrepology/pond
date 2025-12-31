@@ -45,7 +45,7 @@ export const text = {
   
   stone: 'rgba(110, 104, 92, 0.82)',
   stoneSecondary: 'rgba(110, 104, 92, 0.70)',
-  stoneTertiary: 'rgba(110, 104, 92, 0.5)',
+  stoneTertiary: 'rgba(110, 104, 92, 0.40)',
   stoneSubtle: 'rgba(110, 104, 92, 0.3)',
 
 } as const

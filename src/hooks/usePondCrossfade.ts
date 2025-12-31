@@ -1,10 +1,14 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { computeFade, classifyRegion, type CrossfadeRegion } from '../helpers/fade'
 import { signal } from '@preact/signals-core'
+import CameraControlsImpl from 'camera-controls'
 
 // Global signal for UI components outside the Canvas to consume
 export const pondFadeSignal = signal(0)
+
+// Global signal to track if the user has interacted with the scene
+export const userInteractedSignal = signal(false)
 
 interface CrossfadeConfig {
   start: number
@@ -22,8 +26,31 @@ export function usePondCrossfade(config: CrossfadeConfig): UsePondCrossfadeRetur
   const [fade, setFade] = useState(0)
   const [region, setRegion] = useState<CrossfadeRegion>('outside')
   const lastTsRef = useRef(0)
-
+  
   const { start, end, hysteresis = 0.02 } = config
+
+  // Listen for user interaction on the controls
+  useEffect(() => {
+    const cameraControls = controls as unknown as CameraControlsImpl
+    if (!cameraControls) return
+
+    const handleInteraction = () => {
+      if (!userInteractedSignal.value) {
+        const currentAction = (cameraControls as any).currentAction
+        
+        // As determined by debugging: Action 0 is Zoom
+        if (currentAction === 0) {
+           userInteractedSignal.value = true
+        }
+      }
+    }
+
+    cameraControls.addEventListener?.('control', handleInteraction)
+    
+    return () => {
+      cameraControls.removeEventListener?.('control', handleInteraction)
+    }
+  }, [controls])
 
   useFrame(() => {
     const now = performance.now()

@@ -4,18 +4,13 @@ import { useIsAuthenticated } from 'jazz-tools/react-core'
 import { PondAccount } from '../schema'
 import { motion, AnimatePresence } from 'motion/react'
 import { betterAuthClient } from '../lib/auth-client'
+import { userInteractedSignal } from '../hooks/usePondCrossfade'
+import { isMobileDevice } from '../helpers/deviceDetection'
 
 import { text as journalText } from './journal/theme'
 
-const layoutTransition = {
-  type: 'spring',
-  stiffness: 160,
-  damping: 24,
-  mass: 1
-} as const
-
 interface DateTimeState {
-  index: number // 0=Name, 1=Logo, 2=Prompt
+  index: number // 0=Name, 1=Logo, 2=Prompt, 3=Hint
   promptIndex: number
 }
 
@@ -39,8 +34,12 @@ export function DateTimeDisplay({ isInteractive = true }: DateTimeDisplayProps) 
   const isAuthenticated = useIsAuthenticated()
   const [anonymousFish, setAnonymousFish] = useState('')
   const [cycleVersion, setCycleVersion] = useState(0)
+  const [hasInteracted, setHasInteracted] = useState(userInteractedSignal.value)
+  const isMobile = isMobileDevice()
+  
+  // Initialize state based on authentication and interaction
   const [state, setState] = useState<DateTimeState>(() => ({
-    index: 1, // Start with Logo
+    index: (!isAuthenticated && !userInteractedSignal.value) ? 3 : 1, // Start with Hint if logged out & no interaction, else Logo
     promptIndex: 0
   }))
 
@@ -48,8 +47,29 @@ export function DateTimeDisplay({ isInteractive = true }: DateTimeDisplayProps) 
     setAnonymousFish(FISH_NAMES[Math.floor(Math.random() * FISH_NAMES.length)])
   }, [])
 
+  // Subscribe to interaction signal
+  useEffect(() => {
+    const unsubscribe = userInteractedSignal.subscribe((val) => {
+      setHasInteracted(val)
+      if (val && state.index === 3) {
+        // Immediately switch from Hint to Logo when interaction starts
+        setState(prev => ({ ...prev, index: 1 }))
+        setCycleVersion(v => v + 1) // Restart cycle timer
+      }
+    })
+    return unsubscribe
+  }, [state.index])
+
   const advanceCycle = useCallback(() => {
     setState(prev => {
+      // If we are in Hint mode (index 3), stay there unless interaction happened (handled by effect above)
+      if (prev.index === 3) {
+         if (hasInteracted || isAuthenticated) {
+             return { ...prev, index: 1 }
+         }
+         return prev
+      }
+
       const nextPromptIndex = (prev.promptIndex + 1) % PROMPTS.length
       
       // Cycle: Logo (1) -> [Name (0) or Prompt (2)] -> Logo (1) -> ...
@@ -65,14 +85,23 @@ export function DateTimeDisplay({ isInteractive = true }: DateTimeDisplayProps) 
         promptIndex: nextPromptIndex
       }
     })
-  }, [isAuthenticated])
+  }, [isAuthenticated, hasInteracted])
 
   useEffect(() => {
+    // Don't cycle automatically if we are in hint mode
+    if (state.index === 3) return
+
     const interval = setInterval(advanceCycle, 8000)
     return () => clearInterval(interval)
-  }, [advanceCycle, cycleVersion])
+  }, [advanceCycle, cycleVersion, state.index])
 
   const handleTap = () => {
+    // If tapping in hint mode, treat as interaction (though the hint says scroll/pinch)
+    if (state.index === 3) {
+         userInteractedSignal.value = true // will trigger effect to switch state
+         return
+    }
+
     advanceCycle()
     setCycleVersion(v => v + 1) // Reset the interval timer
   }
@@ -126,6 +155,56 @@ export function DateTimeDisplay({ isInteractive = true }: DateTimeDisplayProps) 
                 <circle cx="12" cy="12" r="3.5" fill="currentColor" />
               </svg>
               <span>nd</span>
+            </motion.div>
+          ) : state.index === 3 ? (
+             <motion.div
+              key="hint"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 1, ease: [0.4, 0, 0.2, 1] }}
+              className="text-3xl tracking-tight text-center"
+                style={{
+                  fontFamily: 'AlteHaasGroteskBold, sans-serif',
+                  lineHeight: '1.2',
+                  color: journalText.stoneTertiary,
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word'
+                }}
+            >
+              {isMobile ? (
+                  <>
+                    <motion.span
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{ 
+                            repeat: Infinity, 
+                            duration: 1.5, 
+                            ease: "easeInOut",
+                            repeatType: "reverse" 
+                        }}
+                        style={{ marginRight: '0.3em', display: 'inline-block' }}
+                    >
+                        pinch
+                    </motion.span>
+                    <span>to enter pond</span>
+                  </>
+              ) : (
+                  <>
+                    <motion.span
+                        animate={{ y: [-3, 3] }}
+                        transition={{ 
+                            repeat: Infinity, 
+                            duration: 1.2, 
+                            ease: "easeInOut",
+                            repeatType: "mirror" 
+                        }}
+                        style={{ marginRight: '0.3em', display: 'inline-block' }}
+                    >
+                        scroll
+                    </motion.span>
+                    <span>to enter pond</span>
+                  </>
+              )}
             </motion.div>
           ) : (
             <motion.div

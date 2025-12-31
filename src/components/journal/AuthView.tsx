@@ -174,7 +174,7 @@ export function AuthView({ }: AuthViewProps) {
             }}
             style={{
               fontSize: 20,
-              color: text.stoneSubtle,
+              color: text.stoneTertiary,
               fontFamily: 'AlteHaasGroteskBold, sans-serif',
               lineHeight: '1.2',
               whiteSpace: 'nowrap',
@@ -206,7 +206,7 @@ export function AuthView({ }: AuthViewProps) {
                     layoutId="continueButton"
                     onClick={() => setIsAuthMinimized(false)}
                   >
-                    continue
+                    sign in
                   </PrimaryButton>
                 </motion.div>
               ) : (
@@ -370,7 +370,7 @@ export function AuthView({ }: AuthViewProps) {
                           }}
                           onClick={() => setIntroSeen(true)}
                         >
-                          continue
+                          sign in
                         </PrimaryButton>
                       </div>
                     </motion.div>
@@ -491,7 +491,7 @@ export function AuthView({ }: AuthViewProps) {
                           isLoading={checking}
                           loadingText="checking..."
                         >
-                          continue
+                          sign in
                         </PrimaryButton>
                       </div>
                     </motion.form>

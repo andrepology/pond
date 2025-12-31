@@ -8,7 +8,7 @@ export const FieldNotesView = ({ fieldNotes }: { fieldNotes: FieldNote[] }) => {
   if (sorted.length === 0) {
     return (
       <div style={{ color: text.tertiary, fontSize: 14 }}>
-        No field notes yet
+        no field notes yet
       </div>
     )
   }
