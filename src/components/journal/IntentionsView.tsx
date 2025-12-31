@@ -383,10 +383,12 @@ export const IntentionsView = ({ intentions, onIntentionStart, onIntentionComple
       )}
 
       {/* Quick Add Input */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24, padding: '16px 0', borderBottom: `1px solid ${glass.ultraLight}` }}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ minWidth: 20, minHeight: 20 }}>
-          <path d="M10 4V16M4 10H16" stroke={text.tertiary} strokeWidth="2" strokeLinecap="round"/>
-        </svg>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24, padding: '16px 0', borderBottom: `1px solid ${glass.ultraLight}` }}>
+        <div style={{ width: 28, display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ minWidth: 20, minHeight: 20 }}>
+            <path d="M10 4V16M4 10H16" stroke={text.tertiary} strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </div>
         <input
           type="text"
           value={newIntentionTitle}
