@@ -20,7 +20,7 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
   const bodyControls = useControls('Fish Body', {
     shape: folder({
       maxRadius: { value: 0.30, min: 0.1, max: 1.0, step: 0.05, label: 'Max Radius' },
-      headRoundness: { value: 0.6, min: 0.1, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
+      headRoundness: { value: 0.55, min: 0.1, max: 1.5, step: 0.05, label: 'Head Roundness (p)' },
       tailSharpness: { value: 2.5, min: 0.5, max: 4.0, step: 0.1, label: 'Tail Sharpness (q)' },
     }),
     belly: folder({
@@ -28,9 +28,9 @@ export function TubeBody({ spine, headRef, headDirection, velocity, color = '#FF
       bellyFrequency: { value: 1.5, min: 0.3, max: 2.0, step: 0.1, label: 'Belly Frequency' },
     }),
     shader: folder({
-      opacity: { value: 0.1, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
+      opacity: { value: 0.05, min: 0.0, max: 1.0, step: 0.05, label: 'Opacity' },
       headConcentration: { value: 2.5, min: 0.5, max: 4.0, step: 0.1, label: 'Head Concentration' },
-      fresnelStrength: { value: 0.3, min: 0.0, max: 1.0, step: 0.05, label: 'Edge Fresnel' },
+      fresnelStrength: { value: 0.7, min: 0.0, max: 1.0, step: 0.05, label: 'Edge Fresnel' },
       pulseWidth: { value: 0.35, min: 0.05, max: 0.8, step: 0.05, label: 'Head Fade Width' },
       pulseStrength: { value: 0.6, min: 0.0, max: 2.0, step: 0.05, label: 'Head Pulse Strength' },
     }),

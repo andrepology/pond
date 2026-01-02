@@ -41,7 +41,7 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
       }
 
       const inspectable = active.userData.inspectable
-      cameraControls.minDistance = inspectable ? 1.0 : 5
+      cameraControls.minDistance = inspectable ? 1.0 : 8
       cameraControls.maxDistance = 20
       cameraControls.mouseButtons.left = CameraControlsImpl.ACTION.ROTATE
 
@@ -97,7 +97,7 @@ export function CameraRig({ markersVisible, isJournalDocked }: CameraRigProps) {
       
       hasLandedRef.current = true
     } else {
-      cameraControls.minDistance = 5
+      cameraControls.minDistance = 8
       cameraControls.maxDistance = 20
       
       if (wasActiveRef.current && savedCameraPosition.current.length() > 0) {

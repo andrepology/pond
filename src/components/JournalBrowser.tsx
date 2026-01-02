@@ -97,7 +97,7 @@ export function JournalBrowser({
       setActiveTab(tabId)
 
       // Delay camera movement to let UI animation start first
-      setTimeout(() => setIsDocked(false), 200)
+      setTimeout(() => setIsDocked(false), 300)
     }
   }
 
@@ -163,7 +163,7 @@ export function JournalBrowser({
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 60 }}
             style={{
-              overflow: 'hidden',
+              overflow: isDocked ? 'hidden' : 'visible',
               position: 'relative',
               width: '100%',
               // backgroundColor: glass.medium,
@@ -171,17 +171,19 @@ export function JournalBrowser({
               borderRadius: 12,
               // Keep interactive so tabs can be clicked even when docked.
               pointerEvents: 'auto',
+              isolation: 'isolate',
             }}
             onWheel={(e) => e.stopPropagation()}
           >
             {/* Sliding views fill the glass panel and can render beneath the tabs */}
-            {isMounted && !isDocked &&
+            {isMounted && activeTab &&
               tabs.map((tab, idx) => (
                 <View
                   key={tab.id}
                   containerWidth={viewsContainerWidth}
                   viewIndex={idx}
                   activeIndex={activeTab ? tabs.findIndex((t) => t.id === activeTab) : -1}
+                  isDocked={isDocked}
                 >
                   <TabContent tabId={tab.id} root={root} />
                 </View>
@@ -372,11 +374,13 @@ const View = ({
   containerWidth,
   viewIndex,
   activeIndex,
+  isDocked,
 }: {
   children: React.ReactNode
   containerWidth: number
   viewIndex: number
   activeIndex: number
+  isDocked: boolean
 }) => {
   const [difference, setDifference] = useState(activeIndex - viewIndex)
   const x = useSpring(calculateViewX(difference, containerWidth), {
@@ -385,7 +389,7 @@ const View = ({
   })
   const xVelocity = useVelocity(x)
 
-  const opacity = useTransform(
+  const slideOpacity = useTransform(
     x,
     [-containerWidth * 0.6, 0, containerWidth * 0.6],
     [0, 1, 0]
@@ -407,38 +411,57 @@ const View = ({
 
   return (
     <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: isDocked ? 0 : 1,
+      }}
+      transition={{ 
+        opacity: { 
+          duration: isDocked ? 0.2 : 0.4, 
+          delay: isDocked ? 0 : 0.4,
+          ease: "easeInOut" 
+        } 
+      }}
       style={{
         position: 'absolute',
         inset: 0,
-        padding: 8,
-        transformOrigin: 'center',
-        transform: 'translate3d(0, 0, 0)',
-        willChange: 'transform, filter',
-        isolation: 'isolate',
-        x,
-        opacity,
-        ...(blur && { filter: useMotionTemplate`blur(${blur}px)` }),
-        pointerEvents: isActive ? 'auto' : 'none',
+        pointerEvents: isActive && !isDocked ? 'auto' : 'none',
       }}
     >
-      <div
-        className="scroller"
+      <motion.div
         style={{
-          width: '100%',
-          height: '100%',
-          padding: '6px',
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          overflowY: 'auto',
-          // Extra bottom padding so content can scroll under the overlaid tabs
-          paddingBottom: 120,
+          position: 'absolute',
+          inset: 0,
+          padding: 8,
+          transformOrigin: 'center',
+          transform: 'translate3d(0, 0, 0)',
+          willChange: 'transform, filter',
+          isolation: 'isolate',
+          x,
+          opacity: slideOpacity,
+          ...(blur && { filter: useMotionTemplate`blur(${blur}px)` }),
         }}
-        onWheel={(e) => e.stopPropagation()}
       >
-        {children}
-      </div>
+        <div
+          className="scroller"
+          style={{
+            width: 'min(672px, 90vw)', // Match the maximum expanded width
+            margin: '0 auto', // Center within the parent
+            height: '100%',
+            padding: '6px',
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            overflowY: 'auto',
+            // Extra bottom padding so content can scroll under the overlaid tabs
+            paddingBottom: 120,
+          }}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          {children}
+        </div>
+      </motion.div>
     </motion.div>
   )
 }
