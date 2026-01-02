@@ -17,7 +17,6 @@ import { MeditationContainer } from './components/MeditationContainer'
 import { JournalBrowser, TabId } from './components/JournalBrowser'
 import { SceneInitializer } from './components/SceneInitializer'
 import { useAppUpdater } from './hooks/useAppUpdater'
-import { ReloadPrompt } from './components/ReloadPrompt'
 
 import ZenSand from './components/ZenSand'
 import { Perf } from 'r3f-perf'
@@ -289,7 +288,6 @@ export default function App() {
               isDocked={isJournalDocked} 
               setIsDocked={setIsJournalDocked}
             />
-            <ReloadPrompt />
           </>
         )}
       </AnimatePresence>
