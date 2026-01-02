@@ -34,18 +34,31 @@ export async function processConversationAI(conversationId: string, account: Pon
     const userName = account.profile?.name || "User";
     const userPronouns = account.profile?.pronouns || "they/them";
 
+    // Calculate conversation duration in minutes (only if timestamps are valid)
+    const startTime = conversation.startTime;
+    const endTime = conversation.endTime;
+    const hasValidTimestamps = startTime && endTime && endTime > startTime && startTime > 0;
+    const duration_minutes = hasValidTimestamps
+      ? Math.floor((endTime - startTime) / (1000 * 60))
+      : undefined;
+
     // 5. Parallel API calls with error handling
+    const takeNotesPayload = {
+      conversation_transcript: transcript,
+      first_name: userName,
+      pronouns: userPronouns,
+      world_model: account.root.worldModel?.toString(),
+      ...(duration_minutes !== undefined && duration_minutes >= 0 && { duration_minutes })
+    };
+
+    console.log('🤖 takeNotes API payload:', JSON.stringify(takeNotesPayload, null, 2));
+
     const [worldModelResult, notesResult, summaryResult] = await Promise.allSettled([
       innioAPI.createWorldModel({
         conversation_transcript: transcript,
         old_world_model: account.root.worldModel?.toString()
       }),
-      innioAPI.takeNotes({
-        conversation_transcript: transcript,
-        first_name: userName,
-        pronouns: userPronouns,
-        world_model: account.root.worldModel?.toString()
-      }),
+      innioAPI.takeNotes(takeNotesPayload),
       innioAPI.summarizeConversation({
         conversation_transcript: transcript,
         first_name: userName,
