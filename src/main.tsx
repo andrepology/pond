@@ -7,21 +7,9 @@ import App from './App.tsx'
 import { PondAccount } from './schema'
 import { betterAuthClient } from './lib/auth-client'
 import { VoiceProvider } from './VoiceChat'
-import { registerSW } from 'virtual:pwa-register'
+// import { registerSW } from 'virtual:pwa-register' // Handled by ReloadPrompt
 
 const JAZZ_PEER = import.meta.env.VITE_JAZZ_SYNC_PEER
-
-// Register service worker with update prompt
-const updateSW = registerSW({
-  onNeedRefresh() {
-    if (confirm('New content available. Reload to update?')) {
-      updateSW(true)
-    }
-  },
-  onOfflineReady() {
-    console.log('App ready for offline use')
-  },
-})
 
 // Fix iOS PWA viewport calculation race condition
 if ('standalone' in navigator && (navigator as any).standalone) {
